@@ -1,0 +1,23 @@
+&1&USAGE:&0&
+    jarfile.jar [OPTIONS]
+ OR USE CONFIGURATION FILE named movie_gripper.yaml
+    jarfile.jar c [mode]
+    See example config which was generated to learn available mode names and their codes %s
+
+&1&OPTIONS:&0&
+a     add new links
+
+
+i     replace link in file
+        - i [file.json] [episode number] [new link]
+          i D:\list.json 3 http://s19.speedvid.net:8777/q7/v.mp4
+        - i [file.json] [file with links in new lines]
+          i D:\list.json D:\urls.csv
+
+r     starts gathering
+        - r [file.json] [provider] [series name|season number|relative url to series]
+          r D:\list.json alltube Arrow|6|/serial/arrow-green-arrow-zielona-strzala/1163
+      OPTIONS:
+      e     uses more hostings
+        - re [file.json] [provider] [series name|season number|relative url to series]
+          re D:\list.json alltube Arrow|6|/serial/arrow-green-arrow-zielona-strzala/1163

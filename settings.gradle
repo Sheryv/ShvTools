@@ -1,0 +1,11 @@
+rootProject.name = 'shvtools'
+
+include 'Utils'
+findProject(':Utils')?.name = 'utils'
+
+
+include 'MovieHostingLinkGripper'
+include 'ScaffolderMicro'
+findProject(':ScaffolderMicro')?.name = 'scaffolder-micro'
+findProject(':MovieHostingLinkGripper')?.name = 'movie-link-gripper'
+
