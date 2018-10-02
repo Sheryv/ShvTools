@@ -45,7 +45,7 @@ public class Transformer {
             if (episode.getNum() == num) {
                 episodes.set(i, new Episode(episode.getLink(), episode.getName(), episode.getNum(),
                         newUrl));
-                FileUtils.saveFile(SerialisationUtils.toJson(series), p);
+                FileUtils.saveFile(SerialisationUtils.toJsonPretty(series), p);
                 return true;
             }
         }

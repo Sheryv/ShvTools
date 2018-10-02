@@ -29,6 +29,11 @@ allprojects {
 //    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
 //    println "VersionCode is set to $code"
 //    return code
+        def f = new File((String)path);
+        if(!f.exists())
+            new File((String)path).withWriterAppend { w ->
+                w << "0.1.0"
+            }
         def vfile = file(path)
         def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
         def version = vfile.getText()

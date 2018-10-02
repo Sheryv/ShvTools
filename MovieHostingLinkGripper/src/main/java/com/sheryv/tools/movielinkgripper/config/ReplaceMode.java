@@ -28,20 +28,21 @@ public class ReplaceMode extends AbstractMode {
         this.csvFilePathWithLinksToReplace = csvFilePathWithLinksToReplace;
     }
 
-    @SuppressWarnings("Duplicates")
     @Override
     public void execute(Configuration configuration) throws Exception {
         if (Strings.isNullOrEmpty(csvFilePathWithLinksToReplace) || !Files.exists(Paths.get(csvFilePathWithLinksToReplace))) {
             log.error("Path is incorrect at csvFilePathWithLinksToReplace: " + csvFilePathWithLinksToReplace);
             throw new IllegalArgumentException("Wrong format of csvFilePathWithLinksToReplace");
         }
-
+        if (Strings.isNullOrEmpty(filePathWithEpisodesList)) {
+            filePathWithEpisodesList = configuration.getDefaultFilePathWithEpisodesList();
+        }
         List<String> links = Files.readAllLines(new File(csvFilePathWithLinksToReplace).toPath());
         for (String link : links) {
             int index = link.indexOf(';');
             int num = Integer.parseInt(link.substring(0, index));
             String url = link.substring(index + 1, link.length());
-            log.info(Transformer.replaceLink(csvFilePathWithLinksToReplace, num, url) ? "Link replaced" : "Not replaced");
+            log.info(Transformer.replaceLink(this.getFilePathWithEpisodesList(), num, url) ? "Link replaced" : "Not replaced");
         }
     }
 }

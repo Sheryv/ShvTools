@@ -20,6 +20,11 @@ public class GripperTest {
     }
 
     @Test
+    public void replace() {
+        Bootstrapper.main(new String[]{"c", "r"});
+    }
+
+    @Test
     public void printDoc() {
         PropertyUtils.initLogging();
         Bootstrapper.main(new String[]{});

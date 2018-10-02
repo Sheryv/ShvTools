@@ -14,7 +14,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 public class Bootstrapper {
@@ -43,7 +45,10 @@ public class Bootstrapper {
                 printDoc();
             }
         } catch (Exception e) {
-            log.error("Error while parsing", e);
+            log.error("Error while parsing " + e + "\n" +
+                    Arrays.stream(e.getStackTrace())
+                            .map(s -> "\t" + s.toString())
+                            .collect(Collectors.joining("\n")));
         }
     }
 
