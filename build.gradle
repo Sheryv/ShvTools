@@ -19,31 +19,38 @@ allprojects {
                         'Main-Class': p.className
             }
             baseName = project.name + '-all'
+            archiveName = "${baseName}-${version}.${extension}"
             from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
             with jar
         }
     }
 
 
-    ext.getVersionName = { path='src/main/resources/version.txt' ->
+    ext.getVersionName = { module, folder = '\\src\\main\\resources\\' ->
 //    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
 //    println "VersionCode is set to $code"
 //    return code
-        def f = new File((String)path);
-        if(!f.exists())
-            new File((String)path).withWriterAppend { w ->
-                w << "0.1.0"
-            }
-        def vfile = file(path)
+
+        def suffix = "-version.txt"
+        def nm = projectDir.absolutePath + folder + module + suffix
+        def f = new File((String) nm);
+        if (!f.exists()) {
+            f = new File((String) nm)
+            f.write("0.1.0")
+        }
         def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
-        def version = vfile.getText()
+        def version = f.getText()
         def matcherVersionNumber = patternVersionNumber.matcher(version)
         matcherVersionNumber.find()
         def majorVersion = Integer.parseInt(matcherVersionNumber.group(1))
         def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
         def pointVersion = Integer.parseInt(matcherVersionNumber.group(3))
-        def newVer = majorVersion + "." + minorVersion + "." + (pointVersion + 1)
-        vfile.write(newVer)
+        def begin = majorVersion + "." + minorVersion
+        project.fatJar.version = begin
+        def newVer = begin + "." + (pointVersion + 1)
+        println("Version inc: " + version + " > " + newVer)
+
+        f.write(newVer)
         return newVer
     }
 
@@ -63,10 +70,6 @@ subprojects {
         compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
     }
 }
-
-
-
-
 
 
 //compileKotlin {

@@ -2,7 +2,6 @@ package com.sheryv.tools.movielinkgripper;
 
 import com.sheryv.tools.movielinkgripper.config.AbstractMode;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
-import com.sheryv.tools.movielinkgripper.provider.VideoProvider;
 import com.sheryv.utils.FileUtils;
 import com.sheryv.utils.SerialisationUtils;
 import com.sheryv.utils.logging.Lg;
@@ -14,9 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 public class Bootstrapper {
@@ -45,10 +42,7 @@ public class Bootstrapper {
                 printDoc();
             }
         } catch (Exception e) {
-            log.error("Error while parsing " + e + "\n" +
-                    Arrays.stream(e.getStackTrace())
-                            .map(s -> "\t" + s.toString())
-                            .collect(Collectors.joining("\n")));
+            log.error("Error while parsing ", e);
         }
     }
 
@@ -58,8 +52,9 @@ public class Bootstrapper {
             FileUtils.saveFile(s, Paths.get(Configuration.CONFIG_FILE));
             log.info("Example config file was generated in " + new File(Configuration.CONFIG_FILE).getAbsolutePath());
         } else {
+            log.info("Starting MovieLinkGripper from file " + new File(Configuration.CONFIG_FILE).getAbsolutePath());
             String str = FileUtils.readFileInMemory(Configuration.CONFIG_FILE);
-            Configuration configuration = SerialisationUtils.fromYaml(str, Configuration.class);
+            Configuration configuration = Configuration.init(SerialisationUtils.fromYaml(str, Configuration.class));
             for (AbstractMode abstractMode : configuration.getModes()) {
                 if (mode.equals(abstractMode.getModeCommandLineName())) {
                     log.info("Executing " + abstractMode);
@@ -123,19 +118,20 @@ public class Bootstrapper {
             }
 
         } else if (first.startsWith("r") && args.length == 4) {
-            String params = args[3];
-            String[] parts = params.split("\\|");
-            if (parts.length != 3) {
-                log.error("Incorrect series format [fourth argument]");
-                return;
-            }
-            int season = Integer.parseInt(parts[1]);
-            VideoProvider provider = Transformer.createProvider(third, parts[0], season, parts[2]);
-            Gripper.Options options = new Gripper.Options().setUseChrome(true).setStartEpisodeIndex(2);
-            if (first.contains("e")) {
-                options.setUseMoreProviders(true);
-            }
-            Gripper.start(options, provider);
+            log.error("Not supported");
+//            String params = args[3];
+//            String[] parts = params.split("\\|");
+//            if (parts.length != 3) {
+//                log.error("Incorrect series format [fourth argument]");
+//                return;
+//            }
+//            int season = Integer.parseInt(parts[1]);
+//            VideoProvider provider = Transformer.createProvider(third, parts[0], season, parts[2]);
+//            Gripper.Options options = new Gripper.Options().setUseChrome(true).setStartEpisodeIndex(2);
+//            if (first.contains("e")) {
+//                options.setUseMoreProviders(true);
+//            }
+//            Gripper.create(options, provider);
         } else
             printDoc();
 

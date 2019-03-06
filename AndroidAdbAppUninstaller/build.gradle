@@ -1,6 +1,6 @@
 ext.longName = "Android ADB app uninstaller"
 
-version getVersionName()
+version getVersionName(name)
 
 //apply plugin: 'kotlin'
 apply plugin: 'application'

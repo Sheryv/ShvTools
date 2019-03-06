@@ -1,10 +1,8 @@
 package com.sheryv.tools.movielinkgripper.provider;
 
 import com.sheryv.tools.movielinkgripper.Gripper;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
-import lombok.ToString;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -26,11 +24,18 @@ public abstract class VideoProvider {
     }
 
     public String getSeriesLink() {
+        if (allEpisodesLinkPart.startsWith("http:")
+                || allEpisodesLinkPart.startsWith("http:")
+                || allEpisodesLinkPart.startsWith("www"))
+            return allEpisodesLinkPart;
+
         if (!allEpisodesLinkPart.startsWith("/"))
             return getProviderUrl() + "/" + allEpisodesLinkPart;
         else
             return getProviderUrl() + allEpisodesLinkPart;
     }
+
+    public abstract String getMainLang();
 
     public abstract String getProviderUrl();
 
@@ -42,17 +47,11 @@ public abstract class VideoProvider {
 
     public abstract void goToEpisodePage(Item item);
 
-    public abstract void startVideoLoading(Item item);
+    public abstract List<Hosting> loadItemDataFromSummaryPageAndGetVideoLinks(Item item);
+
+    public abstract void openVideoPage(Item item, String videoLink);
 
     @Nullable
-    public abstract String findDownloadLink(Item item);
+    public abstract String findLoadedVideoDownloadUrl(Item item);
 
-    @Getter
-    @AllArgsConstructor
-    @ToString
-    public static class Item {
-        private final String link;
-        private final String name;
-        private final int num;
-    }
 }

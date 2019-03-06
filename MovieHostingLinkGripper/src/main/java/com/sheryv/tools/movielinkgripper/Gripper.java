@@ -1,9 +1,13 @@
 package com.sheryv.tools.movielinkgripper;
 
 import com.google.common.collect.Streams;
+import com.sheryv.tools.movielinkgripper.config.Configuration;
+import com.sheryv.tools.movielinkgripper.provider.Hosting;
+import com.sheryv.tools.movielinkgripper.provider.Item;
 import com.sheryv.tools.movielinkgripper.provider.VideoProvider;
 import com.sheryv.utils.FileUtils;
 import com.sheryv.utils.SerialisationUtils;
+import com.sheryv.utils.Strings;
 import javafx.util.Pair;
 import lombok.Data;
 import lombok.Getter;
@@ -29,9 +33,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class Gripper {
+public class Gripper implements AutoCloseable {
 
-    private static final ChromeOptions CHROME_OPTIONS = new ChromeOptions();
+    //    private static final ChromeOptions CHROME_OPTIONS = new ChromeOptions();
     private static final FirefoxOptions FIREFOX_OPTIONS = new FirefoxOptions();
 
     private static final int STOP_DELAY = 6;
@@ -42,14 +46,16 @@ public class Gripper {
     @Getter
     private final WebDriver driver;
     private final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+    private Configuration configuration;
     @Getter
     private final Options options;
 
-    private Gripper(Options options, VideoProvider provider) {
+    private Gripper(Configuration configuration, Options options, VideoProvider provider) {
+        this.configuration = configuration;
         this.options = options;
         this.provider = provider;
-        if (options.isUseChrome())
-            driver = new ChromeDriver(CHROME_OPTIONS);
+        if (configuration.isUseChromeBrowser())
+            driver = new ChromeDriver(getChromeOptions());
         else
             driver = new FirefoxDriver(FIREFOX_OPTIONS);
         webWait = new WebDriverWait(driver, 15);
@@ -58,88 +64,112 @@ public class Gripper {
         executor = (JavascriptExecutor) driver;
     }
 
-    public static void start(Options options, VideoProvider provider) {
-        System.setProperty("webdriver.gecko.driver", "F:\\Data\\Selenium_drivers\\geckodriver.exe");
-        System.setProperty("webdriver.chrome.driver", "F:\\Data\\Selenium_drivers\\chromedriver.exe");
-        Gripper g = null;
+    public static Gripper create(Options options, VideoProvider provider) {
+        Configuration configuration = Configuration.get();
+        System.setProperty("webdriver.chrome.driver", configuration.getChromeSeleniumDriverPath());
+        Gripper g = new Gripper(configuration, options, provider);
+        g.provider.setGripper(g);
+        return g;
+    }
+
+    public void close() {
+        if (driver != null) {
+            driver.close();
+            driver.quit();
+        }
+    }
+
+    public void start() {
         try {
-            g = new Gripper(options, provider);
-            g.provider.setGripper(g);
-            g.run();
-//            g.runForErrOnly();
+            run();
         } catch (Exception e) {
-            log.error("Error while creating gripper instance", e);
+            log.error("Error while running gripper", e);
         } finally {
-            if (g != null && g.driver != null) g.driver.quit();
+            close();
         }
     }
 
     private void run() throws Exception {
 
-        beginStopLoading();
+//        beginStopLoading();
         driver.navigate().to(provider.getSeriesLink());
 //            Thread.sleep(500);
         log.info("Run()");
-        List<VideoProvider.Item> items = provider.findEpisodesItems(null);
-        Series series = new Series(provider.getSeries(), provider.getSeason(), new ArrayList<>(25));
+        List<Item> items = provider.findEpisodesItems(null);
+        Series series = new Series(provider.getSeries(), provider.getSeason(), provider.getMainLang(), new ArrayList<>(25));
         String json = null;
-        int start = options.getStartEpisodeIndex();
+        int start = configuration.getSearchStartIndex();
         if (options.getRequiredIndexes() != null) {
             start = 1;
         }
-
-        for (int i = start; i <= items.size(); i++) {
-            VideoProvider.Item item = items.get(i - 1);
+        for (int i = start; i <= items.size() && i <= configuration.getSearchStopIndex(); i++) {
+            Item item = items.get(i - 1);
             if (options.getRequiredIndexes() != null) {
                 if (!options.getRequiredIndexes().contains(item.getNum())) {
                     log.info("Skipped " + item.toString());
                     continue;
                 }
             }
-            provider.goToEpisodePage(item);
-            provider.startVideoLoading(item);
-            String downloadLink = provider.findDownloadLink(item);
+            String downloadLink = null;
             int err = 0;
-            if (downloadLink == null) {
+            try {
+                provider.goToEpisodePage(item);
+                List<Hosting> hostings = provider.loadItemDataFromSummaryPageAndGetVideoLinks(item);
+                for (Hosting hosting : hostings) {
+                    provider.openVideoPage(item, hosting.getVideoLink());
+                    item.updateHosting(hosting);
+                    try {
+                        downloadLink = provider.findLoadedVideoDownloadUrl(item);
+                        if (!Strings.isNullOrEmpty(downloadLink)) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        log.error("Error while searching dl url at " + hosting.getName() + " | " + hosting.getVideoLink(), e);
+                    }
+                }
+            } catch (Exception e) {
+                log.error("Error while searching dl url", e);
+            }
+            if (Strings.isNullOrEmpty(downloadLink)) {
                 err = 2;
             }
-            Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err);
+            Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err, item.getType());
             series.getEpisodes().add(ep);
             if (options.isSendToIdm())
                 addToIDM(series, ep);
             json = SerialisationUtils.toJsonPretty(series);
-            FileUtils.saveFile(json, Paths.get(options.getFilePathWithEpisodesList()));
-            log.info(ep.toString());
+            FileUtils.saveFile(json, Paths.get(configuration.getDefaultFilePathWithEpisodesList()));
+            log.info("\n" + ep.toString() + "\n");
         }
         log.info(json);
     }
 
 
-    private void runForErrOnly() throws Exception {
+ /*   private void runForErrOnly() throws Exception {
         beginStopLoading();
         driver.navigate().to(provider.getSeriesLink());
-        Series series = Transformer.loadSeries(FileUtils.readFileInMemory(options.getFilePathWithEpisodesList()));
+        Series series = Transformer.loadSeries(FileUtils.readFileInMemory(configuration.getDefaultFilePathWithEpisodesList()));
         List<Episode> episodes = series.getEpisodes();
         for (int i = 0; i < episodes.size(); i++) {
             Episode episode = episodes.get(i);
             if (episode.getError() != 0) {
                 log.info("Loading for " + episode);
-                VideoProvider.Item item = new VideoProvider.Item(episode.getLink(), episode.getName(), episode.getNum());
+                Item item = new Item(episode.getPage(), episode.getName(), episode.getN());
                 provider.goToEpisodePage(item);
-                provider.startVideoLoading(item);
+                provider.openVideoPage(item, );
 
-                String downloadLink = provider.findDownloadLink(item);
+                String downloadLink = provider.findLoadedVideoDownloadUrl(item);
                 int err = 0;
                 if (downloadLink == null) {
                     err = 2;
                 }
-                Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err);
+                Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err, item.getType());
                 series.getEpisodes().set(i, ep);
             }
         }
         String json = SerialisationUtils.toJsonPretty(series);
-        FileUtils.saveFile(json, Paths.get(options.getFilePathWithEpisodesList()));
-    }
+        FileUtils.saveFile(json, Paths.get(configuration.getDefaultFilePathWithEpisodesList()));
+    }*/
 
     public void beginStopLoading() {
         service.schedule(() -> {
@@ -153,9 +183,9 @@ public class Gripper {
                 episode.generateFileName(series),
                 series.getName(),
                 series.getSeason(),
-                episode.getDownloadUrl());
+                episode.getDlLink());
         try {
-            log.info("\n> {} {}", episode.getNum(), ex);
+            log.info("\n> {} {}", episode.getN(), ex);
             Runtime.getRuntime().exec(ex);
         } catch (Exception e) {
             log.error("Error while adding to IDM", e);
@@ -176,7 +206,7 @@ public class Gripper {
         return null;
     }
 
-    public List<VideoProvider.Item> calculateEpisodesItemsWithNumSeparator(
+    public List<Item> calculateEpisodesItemsWithNumSeparator(
             List<String> episodesLinks,
             List<String> episodesNames,
             Function<String, Pair<Integer, String>> separator,
@@ -189,18 +219,26 @@ public class Gripper {
             String u = linkAndNum.getValue();
             if (!linkAndNum.getValue().startsWith("/"))
                 u = "/" + u;
-            return new VideoProvider.Item(provider.getProviderUrl() + u, ep == null ? "" : ep, linkAndNum.getKey());
+            return new Item(provider.getProviderUrl() + u, ep == null ? "" : ep, linkAndNum.getKey());
         }).collect(Collectors.toList());
+    }
+
+    private ChromeOptions getChromeOptions() {
+        DesiredCapabilities dc = new DesiredCapabilities();
+        dc.setJavascriptEnabled(false);
+        ChromeOptions options = new ChromeOptions();
+        Configuration c = Configuration.get();
+        options.setBinary(c.getChromeExePath());
+        options.setCapability("applicationCacheEnabled", true);
+        for (String s : c.getChromeExtensionsPaths()) {
+            options.addExtensions(new File(s));
+        }
+        options.merge(dc);
+        return options;
     }
 
     static {
         DesiredCapabilities dc = new DesiredCapabilities();
-        dc.setJavascriptEnabled(false);
-        CHROME_OPTIONS.setBinary("F:\\__Programs\\Google\\Chrome\\Application\\chrome.exe");
-        CHROME_OPTIONS.setCapability("applicationCacheEnabled", true);
-        CHROME_OPTIONS.addExtensions(new File("F:\\Data\\Selenium_drivers\\ublock_chrome_68.0.3440.106.crx"));
-        CHROME_OPTIONS.merge(dc);
-
         dc = new DesiredCapabilities();
         dc.setJavascriptEnabled(false);
         FIREFOX_OPTIONS.setCapability("applicationCacheEnabled", true);
@@ -210,23 +248,12 @@ public class Gripper {
     @Data
     @lombok.experimental.Accessors(chain = true)
     public static class Options {
-        private boolean useChrome = true;
         /**
          * Starts from 1
          */
-        private int startEpisodeIndex = 1;
         private List<Integer> requiredIndexes = null;
         private boolean sendToIdm = false;
         private boolean useMoreProviders = false;
-        private String filePathWithEpisodesList = "";
-
-
-        public Options setStartEpisodeIndex(int startEpisodeIndex) {
-            if (startEpisodeIndex <= 0)
-                throw new IllegalArgumentException("Start index have to be greater than 0 and less than or equal to episodes count!");
-            this.startEpisodeIndex = startEpisodeIndex;
-            return this;
-        }
     }
 
     /*

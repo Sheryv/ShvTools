@@ -3,45 +3,70 @@ package com.sheryv.tools.movielinkgripper;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.sheryv.tools.movielinkgripper.config.Configuration;
+import com.sheryv.utils.Strings;
 import lombok.Getter;
 import lombok.ToString;
+
+import javax.annotation.Nullable;
 
 @Getter
 @ToString
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Episode {
-    private final int num;
+    private final int n;
     private final String name;
+    private final EpisodesTypes type;
     private final int error;
-    private final String link;
-    private final String downloadUrl;
+    private final String dlLink;
+    private final Format format;
+    private final String page;
 
-    public Episode(String link, String name, int num, String downloadUrl) {
-        this(link, name, num, downloadUrl, 0);
+    public Episode(String page, String name, int n, String dlLink) {
+        this(n, name, EpisodesTypes.UNKNOWN, 0, dlLink, page, null);
+    }
+
+    public Episode(String page, String name, int n, String dlLink, EpisodesTypes type) {
+        this(n, name, type, 0, dlLink, page, null);
+    }
+
+    public Episode(String page, String name, int n, String dlLink, int error, EpisodesTypes type) {
+        this(n, name, type, error, dlLink, page, null);
     }
 
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
     public Episode(
-            @JsonProperty("link") String link,
+            @JsonProperty("n") int n,
             @JsonProperty("name") String name,
-            @JsonProperty("num") int num,
-            @JsonProperty("downloadUrl") String downloadUrl,
-            @JsonProperty("error") int error) {
-        this.num = num;
+            @JsonProperty("type") EpisodesTypes type,
+            @JsonProperty("error") int error,
+            @JsonProperty("dlLink") String dlLink,
+            @JsonProperty("page") String page,
+            @JsonProperty("format") @Nullable Format format) {
+        this.n = n;
         this.name = name;
         this.error = error;
-        this.link = link;
-        this.downloadUrl = downloadUrl;
+        this.page = page;
+        this.dlLink = dlLink;
+        this.type = type;
+        this.format = format;
     }
 
     public String generateFileName(Series series) {
         String ext = ".mp4";
-        if (downloadUrl != null) {
-            int indexOf = downloadUrl.lastIndexOf(".");
-            if (downloadUrl.length() - indexOf <= 5) {
-                ext = downloadUrl.substring(indexOf, downloadUrl.length());
+        if (dlLink != null) {
+            int indexOf = dlLink.lastIndexOf(".");
+            if (dlLink.length() - indexOf <= 5) {
+                ext = dlLink.substring(indexOf, dlLink.length());
             }
         }
-        return String.format("%s S%02dE%02d - %s%s", series.getName(), series.getSeason(), num, name, ext);
+        String name = getName().replaceAll("[\\\\/:*?\"<>|]", "");
+        String nameFormatter = "%5$s";
+        Configuration config = Configuration.get();
+        if (!Strings.isNullOrEmpty(config.getEpisodeNameFormatter())) {
+            nameFormatter = config.getEpisodeNameFormatter();
+        }
+
+        return String.format(config.getEpisodeCodeFormatter() + nameFormatter, series.getName(), series.getSeason(), n, name, ext);
     }
 }

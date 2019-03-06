@@ -1,7 +1,6 @@
 package com.sheryv.tools.movielinkgripper.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.sheryv.tools.movielinkgripper.Gripper;
 import lombok.Getter;
 
 @Getter
@@ -34,10 +33,4 @@ public abstract class AbstractMode {
 
     public abstract void execute(Configuration configuration) throws Exception;
 
-    protected Gripper.Options buildOptions(Configuration configuration) {
-        return new Gripper.Options()
-                .setUseChrome(configuration.isUseChromeBrowser())
-                .setFilePathWithEpisodesList(configuration.getDefaultFilePathWithEpisodesList())
-                .setStartEpisodeIndex(configuration.getSearchStartIndex());
-    }
 }

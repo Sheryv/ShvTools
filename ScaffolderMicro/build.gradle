@@ -4,12 +4,10 @@ apply plugin: 'maven-publish'
 ext.longName = "Project scaffolding tool with mustache templating engine support"
 ext.className = "com.sheryv.tools.scaffoldermicro.ScaffolderMain"
 
-version getVersionName()
-
 apply plugin: 'application'
 mainClassName = ext.className
 
-sourceCompatibility = 1.8
+sourceCompatibility = 1.10
 
 dependencies {
     compile project(':utils')

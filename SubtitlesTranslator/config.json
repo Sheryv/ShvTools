@@ -1,0 +1,17 @@
+{
+  "chromeExePath": "F:\\__Programs\\Google\\Chrome\\Application\\chrome.exe",
+  "chromeSeleniumDriverPath": "F:\\Data\\Selenium_drivers\\chromedriver.exe",
+  "chromeExtensionsPaths": [
+    "F:\\Data\\Selenium_drivers\\ublock_chrome_68.0.3440.106.crx"
+  ],
+  "options": {
+    "urlFormatString": "/pl/ssearch/sublanguageid-pol,eng/searchonlytvseries-on/season-%2$d/episode-%3$d/idmovie-%1$s",
+    "baseUrl": "https://www.opensubtitles.org",
+    "downloadDirectory": "C:\\temp\\dest",
+    "temporaryDirectory": "C:\\temp",
+    "seriesId": "137932",
+    "series": "Arrow",
+    "season": 7,
+    "episode": 4
+  }
+}

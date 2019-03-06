@@ -8,8 +8,8 @@
 a     add new links
 
 
-i     replace link in file
-        - i [file.json] [episode number] [new link]
+i     replace page in file
+        - i [file.json] [episode number] [new page]
           i D:\list.json 3 http://s19.speedvid.net:8777/q7/v.mp4
         - i [file.json] [file with links in new lines]
           i D:\list.json D:\urls.csv

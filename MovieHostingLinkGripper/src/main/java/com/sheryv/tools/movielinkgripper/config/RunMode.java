@@ -54,11 +54,12 @@ public class RunMode extends AbstractMode {
     @Override
     public void execute(Configuration configuration) throws Exception {
         VideoProvider provider = Transformer.createProvider(providerName, seriesName, seasonIndex, relativeUrlToSeries);
-        Gripper.Options options = buildOptions(configuration)
+        Gripper.Options options = new Gripper.Options()
                 .setUseMoreProviders(useMoreHostingsProvider);
         if (!Strings.isNullOrEmpty(filePathWithEpisodesList)) {
-            options.setFilePathWithEpisodesList(filePathWithEpisodesList);
+            configuration.setDefaultFilePathWithEpisodesList(filePathWithEpisodesList);
         }
+
         if (findOnlyForAbsent) {
             Path p = Paths.get(directoryToCompareIfIsAbsent);
             if (Files.exists(p) && Files.isDirectory(p)) {
@@ -79,6 +80,6 @@ public class RunMode extends AbstractMode {
                 log.error("Incorrect directory path at directoryToCompareIfIsAbsent: " + directoryToCompareIfIsAbsent);
             }
         }
-        Gripper.start(options, provider);
+        Gripper.create(options, provider);
     }
 }

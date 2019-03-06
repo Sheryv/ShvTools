@@ -1,19 +1,11 @@
 package com.sheryv.common.property;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import org.junit.Assert;
 import org.junit.Ignore;
-import org.junit.Test;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.Optional;
 
 
 @Ignore
 public class SerializationTest {
-
+/*
     @Test
     public void parsing() throws IOException {
         PropertyManager propertyManager = PropertyManager.init()
@@ -28,5 +20,5 @@ public class SerializationTest {
         Assert.assertEquals("idDS", map.get("CAT").get(0).getId());
         Assert.assertTrue(map.get(Categories.OTHERS).get(0) instanceof PropertyGroup.KeyValueGroup);
         Assert.assertEquals(2, ((PropertyGroup.KeyValueGroup) map.get(Categories.OTHERS).get(0)).keyValuePairs.get("keyy"));
-    }
+    }*/
 }

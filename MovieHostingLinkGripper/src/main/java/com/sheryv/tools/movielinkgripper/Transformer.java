@@ -42,9 +42,9 @@ public class Transformer {
         List<Episode> episodes = series.getEpisodes();
         for (int i = 0; i < episodes.size(); i++) {
             Episode episode = episodes.get(i);
-            if (episode.getNum() == num) {
-                episodes.set(i, new Episode(episode.getLink(), episode.getName(), episode.getNum(),
-                        newUrl));
+            if (episode.getN() == num) {
+                episodes.set(i, new Episode(episode.getPage(), episode.getName(), episode.getN(),
+                        newUrl, EpisodesTypes.LECTOR));
                 FileUtils.saveFile(SerialisationUtils.toJsonPretty(series), p);
                 return true;
             }

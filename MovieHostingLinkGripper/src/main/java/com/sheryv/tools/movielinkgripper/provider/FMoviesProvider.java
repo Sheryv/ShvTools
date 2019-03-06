@@ -22,6 +22,11 @@ public class FMoviesProvider extends VideoProvider {
     }
 
     @Override
+    public String getMainLang() {
+        return "en";
+    }
+
+    @Override
     public String getProviderUrl() {
         return BASE_URL;
     }
@@ -45,6 +50,11 @@ public class FMoviesProvider extends VideoProvider {
     }
 
     @Override
+    public List<Hosting> loadItemDataFromSummaryPageAndGetVideoLinks(Item item) {
+        return null;
+    }
+
+    @Override
     public List<Item> findEpisodesItems(@Nullable String serverIndex) {
         List<String> episodes = findEpisodesNames();
         List<String> links = findEpisodesLinks(serverIndex);
@@ -64,7 +74,7 @@ public class FMoviesProvider extends VideoProvider {
     }
 
     @Override
-    public void startVideoLoading(Item item) {
+    public void openVideoPage(Item item, String videoLink) {
         List<WebElement> elements = gripper.getDriver().findElements(SEL_PLAYER);
         if (elements.size() == 0) {
 //                WebElement body_div = element;
@@ -78,7 +88,7 @@ public class FMoviesProvider extends VideoProvider {
     }
 
     @Override
-    public String findDownloadLink(Item item) {
+    public String findLoadedVideoDownloadUrl(Item item) {
         WebElement video = gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(SEL_PLAYER));
         return video.getAttribute(SRC_ATTR);
     }
