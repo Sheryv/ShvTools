@@ -1,30 +1,36 @@
 ---
 searchStartIndex: 1
-searchStopIndex: 2
+searchStopIndex: 23
 useChromeBrowser: true
-defaultFilePathWithEpisodesList: "C:\\temp\\girl_list.json"
+defaultFilePathWithEpisodesList: "G:\\list.json"
+episodeCodeFormatter: "%s S%02dE%02d"
+episodeNameFormatter: " - %s%s"
+chromeExePath: "F:\\__Programs\\Google\\Chrome\\Application\\chrome.exe"
+chromeSeleniumDriverPath: "F:\\Data\\Selenium_drivers\\chromedriver.exe"
+chromeExtensionsPaths:
+  - "F:\\Data\\Selenium_drivers\\ublock_chrome_68.0.3440.106.crx"
 _comment: "This is main configuration file for Movie Link Gripper tool"
 startModes:
+  - !<com.sheryv.tools.movielinkgripper.config.AddMode>
+    name: "Add"
+    modeCommandLineName: "a"
+    filePathWithEpisodesList: ""
 - !<com.sheryv.tools.movielinkgripper.config.ReplaceMode>
   name: "Replace"
   modeCommandLineName: "r"
   filePathWithEpisodesList: ""
-  csvFilePathWithLinksToReplace: "C:\\temp\\links.csv"
+  csvFilePathWithLinksToReplace: "G:\\links.csv"
 - !<com.sheryv.tools.movielinkgripper.config.RunMode>
   name: "Run"
   modeCommandLineName: "s"
   filePathWithEpisodesList: ""
   providerName: "alltube"
-  seriesName: "Supergirl"
-  seasonIndex: 3
-  relativeUrlToSeries: "/serial/supergirl/1856"
+  seriesName: "Orphan Black"
+  seasonIndex: 5
+  relativeUrlToSeries: "/serial/orphan-black/1303"
   useMoreHostingsProvider: false
   findOnlyForAbsent: false
-  directoryToCompareIfIsAbsent: "C:\\temp\\Supergirl 03"
-- !<com.sheryv.tools.movielinkgripper.config.AddMode>
-  name: "Add"
-  modeCommandLineName: "a"
-  filePathWithEpisodesList: ""
+  directoryToCompareIfIsAbsent: "G:\\Filmy\\Serial\\Supergirl 03"
 - !<com.sheryv.tools.movielinkgripper.config.SendToManagerMode>
   name: "SendToManager"
   modeCommandLineName: "m"

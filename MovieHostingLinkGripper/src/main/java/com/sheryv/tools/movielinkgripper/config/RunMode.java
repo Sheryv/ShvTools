@@ -80,6 +80,6 @@ public class RunMode extends AbstractMode {
                 log.error("Incorrect directory path at directoryToCompareIfIsAbsent: " + directoryToCompareIfIsAbsent);
             }
         }
-        Gripper.create(options, provider);
+        Gripper.create(options, provider).start();
     }
 }
