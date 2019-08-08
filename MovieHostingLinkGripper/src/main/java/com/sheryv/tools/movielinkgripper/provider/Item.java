@@ -2,7 +2,7 @@ package com.sheryv.tools.movielinkgripper.provider;
 
 import com.sheryv.tools.movielinkgripper.EpisodesTypes;
 import com.sheryv.tools.movielinkgripper.Format;
-import com.sheryv.utils.Strings;
+import com.sheryv.util.Strings;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,8 +26,7 @@ public class Item {
     }
 
     public void updateHosting(Hosting hosting) {
-        if (!Strings.isNullOrEmpty(hosting.getRating()))
-            setFormat(new Format().setRating(hosting.getRating()));
+        setFormat(hosting.getFormat());
         setType(hosting.getType());
     }
 }

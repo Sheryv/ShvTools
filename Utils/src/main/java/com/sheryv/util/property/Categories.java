@@ -1,4 +1,4 @@
-package com.sheryv.common.property;
+package com.sheryv.util.property;
 
 public class Categories {
     private Categories() {

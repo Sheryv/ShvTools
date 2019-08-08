@@ -1,6 +1,6 @@
 package com.sheryv.tools.movielinkgripper.provider;
 
-import javafx.util.Pair;
+import com.sheryv.util.Pair;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -61,7 +61,7 @@ public class FMoviesProvider extends VideoProvider {
         return gripper.calculateEpisodesItemsWithNumSeparator(links, episodes, link -> {
             var s = link.split("\\|");
             int n = Integer.parseInt(s[0]);
-            return new Pair<>(n, s[1]);
+            return Pair.of(n, s[1]);
         }, this);
     }
 
@@ -74,7 +74,7 @@ public class FMoviesProvider extends VideoProvider {
     }
 
     @Override
-    public void openVideoPage(Item item, String videoLink) {
+    public void openVideoPage(Item item, Hosting videoLink) {
         List<WebElement> elements = gripper.getDriver().findElements(SEL_PLAYER);
         if (elements.size() == 0) {
 //                WebElement body_div = element;
@@ -88,7 +88,7 @@ public class FMoviesProvider extends VideoProvider {
     }
 
     @Override
-    public String findLoadedVideoDownloadUrl(Item item) {
+    public String findLoadedVideoDownloadUrl(Item item, Hosting hosting) {
         WebElement video = gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(SEL_PLAYER));
         return video.getAttribute(SRC_ATTR);
     }

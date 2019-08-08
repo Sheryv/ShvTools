@@ -1,7 +1,7 @@
 package com.sheryv.tools.movielinkgripper.config;
 
 import com.sheryv.tools.movielinkgripper.Transformer;
-import com.sheryv.utils.Strings;
+import com.sheryv.util.Strings;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -16,7 +16,7 @@ public class ReplaceMode extends AbstractMode {
 
     public static final String NAME = "Replace";
 
-    private String csvFilePathWithLinksToReplace = "G:\\links.csv";
+    private String csvFilePathWithLinksToReplace = "D:\\links.csv";
 
     private ReplaceMode() {
         super(NAME, "r");

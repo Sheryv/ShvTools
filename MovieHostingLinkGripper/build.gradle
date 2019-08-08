@@ -6,11 +6,12 @@ ext.longName = "Movie Link Gripper"
 version getVersionName(name)
 //apply plugin: 'kotlin'
 apply plugin: 'application'
+apply plugin: 'idea'
 ext.className = "com.sheryv.tools.movielinkgripper.Bootstrapper"
 mainClassName = ext.className
 
 dependencies {
-    compile project(':utils')
+    compile project(':util')
 
 //    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 //    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'

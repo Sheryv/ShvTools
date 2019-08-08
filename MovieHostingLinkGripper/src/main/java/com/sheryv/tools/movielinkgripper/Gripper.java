@@ -2,13 +2,14 @@ package com.sheryv.tools.movielinkgripper;
 
 import com.google.common.collect.Streams;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
+import com.sheryv.tools.movielinkgripper.config.HostingConfig;
 import com.sheryv.tools.movielinkgripper.provider.Hosting;
 import com.sheryv.tools.movielinkgripper.provider.Item;
 import com.sheryv.tools.movielinkgripper.provider.VideoProvider;
-import com.sheryv.utils.FileUtils;
-import com.sheryv.utils.SerialisationUtils;
-import com.sheryv.utils.Strings;
-import javafx.util.Pair;
+import com.sheryv.util.FileUtils;
+import com.sheryv.util.Pair;
+import com.sheryv.util.SerialisationUtils;
+import com.sheryv.util.Strings;
 import lombok.Data;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +24,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.io.File;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -114,17 +113,31 @@ public class Gripper implements AutoCloseable {
             int err = 0;
             try {
                 provider.goToEpisodePage(item);
-                List<Hosting> hostings = provider.loadItemDataFromSummaryPageAndGetVideoLinks(item);
-                for (Hosting hosting : hostings) {
-                    provider.openVideoPage(item, hosting.getVideoLink());
-                    item.updateHosting(hosting);
-                    try {
-                        downloadLink = provider.findLoadedVideoDownloadUrl(item);
-                        if (!Strings.isNullOrEmpty(downloadLink)) {
-                            break;
+                List<Hosting> allHostings = provider.loadItemDataFromSummaryPageAndGetVideoLinks(item);
+                if (allHostings.isEmpty())
+                    System.out.printf("No hosting found for: E%02d %s | %s%n", item.getNum(), item.getName(), item.getLink());
+
+                List<HostingConfig> priorities = getPriorities(i);
+                for (HostingConfig priority : priorities) {
+                    List<Hosting> hostings = allHostings.stream()
+                            .filter(hosting -> hosting.getName().equals(priority.getCode()))
+                            .limit(configuration.getTriesBeforeHostingChange())
+                            .collect(Collectors.toList());
+
+                    for (Hosting hosting : hostings) {
+                        try {
+                            provider.openVideoPage(item, hosting);
+                            item.updateHosting(hosting);
+                            downloadLink = provider.findLoadedVideoDownloadUrl(item, hosting);
+                            if (!Strings.isNullOrEmpty(downloadLink)) {
+                                break;
+                            }
+                        } catch (Exception e) {
+                            log.error("Error while searching dl url at " + hosting.getName() + " ["+hosting.getIndex()+"] | " + hosting.getVideoLink(), e);
                         }
-                    } catch (Exception e) {
-                        log.error("Error while searching dl url at " + hosting.getName() + " | " + hosting.getVideoLink(), e);
+                    }
+                    if (!Strings.isNullOrEmpty(downloadLink)) {
+                        break;
                     }
                 }
             } catch (Exception e) {
@@ -136,7 +149,7 @@ public class Gripper implements AutoCloseable {
             Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err, item.getType());
             series.getEpisodes().add(ep);
             if (options.isSendToIdm())
-                addToIDM(series, ep);
+                addToIDM(series, ep, configuration);
             json = SerialisationUtils.toJsonPretty(series);
             FileUtils.saveFile(json, Paths.get(configuration.getDefaultFilePathWithEpisodesList()));
             log.info("\n" + ep.toString() + "\n");
@@ -171,15 +184,39 @@ public class Gripper implements AutoCloseable {
         FileUtils.saveFile(json, Paths.get(configuration.getDefaultFilePathWithEpisodesList()));
     }*/
 
+    public List<HostingConfig> getPriorities(int offset) {
+        List<HostingConfig> base = configuration.getHostings().stream()
+                .filter(HostingConfig::isEnabled)
+                .sorted((o1, o2) -> Integer.compare(o2.getPriority(), o1.getPriority()))
+                .collect(Collectors.toList());
+        if (configuration.getNumOfTopHostingsUsedSimultaneously() <= 0) {
+            return base;
+        }
+        List<HostingConfig> top = base.stream().limit(configuration.getNumOfTopHostingsUsedSimultaneously()).collect(Collectors.toList());
+        base.removeAll(top);
+        offset = offset % top.size();
+        ArrayDeque<HostingConfig> deque = new ArrayDeque<>(top);
+        for (int i = 0; i < offset; i++) {
+            HostingConfig poll = deque.poll();
+            deque.add(poll);
+        }
+        ArrayList<HostingConfig> result = new ArrayList<>(deque);
+        result.addAll(base);
+        return result;
+    }
+
+
     public void beginStopLoading() {
         service.schedule(() -> {
             executor.executeScript("return window.stop");
         }, STOP_DELAY, TimeUnit.SECONDS);
     }
 
-    public static void addToIDM(Series series, Episode episode) {
-        String ex = String.format("\"F:\\__Programs\\Internet Download Manager\\IDMan.exe\" /n /f \"%s\" /p \"G:\\Filmy\\Serial\\%s %02d\"" +
+    public static void addToIDM(Series series, Episode episode, Configuration configuration) {
+        String idmExePath = configuration.getIdmExePath();
+        String ex = String.format("\"%s\" /n /f \"%s\" /p \"G:\\Filmy\\Serial\\%s %02d\"" +
                         " /a /d %s",
+                idmExePath,
                 episode.generateFileName(series),
                 series.getName(),
                 series.getSeason(),
@@ -253,7 +290,6 @@ public class Gripper implements AutoCloseable {
          */
         private List<Integer> requiredIndexes = null;
         private boolean sendToIdm = false;
-        private boolean useMoreProviders = false;
     }
 
     /*

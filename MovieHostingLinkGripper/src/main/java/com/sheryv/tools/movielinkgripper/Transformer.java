@@ -1,16 +1,18 @@
 package com.sheryv.tools.movielinkgripper;
 
-import com.sheryv.tools.movielinkgripper.provider.AlltubeProvider;
-import com.sheryv.tools.movielinkgripper.provider.FMoviesProvider;
-import com.sheryv.tools.movielinkgripper.provider.VideoProvider;
-import com.sheryv.utils.FileUtils;
-import com.sheryv.utils.SerialisationUtils;
+import com.sheryv.tools.movielinkgripper.config.Configuration;
+import com.sheryv.tools.movielinkgripper.provider.*;
+import com.sheryv.util.FileUtils;
+import com.sheryv.util.SerialisationUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Supplier;
 
 @Slf4j
 public class Transformer {
@@ -19,10 +21,10 @@ public class Transformer {
         return SerialisationUtils.fromJson(json, Series.class);
     }
 
-    public static void sendToIDM(Series series) {
+    public static void sendToIDM(Series series, Configuration configuration) {
         for (Episode episode : series.getEpisodes()) {
             if (episode.getError() == 0) {
-                Gripper.addToIDM(series, episode);
+                Gripper.addToIDM(series, episode, configuration);
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
@@ -53,11 +55,24 @@ public class Transformer {
     }
 
     public static VideoProvider createProvider(String provider, String seriesName, int season, String relativeLink) {
-        if (("alltube" + AlltubeProvider.BASE_URL).contains(provider)) {
-            return new AlltubeProvider(seriesName, season, relativeLink);
-        } else if (("fmovies" + FMoviesProvider.BASE_URL).contains(provider)) {
-            return new FMoviesProvider(seriesName, season, relativeLink);
+        for (Map.Entry<String, Creator> entry : PROVIDERS.entrySet()) {
+            if (entry.getKey().contains(provider)) {
+                return entry.getValue().create(seriesName, season, relativeLink);
+            }
         }
         return null;
+    }
+
+    public static final Map<String, Creator> PROVIDERS = new HashMap<>();
+
+    static {
+        PROVIDERS.put("alltube", AlltubeProvider::new);
+        PROVIDERS.put("fmovies", FMoviesProvider::new);
+        PROVIDERS.put("fili", FiliProvider::new);
+        PROVIDERS.put("vodgo", VodGoProvider::new);
+    }
+
+    interface Creator {
+        VideoProvider create(String seriesName, int season, String relativeLink);
     }
 }

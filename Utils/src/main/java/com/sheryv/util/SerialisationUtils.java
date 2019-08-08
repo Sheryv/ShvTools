@@ -1,4 +1,4 @@
-package com.sheryv.utils;
+package com.sheryv.util;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;

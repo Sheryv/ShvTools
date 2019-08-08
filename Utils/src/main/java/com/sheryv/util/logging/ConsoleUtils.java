@@ -1,4 +1,4 @@
-package com.sheryv.utils.logging;
+package com.sheryv.util.logging;
 
 import java.util.HashMap;
 import java.util.Map;

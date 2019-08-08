@@ -1,4 +1,4 @@
-package com.sheryv.utils.logging;
+package com.sheryv.util.logging;
 
 public class Lg {
     private Lg() {

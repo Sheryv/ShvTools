@@ -1,6 +1,6 @@
-package com.sheryv.utils;
+package com.sheryv.util;
 
-import com.sheryv.common.property.PropertyUtils;
+import com.sheryv.util.property.PropertyUtils;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;

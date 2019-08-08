@@ -1,4 +1,4 @@
-package com.sheryv.common.property;
+package com.sheryv.util.property;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;

@@ -2,9 +2,10 @@ package com.sheryv.tools.movielinkgripper;
 
 import com.sheryv.tools.movielinkgripper.config.AbstractMode;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
-import com.sheryv.utils.FileUtils;
-import com.sheryv.utils.SerialisationUtils;
-import com.sheryv.utils.logging.Lg;
+import com.sheryv.tools.movielinkgripper.ui.MainWindow;
+import com.sheryv.util.FileUtils;
+import com.sheryv.util.SerialisationUtils;
+import com.sheryv.util.logging.Lg;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
@@ -32,12 +33,24 @@ public class Bootstrapper {
                         log.error("File does not exists");
                         return;
                     }
-                    Transformer.sendToIDM(Transformer.loadSeries(FileUtils.readFileInMemory(sec)));
+                    String str = FileUtils.readFileInMemory(Configuration.CONFIG_FILE);
+                    Configuration configuration = Configuration.init(SerialisationUtils.fromYaml(str, Configuration.class));
+                    Transformer.sendToIDM(Transformer.loadSeries(FileUtils.readFileInMemory(sec)), configuration);
                 } else {
                     printDoc();
                 }
             } else if (args.length == 1 && args[0].equals("c")) {
                 runConfig(null);
+            } else if (args[0].equals("i")) {
+                log.info("Loading from file " + new File(Configuration.CONFIG_FILE).getAbsolutePath());
+                if (!Files.exists(Paths.get(Configuration.CONFIG_FILE))) {
+                    String s = SerialisationUtils.toYaml(Configuration.getDefault());
+                    FileUtils.saveFile(s, Paths.get(Configuration.CONFIG_FILE));
+                    log.info("Example config file was generated in " + new File(Configuration.CONFIG_FILE).getAbsolutePath());
+                }
+                String str = FileUtils.readFileInMemory(Configuration.CONFIG_FILE);
+                Configuration.init(SerialisationUtils.fromYaml(str, Configuration.class));
+                MainWindow.createAndShowGUI();
             } else {
                 printDoc();
             }
@@ -48,7 +61,7 @@ public class Bootstrapper {
 
     private static void runConfig(@Nullable String mode) throws Exception {
         if (mode == null || !Files.exists(Paths.get(Configuration.CONFIG_FILE))) {
-            String s = SerialisationUtils.toYaml(Configuration.DEFAULT);
+            String s = SerialisationUtils.toYaml(Configuration.getDefault());
             FileUtils.saveFile(s, Paths.get(Configuration.CONFIG_FILE));
             log.info("Example config file was generated in " + new File(Configuration.CONFIG_FILE).getAbsolutePath());
         } else {

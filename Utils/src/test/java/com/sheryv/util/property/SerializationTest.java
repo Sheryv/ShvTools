@@ -1,4 +1,4 @@
-package com.sheryv.common.property;
+package com.sheryv.util.property;
 
 import org.junit.Ignore;
 

@@ -2,18 +2,39 @@ package com.sheryv.tools.movielinkgripper.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.sheryv.utils.Strings;
+import com.sheryv.tools.movielinkgripper.EpisodesTypes;
+import com.sheryv.util.FileUtils;
+import com.sheryv.util.SerialisationUtils;
+import com.sheryv.util.Strings;
 import lombok.*;
 
 import java.io.File;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.nio.file.Paths;
+import java.util.*;
+import java.util.function.Consumer;
 
 @Data
 @NoArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Configuration {
+
+    private static boolean paused;
+    private static Consumer<Boolean> onPausedChange;
+
+    public static boolean isPaused() {
+        return paused;
+    }
+
+    public static void setPaused(boolean paused) {
+        Configuration.paused = paused;
+        if (onPausedChange != null)
+            onPausedChange.accept(paused);
+    }
+
+    public static void setOnPausedChange(Consumer<Boolean> onPausedChange) {
+        Configuration.onPausedChange = onPausedChange;
+    }
 
     private static Configuration instance;
 
@@ -45,10 +66,16 @@ public class Configuration {
 
     private String episodeCodeFormatter;
     private String episodeNameFormatter;
+    private String idmExePath;
 
     private String chromeExePath;
     private String chromeSeleniumDriverPath;
     private List<String> chromeExtensionsPaths;
+    private int triesBeforeHostingChange = 3;
+    private int numOfTopHostingsUsedSimultaneously = 3;
+    private List<String> availableHostings;
+    private List<EpisodesTypes> allowedEpisodeTypes = Arrays.asList(EpisodesTypes.values());
+    private List<HostingConfig> hostings;
 
     @JsonProperty(value = "startModes", index = 100)
     private Set<AbstractMode> modes;
@@ -75,24 +102,57 @@ public class Configuration {
         }
     }
 
+    public RunMode findRunMode() {
+        return (RunMode) Configuration.get().getModes().stream().filter(m -> m instanceof RunMode).findFirst().get();
+    }
 
 
     public static final String CONFIG_FILE = "movie_gripper.yaml";
-    public static final Configuration DEFAULT;
+    public static final String CONFIG_TEMPLATE_FILE = "../../movie_gripper_template.yaml";
 
-    static {
+    public static Configuration getDefault() {
         AddMode add = new AddMode();
-        ReplaceMode repl = new ReplaceMode("G:\\links.csv");
-        RunMode run = new RunMode("alltube", "Supergirl", 3, "/serial/supergirl/1856");
+        ReplaceMode repl = new ReplaceMode("D:\\links.csv");
+        RunMode run = new RunMode("alltube", "Arrow", 1, "");
         SendToManagerMode send = new SendToManagerMode();
-        run.setDirectoryToCompareIfIsAbsent("G:\\Filmy\\Serial\\Supergirl 03");
-        DEFAULT = new Configuration(Set.of(add, repl, run, send));
-        DEFAULT.setEpisodeCodeFormatter("%s S%02dE%02d");
-        DEFAULT.setEpisodeNameFormatter(" - %s%s");
-        DEFAULT.setDefaultFilePathWithEpisodesList("G:\\arrow_list.json");
-        DEFAULT.setChromeExePath("F:\\__Programs\\Google\\Chrome\\Application\\chrome.exe");
-        DEFAULT.setChromeSeleniumDriverPath("F:\\Data\\Selenium_drivers\\chromedriver.exe");
-        DEFAULT.setChromeExtensionsPaths(Collections.singletonList("F:\\Data\\Selenium_drivers\\ublock_chrome_68.0.3440.106.crx"));
+        Configuration result = new Configuration(Set.of(add, repl, run, send));
+        FileUtils.readFileInMemorySilently(Paths.get(CONFIG_TEMPLATE_FILE)).ifPresent(s -> {
+            try {
+                Configuration c = SerialisationUtils.fromYaml(s, Configuration.class);
+                result.setAllowedEpisodeTypes(c.getAllowedEpisodeTypes());
+                result.setHostings(c.getHostings());
+                result.setTriesBeforeHostingChange(c.getTriesBeforeHostingChange());
+                result.setAvailableHostings(c.getAvailableHostings());
+                result.setEpisodeCodeFormatter(c.getEpisodeCodeFormatter());
+                result.setEpisodeNameFormatter(c.getEpisodeNameFormatter());
+                result.setIdmExePath(c.getIdmExePath());
+                result.setDefaultFilePathWithEpisodesList(c.getDefaultFilePathWithEpisodesList());
+                result.setChromeExePath(c.getChromeExePath());
+                result.setChromeSeleniumDriverPath(c.getChromeSeleniumDriverPath());
+                result.setChromeExtensionsPaths(c.getChromeExtensionsPaths());
+                result.setUseChromeBrowser(c.isUseChromeBrowser());
+
+                if (result.getHostings() == null) {
+                    List<HostingConfig> list = new ArrayList<>();
+                    List<String> resultAvailableHostings = result.getAvailableHostings();
+                    for (int i = 0; i < resultAvailableHostings.size(); i++) {
+                        String hosting = resultAvailableHostings.get(i);
+                        list.add(new HostingConfig(hosting, (resultAvailableHostings.size() - i) * 10, hosting, true));
+                    }
+                    result.setHostings(list);
+                } else {
+                    for (String availableHosting : result.getAvailableHostings()) {
+                        if (result.getHostings().stream().noneMatch(h -> h.getCode().equals(availableHosting))) {
+                            HostingConfig min = result.getHostings().stream().min(Comparator.comparingInt(HostingConfig::getPriority)).get();
+                            result.getHostings().add(new HostingConfig(availableHosting, min.getPriority() - 1, availableHosting, false));
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+        return result;
     }
 
 

@@ -1,4 +1,4 @@
-package com.sheryv.utils;
+package com.sheryv.util;
 
 public class Initialisation {
 

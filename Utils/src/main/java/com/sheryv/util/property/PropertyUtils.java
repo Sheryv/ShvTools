@@ -1,4 +1,4 @@
-package com.sheryv.common.property;
+package com.sheryv.util.property;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;

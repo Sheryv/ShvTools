@@ -2,9 +2,11 @@ package com.sheryv.tools.movielinkgripper.config;
 
 import com.sheryv.tools.movielinkgripper.Series;
 import com.sheryv.tools.movielinkgripper.Transformer;
-import com.sheryv.utils.FileUtils;
-import com.sheryv.utils.Strings;
+import com.sheryv.util.FileUtils;
+import com.sheryv.util.Strings;
+import lombok.Getter;
 
+@Getter
 public class SendToManagerMode extends AbstractMode {
     public static final String NAME = "SendToManager";
 
@@ -19,6 +21,6 @@ public class SendToManagerMode extends AbstractMode {
             path = configuration.getDefaultFilePathWithEpisodesList();
         String json = FileUtils.readFileInMemory(path);
         Series series = Transformer.loadSeries(json);
-        Transformer.sendToIDM(series);
+        Transformer.sendToIDM(series, configuration);
     }
 }

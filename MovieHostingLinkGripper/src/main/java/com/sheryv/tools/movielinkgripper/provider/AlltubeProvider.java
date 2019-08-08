@@ -1,20 +1,18 @@
 package com.sheryv.tools.movielinkgripper.provider;
 
 import com.sheryv.tools.movielinkgripper.EpisodesTypes;
+import com.sheryv.tools.movielinkgripper.Format;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class AlltubeProvider extends VideoProvider {
 
-    private static final String[] HOSTINGS = new String[]{"streamango", "streamcherry", "vidoza", "openload"};
-    private static final String[] ADDITIONAL_HOSTINGS = new String[]{};
     public static final String BASE_URL = "https://alltube.tv";
 
     public AlltubeProvider(String series, int seriesNum, String allEpisodesLinkPart) {
@@ -52,23 +50,14 @@ public class AlltubeProvider extends VideoProvider {
             String u = map.get("u");
             String[] parts = e.split("\\] ");
             int num = Integer.parseInt(parts[0].substring(parts[0].indexOf('e') + 1));
-            String name = parts[1];
+            String name = parts[1].trim();
             items.add(new Item(u, name, num));
         }
         return items;
     }
 
     @Override
-    public void goToEpisodePage(Item item) {
-        gripper.getDriver().navigate().to(item.getLink());
-    }
-
-    @Override
     public List<Hosting> loadItemDataFromSummaryPageAndGetVideoLinks(Item item) {
-        List<String> hostings = new ArrayList<>(Arrays.asList(HOSTINGS));
-        if (gripper.getOptions().isUseMoreProviders()) {
-            hostings.addAll(Arrays.asList(ADDITIONAL_HOSTINGS));
-        }
         String js = "return $('#links-container table tr').map(function(a,e){\n" +
                 "  let j = $(e);\n" +
                 "  return j.children('td').eq(0).text()+'|||'+\n" +
@@ -79,38 +68,28 @@ public class AlltubeProvider extends VideoProvider {
         @SuppressWarnings("unchecked")
         List<String> links = (List<String>) gripper.executeScript(js);
         List<Hosting> videos = new ArrayList<>();
-        for (String link : links) {
+        for (int i = 0; i < links.size(); i++) {
+            String link = links.get(i);
             String[] parts = link.split("\\|\\|\\|");
             String hosting = parts[0].trim().toLowerCase();
-            if (hostings.contains(hosting)) {
-                videos.add(new Hosting(hosting, parseType(parts[1].trim()), parts[2].trim(), parts[3].trim()));
-            }
+            videos.add(new Hosting(hosting, parseType(parts[1].trim()), new Format().setRating(parts[2].trim()), i, parts[3].trim()));
         }
-        if (videos.isEmpty())
-            System.out.printf("No hosting found for: E%02d %s | %s%n", item.getNum(), item.getName(), item.getLink());
         return videos;
     }
 
     @Override
-    public void openVideoPage(Item item, String videoLink) {
+    public void openVideoPage(Item item, Hosting hosting) {
         WebDriver driver = gripper.getDriver();
-        driver.navigate().to(videoLink);
+        driver.navigate().to(hosting.getVideoLink());
     }
 
     @Override
-    public String findLoadedVideoDownloadUrl(Item item) {
+    public String findLoadedVideoDownloadUrl(Item item, Hosting hosting) {
         WebDriver driver = gripper.getDriver();
 //        WebElement iframe = driver.findElement(By.cssSelector(".container iframe"));
-        WebElement iframe = gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".container iframe")));
+        WebElement iframe = waitForAttribute("src", By.cssSelector(".container iframe"));
         driver.switchTo().frame(iframe);
-//        By btn = By.cssSelector("button");
-//        WebElement btnElement = gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(btn));
-        gripper.executeScript("return $('#videooverlay').click();");
-        gripper.executeScript("return $('div button').eq(0).click();");
-//        btnElement.click();
-        By byVideo = By.cssSelector("video:not(.hidden)");
-        WebElement video = gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(byVideo));
-        return video.getAttribute("src");
+        return initializeHostingAndGetUrl(hosting);
     }
 
     private EpisodesTypes parseType(String type) {

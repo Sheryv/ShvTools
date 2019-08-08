@@ -4,7 +4,8 @@ package com.sheryv.tools.movielinkgripper.config;
 import com.sheryv.tools.movielinkgripper.Gripper;
 import com.sheryv.tools.movielinkgripper.Transformer;
 import com.sheryv.tools.movielinkgripper.provider.VideoProvider;
-import com.sheryv.utils.Strings;
+import com.sheryv.util.Strings;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -19,7 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-@Getter
+@Data
 @Accessors(chain = true)
 @Slf4j
 public class RunMode extends AbstractMode {
@@ -31,8 +32,6 @@ public class RunMode extends AbstractMode {
     private String seriesName = "Arrow";
     private int seasonIndex = 1;
     private String relativeUrlToSeries = "/";
-    @Setter
-    private boolean useMoreHostingsProvider = false;
     @Setter
     private boolean findOnlyForAbsent = false;
     @Setter
@@ -54,8 +53,7 @@ public class RunMode extends AbstractMode {
     @Override
     public void execute(Configuration configuration) throws Exception {
         VideoProvider provider = Transformer.createProvider(providerName, seriesName, seasonIndex, relativeUrlToSeries);
-        Gripper.Options options = new Gripper.Options()
-                .setUseMoreProviders(useMoreHostingsProvider);
+        Gripper.Options options = new Gripper.Options();
         if (!Strings.isNullOrEmpty(filePathWithEpisodesList)) {
             configuration.setDefaultFilePathWithEpisodesList(filePathWithEpisodesList);
         }

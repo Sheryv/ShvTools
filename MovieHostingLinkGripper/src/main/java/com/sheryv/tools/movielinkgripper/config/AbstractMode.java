@@ -1,5 +1,6 @@
 package com.sheryv.tools.movielinkgripper.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import lombok.Getter;
 
@@ -7,7 +8,7 @@ import lombok.Getter;
 //@JsonTypeInfo(
 //        use = JsonTypeInfo.Id.NAME,
 //        include = JsonTypeInfo.As.PROPERTY,
-//        com.sheryv.tools.utils.property = "name")
+//        com.sheryv.tools.util.property = "name")
 //@JsonSubTypes({
 //        @JsonSubTypes.Type(value = RunMode.class, name = RunMode.NAME),
 //        @JsonSubTypes.Type(value = ReplaceMode.class, name = ReplaceMode.NAME),
@@ -17,6 +18,7 @@ import lombok.Getter;
         use = JsonTypeInfo.Id.CLASS,
         include = JsonTypeInfo.As.PROPERTY,
         property = "clazz")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class AbstractMode {
 
     protected final String name;

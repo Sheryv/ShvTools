@@ -4,11 +4,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
-import com.sheryv.utils.Strings;
+import com.sheryv.util.Strings;
 import lombok.Getter;
 import lombok.ToString;
 
 import javax.annotation.Nullable;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Getter
 @ToString
@@ -66,7 +68,12 @@ public class Episode {
         if (!Strings.isNullOrEmpty(config.getEpisodeNameFormatter())) {
             nameFormatter = config.getEpisodeNameFormatter();
         }
-
-        return String.format(config.getEpisodeCodeFormatter() + nameFormatter, series.getName(), series.getSeason(), n, name, ext);
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("series_name", series.getName());
+        values.put("season", String.format("%02d", series.getSeason()));
+        values.put("episode_number", String.format("%02d", n));
+        values.put("episode_name", name);
+        values.put("file_extension", ext);
+        return Strings.fillTemplate(config.getEpisodeCodeFormatter()+nameFormatter, values);
     }
 }
