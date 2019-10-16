@@ -1,6 +1,7 @@
 package com.sheryv.tools.movielinkgripper.provider;
 
 import com.sheryv.tools.movielinkgripper.EpisodesTypes;
+import com.sheryv.tools.movielinkgripper.Format;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -14,6 +15,7 @@ import java.util.Map;
 public class VodGoProvider extends VideoProvider {
 
     public static final String BASE_URL = "https://vodgo.pl";
+    private static final String ROW_SELECTOR = ".mt-3.p-0 .tab-content > .tab-pane > ul > li > div";
 
     public VodGoProvider(String series, int season, String allEpisodesLinkPart) {
         super(series, season, allEpisodesLinkPart);
@@ -55,13 +57,14 @@ public class VodGoProvider extends VideoProvider {
 
     @Override
     public List<Hosting> loadItemDataFromSummaryPageAndGetVideoLinks(Item item) {
-        String js = "return $('.mt-1.p-0 .tab-content > .tab-pane > ul > li > div > div > button').map((e,a)=>{ return {h:$(a).text()};}).get();";
+        String js = "return $('" + ROW_SELECTOR + "').map((e,a)=>{ return {h:$(a).find('div>button').first().text(), q:$(a).find('div>button').eq(1).text()};}).get();";
         List<Map<String, String>> mapList = gripper.executeScriptFetchList(js);
         List<Hosting> videos = new ArrayList<>();
         for (int i = 0; i < mapList.size(); i++) {
             Map<String, String> map = mapList.get(i);
             String name = map.get("h").trim().toLowerCase();
-            videos.add(new Hosting(name, EpisodesTypes.UNKNOWN, null, i, null));
+            String format = map.get("q").trim().toLowerCase();
+            videos.add(new Hosting(name, EpisodesTypes.UNKNOWN, new Format().setQuality(format), i, null));
         }
 
         return videos;
@@ -70,8 +73,8 @@ public class VodGoProvider extends VideoProvider {
     @Override
     public void openVideoPage(Item item, Hosting videoLink) {
         gripper.getDriver().navigate().refresh();
-        gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".mt-1.p-0 .tab-content > .tab-pane > ul > li > div > div:nth-child(2) > form")));
-        String js = "$('.mt-1.p-0 .tab-content > .tab-pane > ul > li > div > div:nth-child(2) > form > div > a').eq(" + videoLink.getIndex() + ").click();";
+        gripper.getWebWait().until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(ROW_SELECTOR + " > div > form")));
+        String js = "$('" + ROW_SELECTOR + " > div > form a').eq(" + videoLink.getIndex() + ").click();";
         gripper.executeScript(js);
     }
 

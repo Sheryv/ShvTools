@@ -25,25 +25,26 @@ public class Episode {
     private final String page;
 
     public Episode(String page, String name, int n, String dlLink) {
-        this(n, name, EpisodesTypes.UNKNOWN, 0, dlLink, page, null);
+        this(page, name, n, dlLink, 0, EpisodesTypes.UNKNOWN, null);
+//        this(n, name, EpisodesTypes.UNKNOWN, 0, dlLink, page, null);
     }
 
     public Episode(String page, String name, int n, String dlLink, EpisodesTypes type) {
-        this(n, name, type, 0, dlLink, page, null);
+        this(page, name, n, dlLink, 0, type, null);
     }
 
     public Episode(String page, String name, int n, String dlLink, int error, EpisodesTypes type) {
-        this(n, name, type, error, dlLink, page, null);
+        this(page, name, n, dlLink, error, type, null);
     }
 
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
     public Episode(
-            @JsonProperty("n") int n,
-            @JsonProperty("name") String name,
-            @JsonProperty("type") EpisodesTypes type,
-            @JsonProperty("error") int error,
-            @JsonProperty("dlLink") String dlLink,
             @JsonProperty("page") String page,
+            @JsonProperty("name") String name,
+            @JsonProperty("n") int n,
+            @JsonProperty("dlLink") String dlLink,
+            @JsonProperty("error") int error,
+            @JsonProperty("type") EpisodesTypes type,
             @JsonProperty("format") @Nullable Format format) {
         this.n = n;
         this.name = name;

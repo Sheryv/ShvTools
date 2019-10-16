@@ -146,7 +146,7 @@ public class Gripper implements AutoCloseable {
             if (Strings.isNullOrEmpty(downloadLink)) {
                 err = 2;
             }
-            Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err, item.getType());
+            Episode ep = new Episode(item.getLink(), item.getName(), item.getNum(), downloadLink, err, item.getType(), item.getFormat());
             series.getEpisodes().add(ep);
             if (options.isSendToIdm())
                 addToIDM(series, ep, configuration);
