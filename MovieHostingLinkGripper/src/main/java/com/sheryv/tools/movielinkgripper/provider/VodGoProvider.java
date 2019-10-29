@@ -43,6 +43,7 @@ public class VodGoProvider extends VideoProvider {
 
     @Override
     public List<Item> findEpisodesItems(String serverIndex) {
+        List<WebElement> until = getGripper().getWebWait().until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.id("s" + season)));
         String js = "return $('#s"+season+" > ul > li > div > div.col-10.col-md-11 > a').map((e, a) => {return {e:$(a).text(), u:$(a).attr('href')};}).get();";
         List<Map<String, String>> mapList = gripper.executeScriptFetchList(js);
         List<Item> items = new ArrayList<>();
