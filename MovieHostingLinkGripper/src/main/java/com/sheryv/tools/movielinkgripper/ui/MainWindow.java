@@ -11,6 +11,7 @@ import com.sheryv.tools.movielinkgripper.config.RunMode;
 import com.sheryv.tools.movielinkgripper.provider.Hosting;
 import com.sheryv.util.FileUtils;
 import com.sheryv.util.SerialisationUtils;
+import com.sheryv.util.VersionUtils;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
@@ -37,6 +38,8 @@ public class MainWindow {
     private JPanel properties;
     private JButton saveBtn;
     private JButton continueBtn;
+    private JButton openSearchWindowButton;
+    private JLabel statusBar;
 
     private boolean isWorking = false;
 
@@ -193,8 +196,11 @@ public class MainWindow {
             }
         });
 
+        openSearchWindowButton.addActionListener(e -> openSearchEpisodesWindow());
+
         Configuration.setOnPausedChange(aBoolean -> continueBtn.setEnabled(aBoolean));
         continueBtn.addActionListener(e -> Configuration.setPaused(false));
+        statusBar.setText(VersionUtils.loadVersionByModuleName("movie-link-gripper-version"));
         return this;
     }
 
@@ -225,6 +231,14 @@ public class MainWindow {
             f.setVisible(true);
         });
 
+    }
+
+    public void openSearchEpisodesWindow() {
+        JFrame f = new JFrame();
+        f.setTitle("Search and fill episodes links");
+        f.getContentPane().add(new SearchWindow().init().getMainPanel());
+        f.setSize(800, 550);
+        f.setVisible(true);
     }
 
     {
@@ -347,12 +361,23 @@ public class MainWindow {
         continueBtn.setEnabled(false);
         continueBtn.setText("Continue");
         panel1.add(continueBtn);
+        openSearchWindowButton = new JButton();
+        openSearchWindowButton.setText("Open search window");
+        panel1.add(openSearchWindowButton);
         final JPanel spacer8 = new JPanel();
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 6;
         gbc.fill = GridBagConstraints.VERTICAL;
         mainPanel.add(spacer8, gbc);
+        statusBar = new JLabel();
+        statusBar.setText("Label");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 1;
+        gbc.gridy = 7;
+        gbc.gridwidth = 5;
+        gbc.anchor = GridBagConstraints.WEST;
+        mainPanel.add(statusBar, gbc);
     }
 
     /**

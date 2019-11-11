@@ -3,7 +3,6 @@ package com.sheryv.tools.subtitlestranslator.api.parser;
 import com.sheryv.tools.subtitlestranslator.api.parser.exception.InvalidFileException;
 import com.sheryv.tools.subtitlestranslator.api.parser.exception.InvalidSubException;
 import com.sheryv.tools.subtitlestranslator.api.subtitle.common.TimedTextFile;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 
 import java.io.*;
@@ -40,7 +39,7 @@ public abstract class BaseParser<T extends TimedTextFile> implements SubtitlePar
             Type type = this.getClass().getGenericSuperclass();
             T sub = ((Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0]).newInstance();
 
-            byte[] bytes = IOUtils.toByteArray(is);
+            byte[] bytes = is.readAllBytes();
 
             try (InputStream nis = new ByteArrayInputStream(bytes);
                  InputStreamReader isr = new InputStreamReader(nis, StandardCharsets.UTF_8);

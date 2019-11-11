@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
 import com.sheryv.util.Strings;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.ToString;
 
 import javax.annotation.Nullable;
@@ -20,7 +21,8 @@ public class Episode {
     private final String name;
     private final EpisodesTypes type;
     private final int error;
-    private final String dlLink;
+    @Setter
+    private String dlLink;
     private final Format format;
     private final String page;
 

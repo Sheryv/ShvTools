@@ -1,17 +1,26 @@
 package com.sheryv.tools.movielinkgripper.ui;
 
 import com.sheryv.util.Strings;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.io.IOException;
 import java.util.function.Consumer;
 
+@Slf4j
 public class UiUtils {
     public static <T> JComponent appendRow(JPanel panel, String label, T value, Class<T> type, Consumer<T> onChange) {
         JPanel row = new JPanel(new BorderLayout(10, 0));
-        row.add(new JLabel(label), BorderLayout.WEST);
+        JLabel title = new JLabel(label);
+        title.setMinimumSize(new Dimension(60, 10));
+        title.setPreferredSize(new Dimension(140, 12));
+        title.setToolTipText(label);
+        row.add(title, BorderLayout.WEST);
         row.setMaximumSize(new Dimension(Short.MAX_VALUE, 26));
         row.setBorder(BorderFactory.createEmptyBorder(3, 5, 3, 5));
         JComponent box;
@@ -50,6 +59,30 @@ public class UiUtils {
         }
 
         row.add(box, BorderLayout.CENTER);
+        if (box instanceof JTextField) {
+            JPanel btns = new JPanel(new BorderLayout(2, 0));
+            JButton clearBtn = new JButton("X");
+            clearBtn.addActionListener(e -> {
+                ((JTextField) box).setText("");
+            });
+            row.add(clearBtn, BorderLayout.EAST);
+            JButton pasteBtn = new JButton("P");
+            pasteBtn.addActionListener(e -> {
+                try {
+                    String data = (String) Toolkit.getDefaultToolkit()
+                            .getSystemClipboard().getData(DataFlavor.stringFlavor);
+                    log.debug("Read from clipboard: {}", data);
+                    ((JTextField) box).setText(data);
+                } catch (UnsupportedFlavorException ex) {
+                    ex.printStackTrace();
+                } catch (IOException ex) {
+                    ex.printStackTrace();
+                }
+            });
+            btns.add(clearBtn, BorderLayout.WEST);
+            btns.add(pasteBtn, BorderLayout.EAST);
+            row.add(btns, BorderLayout.EAST);
+        }
         panel.add(row);
         return row;
     }

@@ -56,6 +56,8 @@ public class Configuration {
     @JsonProperty(value = "_comment", access = JsonProperty.Access.READ_ONLY, index = -500)
     private String comment = "This is main configuration file for Movie Link Gripper tool";
 
+    private String tmdbKey;
+
     private int searchStartIndex = 1;
 
     private int searchStopIndex = -1;
@@ -99,6 +101,9 @@ public class Configuration {
         }
         if (Strings.isNullOrEmpty(this.getChromeSeleniumDriverPath()) || !new File(this.getChromeSeleniumDriverPath()).exists()) {
             throw new IllegalArgumentException("Insert correct Selenium chromedriver.exe path in chromeSeleniumDriverPath field");
+        }
+        if (Strings.isNullOrEmpty(this.getTmdbKey())) {
+            throw new IllegalArgumentException("Tmdb key is required for search to work");
         }
     }
 
