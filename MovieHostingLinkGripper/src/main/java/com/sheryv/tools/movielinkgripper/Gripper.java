@@ -95,7 +95,7 @@ public class Gripper implements AutoCloseable {
 //            Thread.sleep(500);
         log.info("Run()");
         List<Item> items = provider.findEpisodesItems(null);
-        Series series = new Series(provider.getSeries(), provider.getSeason(), provider.getMainLang(), new ArrayList<>(25));
+        Series series = new Series(provider.getSeries(), provider.getSeason(), provider.getMainLang(), provider.getProviderUrl(), new ArrayList<>(25));
         String json = null;
         int start = configuration.getSearchStartIndex();
         if (options.getRequiredIndexes() != null) {

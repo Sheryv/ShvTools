@@ -29,6 +29,7 @@ public class SearchWindow {
     private JSpinner seasonNumber;
     private JTextField detailsField;
     private JTextField nameField;
+    private JButton showFileListButton;
     private TmdbApi api = new TmdbApi();
     private Series lastSeries;
     private Configuration configuration;
@@ -56,7 +57,7 @@ public class SearchWindow {
                             return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
                         })
                         .collect(Collectors.toList());
-                Series series = new Series(i.getName(), season, "pl", episodes);
+                Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), episodes);
                 fillList(series);
             });
         });
@@ -74,6 +75,8 @@ public class SearchWindow {
                 }
             }
         });
+        showFileListButton.addActionListener(e -> showFileNamesList(lastSeries));
+
         episodes.setLayout(new BoxLayout(episodes, BoxLayout.Y_AXIS));
         episodes.setAlignmentY(0);
         loadFromFile();
@@ -108,6 +111,15 @@ public class SearchWindow {
         detailsField.setText(String.format("%s [%d, %s, S%d] %s | %.2f", i.getOriginalName(),
                 i.getId(), i.getOriginalLanguage(), season, i.getFirstAirDate(), i.getPopularity()));
 
+    }
+
+    private void showFileNamesList(Series series) {
+        String collect = series.getEpisodes().stream().map(e -> e.generateFileName(series)).collect(Collectors.joining("\n"));
+        JTextArea textarea = new JTextArea(collect);
+        textarea.setEditable(false);
+        Font font = textarea.getFont();
+        textarea.setFont(font.deriveFont(font.getSize() + 5f));
+        JOptionPane.showMessageDialog(null, textarea, "Episodes files list", JOptionPane.PLAIN_MESSAGE);
     }
 
     public JPanel getMainPanel() {
@@ -274,6 +286,13 @@ public class SearchWindow {
         gbc.gridy = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         properties.add(spacer11, gbc);
+        showFileListButton = new JButton();
+        showFileListButton.setText("Show File List");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 9;
+        gbc.gridy = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        properties.add(showFileListButton, gbc);
         final JScrollPane scrollPane1 = new JScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 1;

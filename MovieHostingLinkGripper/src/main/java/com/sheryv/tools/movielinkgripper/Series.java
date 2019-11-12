@@ -11,13 +11,15 @@ public class Series {
     private final String name;
     private final int season;
     private final String lang;
+    private final String providerUrl;
     private final List<Episode> episodes;
 
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
-    public Series(@JsonProperty("name") String name, @JsonProperty("season") int season, @JsonProperty("lang") String lang, @JsonProperty("episodes") List<Episode> episodes) {
+    public Series(@JsonProperty("name") String name, @JsonProperty("season") int season, @JsonProperty("lang") String lang, @JsonProperty("providerUrl") String providerUrl, @JsonProperty("episodes") List<Episode> episodes) {
         this.name = name;
         this.season = season;
         this.lang = lang;
+        this.providerUrl = providerUrl;
         this.episodes = episodes;
     }
 }

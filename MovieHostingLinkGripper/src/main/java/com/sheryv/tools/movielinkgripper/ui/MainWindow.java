@@ -237,7 +237,7 @@ public class MainWindow {
         JFrame f = new JFrame();
         f.setTitle("Search and fill episodes links");
         f.getContentPane().add(new SearchWindow().init().getMainPanel());
-        f.setSize(800, 550);
+        f.setSize(1200, 750);
         f.setVisible(true);
     }
 
