@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sheryv.tools.movielinkgripper.Bootstrapper;
 import com.sheryv.tools.movielinkgripper.EpisodesTypes;
 import com.sheryv.tools.movielinkgripper.Transformer;
-import com.sheryv.tools.movielinkgripper.config.AbstractMode;
-import com.sheryv.tools.movielinkgripper.config.Configuration;
-import com.sheryv.tools.movielinkgripper.config.HostingConfig;
-import com.sheryv.tools.movielinkgripper.config.RunMode;
+import com.sheryv.tools.movielinkgripper.config.*;
 import com.sheryv.tools.movielinkgripper.provider.Hosting;
 import com.sheryv.util.FileUtils;
 import com.sheryv.util.SerialisationUtils;
@@ -40,6 +37,7 @@ public class MainWindow {
     private JButton continueBtn;
     private JButton openSearchWindowButton;
     private JLabel statusBar;
+    private JButton addToIDMButton;
 
     private boolean isWorking = false;
 
@@ -197,6 +195,21 @@ public class MainWindow {
         });
 
         openSearchWindowButton.addActionListener(e -> openSearchEpisodesWindow());
+
+        addToIDMButton.addActionListener(e -> {
+            addToIDMButton.setEnabled(false);
+            Executors.newSingleThreadExecutor().submit(() -> {
+                try {
+                    new SendToManagerMode().execute(config);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                } finally {
+                    EventQueue.invokeLater(() -> {
+                        addToIDMButton.setEnabled(true);
+                    });
+                }
+            });
+        });
 
         Configuration.setOnPausedChange(aBoolean -> continueBtn.setEnabled(aBoolean));
         continueBtn.addActionListener(e -> Configuration.setPaused(false));
@@ -364,6 +377,9 @@ public class MainWindow {
         openSearchWindowButton = new JButton();
         openSearchWindowButton.setText("Open search window");
         panel1.add(openSearchWindowButton);
+        addToIDMButton = new JButton();
+        addToIDMButton.setText("Add to IDM");
+        panel1.add(addToIDMButton);
         final JPanel spacer8 = new JPanel();
         gbc = new GridBagConstraints();
         gbc.gridx = 1;

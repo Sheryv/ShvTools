@@ -14,8 +14,11 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 public class SearchWindow {
@@ -41,24 +44,40 @@ public class SearchWindow {
             detailsField.setText("");
             nameField.setText("");
             api.searchTv(searchText.getText()).ifPresent(i -> {
+                searchBtn.setEnabled(false);
                 Integer season = (Integer) seasonNumber.getValue();
                 setDetails(i, season);
                 fillList(null);
-                List<Episode> episodes = api.getTvEpisodes(i.getId(), season).getEpisodes()
-                        .stream()
-                        .map(ep -> {
-                            Optional<Episode> found = lastSeries.getEpisodes().stream()
-                                    .filter(l -> l.getN() == ep.getEpisodeNumber() && season == lastSeries.getSeason())
-                                    .findAny();
-                            if (found.isPresent()) {
-                                Episode f = found.get();
-                                return new Episode(f.getPage(), ep.getName(), (int) ep.getEpisodeNumber(), f.getDlLink(), 0, f.getType(), f.getFormat());
+                Executors.newSingleThreadExecutor().submit(() -> {
+                    List<Episode> episodeList = Collections.emptyList();
+                    try {
+                        episodeList = api.getTvEpisodes(i.getId(), season).getEpisodes()
+                                .stream()
+                                .map(ep -> {
+                                    Optional<Episode> found = lastSeries.getEpisodes().stream()
+                                            .filter(l -> l.getN() == ep.getEpisodeNumber() && season == lastSeries.getSeason())
+                                            .findAny();
+                                    if (found.isPresent()) {
+                                        Episode f = found.get();
+                                        return new Episode(f.getPage(), ep.getName(), (int) ep.getEpisodeNumber(), f.getDlLink(), 0, f.getType(), f.getFormat());
+                                    }
+                                    return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
+                                })
+                                .collect(Collectors.toList());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    } finally {
+                        final List<Episode> copy = new ArrayList<>(episodeList);
+                        EventQueue.invokeLater(() -> {
+                            searchBtn.setEnabled(true);
+                            if (!copy.isEmpty()) {
+                                Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), copy);
+                                fillList(series);
                             }
-                            return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
-                        })
-                        .collect(Collectors.toList());
-                Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), episodes);
-                fillList(series);
+                        });
+                    }
+                });
+
             });
         });
 
