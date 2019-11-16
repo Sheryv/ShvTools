@@ -73,4 +73,15 @@ public class FileUtils {
     }
 
 
+    public static String sizeString(long bytes) {
+        double mb = bytes / 1024D / 1024D;
+        String label = "MB";
+        int precision = 0;
+        if (mb > 1024) {
+            label = "GB";
+            mb = mb / 1024D;
+            precision = 2;
+        }
+        return String.format("%." + precision + "f %s", mb, label);
+    }
 }

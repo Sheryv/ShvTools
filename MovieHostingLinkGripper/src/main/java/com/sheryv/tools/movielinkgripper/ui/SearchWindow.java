@@ -2,6 +2,7 @@ package com.sheryv.tools.movielinkgripper.ui;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sheryv.tools.movielinkgripper.Episode;
+import com.sheryv.tools.movielinkgripper.Gripper;
 import com.sheryv.tools.movielinkgripper.Series;
 import com.sheryv.tools.movielinkgripper.Transformer;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
@@ -9,18 +10,28 @@ import com.sheryv.tools.movielinkgripper.search.SearchItem;
 import com.sheryv.tools.movielinkgripper.search.TmdbApi;
 import com.sheryv.util.FileUtils;
 import com.sheryv.util.SerialisationUtils;
+import com.sheryv.util.ThrowableFunction;
+import lombok.extern.slf4j.Slf4j;
 
+import javax.annotation.Nullable;
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.*;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class SearchWindow {
     private JPanel properties;
     private JPanel episodes;
@@ -33,6 +44,8 @@ public class SearchWindow {
     private JTextField detailsField;
     private JTextField nameField;
     private JButton showFileListButton;
+    private JProgressBar progressBar;
+    private JButton findSizeBtn;
     private TmdbApi api = new TmdbApi();
     private Series lastSeries;
     private Configuration configuration;
@@ -44,40 +57,35 @@ public class SearchWindow {
             detailsField.setText("");
             nameField.setText("");
             api.searchTv(searchText.getText()).ifPresent(i -> {
+                setProgress(-1);
                 searchBtn.setEnabled(false);
                 Integer season = (Integer) seasonNumber.getValue();
                 setDetails(i, season);
                 fillList(null);
-                Executors.newSingleThreadExecutor().submit(() -> {
-                    List<Episode> episodeList = Collections.emptyList();
-                    try {
-                        episodeList = api.getTvEpisodes(i.getId(), season).getEpisodes()
-                                .stream()
-                                .map(ep -> {
-                                    Optional<Episode> found = lastSeries.getEpisodes().stream()
-                                            .filter(l -> l.getN() == ep.getEpisodeNumber() && season == lastSeries.getSeason())
-                                            .findAny();
-                                    if (found.isPresent()) {
-                                        Episode f = found.get();
-                                        return new Episode(f.getPage(), ep.getName(), (int) ep.getEpisodeNumber(), f.getDlLink(), 0, f.getType(), f.getFormat());
-                                    }
-                                    return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
-                                })
-                                .collect(Collectors.toList());
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    } finally {
-                        final List<Episode> copy = new ArrayList<>(episodeList);
-                        EventQueue.invokeLater(() -> {
-                            searchBtn.setEnabled(true);
-                            if (!copy.isEmpty()) {
-                                Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), copy);
+
+                this.doInBackground(i, item ->
+                                api.getTvEpisodes(i.getId(), season).getEpisodes()
+                                        .stream()
+                                        .map(ep -> {
+                                            Optional<Episode> found = lastSeries.getEpisodes().stream()
+                                                    .filter(l -> l.getN() == ep.getEpisodeNumber() && season == lastSeries.getSeason())
+                                                    .findAny();
+                                            if (found.isPresent()) {
+                                                Episode f = found.get();
+                                                return new Episode(f.getPage(), ep.getName(), (int) ep.getEpisodeNumber(), f.getDlLink(), 0, f.getType(), f.getFormat(), f.getLastSize());
+                                            }
+                                            return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
+                                        })
+                                        .collect(Collectors.toList()),
+                        episodeList -> {
+                            if (!episodeList.isEmpty()) {
+                                Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), episodeList);
                                 fillList(series);
                             }
+                        }, o -> {
+                            searchBtn.setEnabled(true);
+                            setProgress(100);
                         });
-                    }
-                });
-
             });
         });
 
@@ -87,14 +95,43 @@ public class SearchWindow {
 
         saveToFileBtn.addActionListener(e -> {
             if (lastSeries != null) {
-                try {
-                    FileUtils.saveFile(SerialisationUtils.toJsonPretty(lastSeries), Paths.get(configuration.getDefaultFilePathWithEpisodesList()));
-                } catch (JsonProcessingException ex) {
-                    ex.printStackTrace();
-                }
+                setProgress(-1);
+                doInBackground(
+                        null,
+                        o -> FileUtils.saveFile(SerialisationUtils.toJsonPretty(lastSeries), Paths.get(configuration.getDefaultFilePathWithEpisodesList())),
+                        null,
+                        o -> setProgress(100)
+                );
             }
         });
         showFileListButton.addActionListener(e -> showFileNamesList(lastSeries));
+        findSizeBtn.addActionListener(e -> {
+            if (lastSeries == null)
+                return;
+            setProgress(-1);
+            findSizeBtn.setEnabled(false);
+            float part = 100f / lastSeries.getEpisodes().size();
+            doInBackground(
+                    lastSeries,
+                    ep -> {
+                        float prog = 0;
+                        for (Episode episode : lastSeries.getEpisodes()) {
+                            Long size = getDownloadSize(episode.getDlLink());
+                            episode.setLastSize(size);
+                            prog += part;
+                            setProgress((int) prog);
+                            EventQueue.invokeLater(() -> fillList(lastSeries));
+                        }
+                        return null;
+                    },
+                    null,
+                    o -> {
+                        findSizeBtn.setEnabled(true);
+                        setProgress(100);
+                        fillList(lastSeries);
+                    }
+            );
+        });
 
         episodes.setLayout(new BoxLayout(episodes, BoxLayout.Y_AXIS));
         episodes.setAlignmentY(0);
@@ -103,14 +140,17 @@ public class SearchWindow {
     }
 
     private void loadFromFile() {
-        try {
-            Series series = Transformer.loadSeries(FileUtils.readFileInMemory(configuration.getDefaultFilePathWithEpisodesList()));
-            seasonNumber.setValue(series.getSeason());
-            searchText.setText(series.getName());
-            fillList(series);
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
+        setProgress(-1);
+        doInBackground(
+                null,
+                o -> Transformer.loadSeries(FileUtils.readFileInMemory(configuration.getDefaultFilePathWithEpisodesList())),
+                series -> {
+                    seasonNumber.setValue(series.getSeason());
+                    searchText.setText(series.getName());
+                    fillList(series);
+                },
+                o -> setProgress(100)
+        );
     }
 
     private void fillList(Series season) {
@@ -119,8 +159,48 @@ public class SearchWindow {
             return;
 
         lastSeries = season;
-        for (Episode episode : season.getEpisodes()) {
-            UiUtils.appendRow(episodes, String.format("%02d: %s", episode.getN(), episode.getName()), episode.getDlLink(), String.class, episode::setDlLink);
+        List<Episode> seasonEpisodes = season.getEpisodes();
+        for (int i = 0; i < seasonEpisodes.size(); i++) {
+            Episode episode = seasonEpisodes.get(i);
+            JButton toIdmBtn = new JButton("IDM");
+            toIdmBtn.setMargin(new Insets(2, 2, 1, 2));
+            toIdmBtn.addActionListener(e -> {
+                Gripper.addToIDM(season, episode, configuration);
+            });
+            JButton loadSizeBtn = new JButton("Size");
+            loadSizeBtn.setMargin(new Insets(2, 2, 1, 2));
+            loadSizeBtn.addActionListener(e -> {
+                loadSize(episode);
+            });
+            String sizeString = episode.getLastSize() == 0 ? "" : FileUtils.sizeString(episode.getLastSize());
+            JComponent row = UiUtils.appendRow(episodes, String.format("%02d [%s] %s", episode.getN(), sizeString, episode.getName()), episode.getDlLink(),
+                    String.class, episode::setDlLink, Arrays.asList(toIdmBtn, loadSizeBtn));
+            if (i % 2 != 0) {
+                row.setBackground(new Color(223, 223, 223));
+            }
+           /* row.addMouseListener(new MouseAdapter() {
+                private Border grayBorder = BorderFactory.createLineBorder(Color.DARK_GRAY, 2);
+                private Border prev;
+
+                public void mouseEntered(MouseEvent e) {
+                    JPanel parent = (JPanel) e.getSource();
+                    prev = parent.getBorder();
+                    parent.setBorder(grayBorder);
+                    parent.revalidate();
+                }
+
+                public void mouseExited(MouseEvent e) {
+
+                    Component c = SwingUtilities.getDeepestComponentAt(
+                            e.getComponent(), e.getX(), e.getY());
+                    // doesn't work if you move your mouse into the combobox popup
+                    if (c == null) {
+                        JPanel parent = (JPanel) e.getSource();
+                        parent.setBorder(prev);
+                        parent.revalidate();
+                    }
+                }
+            });*/
         }
         episodes.updateUI();
     }
@@ -139,6 +219,61 @@ public class SearchWindow {
         Font font = textarea.getFont();
         textarea.setFont(font.deriveFont(font.getSize() + 5f));
         JOptionPane.showMessageDialog(null, textarea, "Episodes files list", JOptionPane.PLAIN_MESSAGE);
+    }
+
+    private void loadSize(Episode episode) {
+        if (episode.getDlLink() == null)
+            return;
+        setProgress(-1);
+        doInBackground(
+                episode,
+                ep -> getDownloadSize(ep.getDlLink()),
+                lastSize -> {
+                    episode.setLastSize(lastSize);
+                    fillList(lastSeries);
+                },
+                o -> setProgress(100)
+        );
+    }
+
+    private Long getDownloadSize(String urlString) throws IOException {
+        URL url = new URL(urlString);
+        HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
+        urlConnection.connect();
+        long contentLengthLong = urlConnection.getContentLengthLong();
+        urlConnection.disconnect();
+        return contentLengthLong;
+    }
+
+    private void setProgress(int value) {
+        EventQueue.invokeLater(() -> {
+            if (value < 0) {
+                progressBar.setIndeterminate(true);
+            } else {
+                if (progressBar.isIndeterminate())
+                    progressBar.setIndeterminate(false);
+                progressBar.setValue(value);
+            }
+        });
+    }
+
+    private <T, R> void doInBackground(@Nullable T in, ThrowableFunction<T, R> work, @Nullable Consumer<R> success, @Nullable Consumer<R> finished) {
+        Executors.newSingleThreadExecutor().submit(() -> {
+            R result = null;
+            try {
+                result = work.apply(in);
+                if (success != null) {
+                    final R r = result;
+                    EventQueue.invokeLater(() -> success.accept(r));
+                }
+            } catch (Exception e) {
+                log.error("In Background task", e);
+            }
+            if (finished != null) {
+                final R r = result;
+                EventQueue.invokeLater(() -> finished.accept(r));
+            }
+        });
     }
 
     public JPanel getMainPanel() {
@@ -201,7 +336,6 @@ public class SearchWindow {
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 7;
-        gbc.gridwidth = 3;
         gbc.fill = GridBagConstraints.BOTH;
         mainPanel.add(panel1, gbc);
         final JPanel spacer6 = new JPanel();
@@ -237,7 +371,7 @@ public class SearchWindow {
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
         gbc.gridy = 0;
-        gbc.gridwidth = 6;
+        gbc.gridwidth = 7;
         gbc.weightx = 1.0;
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
@@ -245,23 +379,22 @@ public class SearchWindow {
         loadFromFileBtn = new JButton();
         loadFromFileBtn.setText("Load From File");
         gbc = new GridBagConstraints();
-        gbc.gridx = 4;
+        gbc.gridx = 6;
         gbc.gridy = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         properties.add(loadFromFileBtn, gbc);
         searchBtn = new JButton();
         searchBtn.setText("Search");
         gbc = new GridBagConstraints();
-        gbc.gridx = 9;
+        gbc.gridx = 10;
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         properties.add(searchBtn, gbc);
         saveToFileBtn = new JButton();
         saveToFileBtn.setText("Save to File");
         gbc = new GridBagConstraints();
-        gbc.gridx = 6;
+        gbc.gridx = 8;
         gbc.gridy = 2;
-        gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         properties.add(saveToFileBtn, gbc);
         seasonNumber = new JSpinner();
@@ -295,23 +428,36 @@ public class SearchWindow {
         properties.add(spacer9, gbc);
         final JPanel spacer10 = new JPanel();
         gbc = new GridBagConstraints();
-        gbc.gridx = 8;
+        gbc.gridx = 9;
         gbc.gridy = 0;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         properties.add(spacer10, gbc);
+        showFileListButton = new JButton();
+        showFileListButton.setText("Show File List");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 10;
+        gbc.gridy = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        properties.add(showFileListButton, gbc);
         final JPanel spacer11 = new JPanel();
+        gbc = new GridBagConstraints();
+        gbc.gridx = 7;
+        gbc.gridy = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        properties.add(spacer11, gbc);
+        findSizeBtn = new JButton();
+        findSizeBtn.setText("Find file size");
+        gbc = new GridBagConstraints();
+        gbc.gridx = 4;
+        gbc.gridy = 2;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        properties.add(findSizeBtn, gbc);
+        final JPanel spacer12 = new JPanel();
         gbc = new GridBagConstraints();
         gbc.gridx = 5;
         gbc.gridy = 2;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        properties.add(spacer11, gbc);
-        showFileListButton = new JButton();
-        showFileListButton.setText("Show File List");
-        gbc = new GridBagConstraints();
-        gbc.gridx = 9;
-        gbc.gridy = 2;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        properties.add(showFileListButton, gbc);
+        properties.add(spacer12, gbc);
         final JScrollPane scrollPane1 = new JScrollPane();
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
@@ -324,13 +470,13 @@ public class SearchWindow {
         episodes = new JPanel();
         episodes.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
         scrollPane1.setViewportView(episodes);
-        final JPanel spacer12 = new JPanel();
+        final JPanel spacer13 = new JPanel();
         gbc = new GridBagConstraints();
         gbc.gridx = 1;
         gbc.gridy = 4;
         gbc.gridwidth = 3;
         gbc.fill = GridBagConstraints.VERTICAL;
-        mainPanel.add(spacer12, gbc);
+        mainPanel.add(spacer13, gbc);
         detailsField = new JTextField();
         detailsField.setEditable(false);
         gbc = new GridBagConstraints();
@@ -349,12 +495,20 @@ public class SearchWindow {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.fill = GridBagConstraints.HORIZONTAL;
         mainPanel.add(nameField, gbc);
-        final JPanel spacer13 = new JPanel();
+        final JPanel spacer14 = new JPanel();
         gbc = new GridBagConstraints();
         gbc.gridx = 2;
         gbc.gridy = 3;
         gbc.fill = GridBagConstraints.HORIZONTAL;
-        mainPanel.add(spacer13, gbc);
+        mainPanel.add(spacer14, gbc);
+        progressBar = new JProgressBar();
+        progressBar.setMinimumSize(new Dimension(10, 15));
+        progressBar.setPreferredSize(new Dimension(146, 15));
+        gbc = new GridBagConstraints();
+        gbc.gridx = 3;
+        gbc.gridy = 7;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        mainPanel.add(progressBar, gbc);
     }
 
     /**
@@ -364,4 +518,7 @@ public class SearchWindow {
         return mainPanel;
     }
 
+    private void createUIComponents() {
+        // TODO: place custom component creation code here
+    }
 }

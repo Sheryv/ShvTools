@@ -25,18 +25,20 @@ public class Episode {
     private String dlLink;
     private final Format format;
     private final String page;
+    @Setter
+    private long lastSize;
 
     public Episode(String page, String name, int n, String dlLink) {
-        this(page, name, n, dlLink, 0, EpisodesTypes.UNKNOWN, null);
+        this(page, name, n, dlLink, 0, EpisodesTypes.UNKNOWN, null, null);
 //        this(n, name, EpisodesTypes.UNKNOWN, 0, dlLink, page, null);
     }
 
     public Episode(String page, String name, int n, String dlLink, EpisodesTypes type) {
-        this(page, name, n, dlLink, 0, type, null);
+        this(page, name, n, dlLink, 0, type, null, null);
     }
 
     public Episode(String page, String name, int n, String dlLink, int error, EpisodesTypes type) {
-        this(page, name, n, dlLink, error, type, null);
+        this(page, name, n, dlLink, error, type, null, null);
     }
 
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
@@ -47,7 +49,8 @@ public class Episode {
             @JsonProperty("dlLink") String dlLink,
             @JsonProperty("error") int error,
             @JsonProperty("type") EpisodesTypes type,
-            @JsonProperty("format") @Nullable Format format) {
+            @JsonProperty("format") @Nullable Format format,
+            @JsonProperty("lastSize") @Nullable Long lastSize) {
         this.n = n;
         this.name = name;
         this.error = error;
@@ -55,6 +58,7 @@ public class Episode {
         this.dlLink = dlLink;
         this.type = type;
         this.format = format;
+        this.lastSize = lastSize == null ? 0 : lastSize;
     }
 
     public String generateFileName(Series series) {
@@ -65,7 +69,7 @@ public class Episode {
                 ext = dlLink.substring(indexOf, dlLink.length());
             }
         }
-        String name = getName().replaceAll("[\\\\/:*?\"<>|]", "");
+        String name = getName();
         String nameFormatter = "%5$s";
         Configuration config = Configuration.get();
         if (!Strings.isNullOrEmpty(config.getEpisodeNameFormatter())) {
@@ -77,6 +81,7 @@ public class Episode {
         values.put("episode_number", String.format("%02d", n));
         values.put("episode_name", name);
         values.put("file_extension", ext);
-        return Strings.fillTemplate(config.getEpisodeCodeFormatter()+nameFormatter, values);
+        return Strings.fillTemplate(config.getEpisodeCodeFormatter() + nameFormatter, values)
+                .replaceAll("[\\\\/:*?\"<>|]", "");
     }
 }
