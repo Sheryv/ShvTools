@@ -63,9 +63,9 @@ public class Episode {
 
     public String generateFileName(Series series) {
         String ext = ".mp4";
-        if (dlLink != null) {
+        if (dlLink != null && !dlLink.isEmpty()) {
             int indexOf = dlLink.lastIndexOf(".");
-            if (dlLink.length() - indexOf <= 5) {
+            if (indexOf > 0 && dlLink.length() - indexOf <= 5) {
                 ext = dlLink.substring(indexOf, dlLink.length());
             }
         }

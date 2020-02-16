@@ -2,16 +2,20 @@ import java.util.regex.Pattern
 
 allprojects {
     apply plugin: 'java'
-    sourceCompatibility = 1.10
-    targetCompatibility = 1.10
+    apply plugin: 'maven-publish'
+    sourceCompatibility = 1.13
+    targetCompatibility = 1.13
     ext.author = "Sheryv"
     ext.longName = "ShvTools root"
     ext.className = ""
     ext.site = 'https://github.com/Sheryv/ShvTools'
-    ext.kotlin_version = '1.2.60'
+    ext.kotlin_version = '1.3.61'
+    ext.shortVersion = "0.1"
+
+    group = 'com.sheryv'
 
     task fatJar(type: Jar) {
-        afterEvaluate { Project p ->
+        afterEvaluate { p ->
             manifest {
                 attributes 'Implementation-Title': p.longName,
                         'Implementation-Version': p.version,
@@ -19,7 +23,7 @@ allprojects {
                         'Main-Class': p.className
             }
             baseName = project.name + '-all'
-            archiveName = "${baseName}-${version}.${extension}"
+            archiveName = "${baseName}-${p.ext.shortVersion}.${extension}"
             from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
             with jar
         }
@@ -46,12 +50,22 @@ allprojects {
         def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
         def pointVersion = Integer.parseInt(matcherVersionNumber.group(3))
         def begin = majorVersion + "." + minorVersion
-        project.fatJar.version = begin
+        project.ext.shortVersion = begin
         def newVer = begin + "." + (pointVersion + 1)
         println("Version inc: " + version + " > " + newVer)
 
         f.write(newVer)
         return newVer
+    }
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                version = project.ext.shortVersion
+
+                from components.java
+            }
+        }
     }
 
 }
@@ -69,6 +83,7 @@ subprojects {
         compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
         compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
     }
+
 }
 
 

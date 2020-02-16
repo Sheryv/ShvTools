@@ -214,7 +214,7 @@ public class Gripper implements AutoCloseable {
 
     public static void addToIDM(Series series, Episode episode, Configuration configuration) {
         String idmExePath = configuration.getIdmExePath();
-        String ex = String.format("\"%s\" /n /f \"%s\" /p \"G:\\Filmy\\Serial\\%s %02d\"" +
+        String ex = String.format("\"%s\" /n /f \"%s\" /p \"" + configuration.getDownloadDir() + "\\%s %02d\"" +
                         " /a /d %s",
                 idmExePath,
                 episode.generateFileName(series),

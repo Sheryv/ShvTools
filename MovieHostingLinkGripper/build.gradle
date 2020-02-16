@@ -1,6 +1,3 @@
-apply plugin: 'maven-publish'
-
-
 ext.longName = "Movie Link Gripper"
 
 version getVersionName(name)

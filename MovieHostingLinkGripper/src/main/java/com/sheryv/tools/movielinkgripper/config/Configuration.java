@@ -75,6 +75,7 @@ public class Configuration {
     private List<String> chromeExtensionsPaths;
     private int triesBeforeHostingChange = 3;
     private int numOfTopHostingsUsedSimultaneously = 3;
+    private String downloadDir;
     private List<String> availableHostings;
     private List<EpisodesTypes> allowedEpisodeTypes = Arrays.asList(EpisodesTypes.values());
     private List<HostingConfig> hostings;
@@ -135,6 +136,7 @@ public class Configuration {
                 result.setChromeExePath(c.getChromeExePath());
                 result.setChromeSeleniumDriverPath(c.getChromeSeleniumDriverPath());
                 result.setChromeExtensionsPaths(c.getChromeExtensionsPaths());
+                result.setDownloadDir(c.getDownloadDir());
                 result.setUseChromeBrowser(c.isUseChromeBrowser());
 
                 if (result.getHostings() == null) {
