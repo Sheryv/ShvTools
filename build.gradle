@@ -3,8 +3,8 @@ import java.util.regex.Pattern
 allprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
-    sourceCompatibility = 1.13
-    targetCompatibility = 1.13
+    sourceCompatibility = 1.12
+    targetCompatibility = 1.12
     ext.author = "Sheryv"
     ext.longName = "ShvTools root"
     ext.className = ""
