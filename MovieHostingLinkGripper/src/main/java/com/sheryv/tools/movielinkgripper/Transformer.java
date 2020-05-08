@@ -67,6 +67,7 @@ public class Transformer {
 
     static {
         PROVIDERS.put("alltube", AlltubeProvider::new);
+        PROVIDERS.put("zerion", ZerionProvider::new);
         PROVIDERS.put("fmovies", FMoviesProvider::new);
         PROVIDERS.put("fili", FiliProvider::new);
         PROVIDERS.put("vodgo", VodGoProvider::new);

@@ -48,6 +48,11 @@ public class GripperTest {
     }
 
     @Test
+    public void gui() {
+        Bootstrapper.main(new String[]{"i"});
+    }
+
+    @Test
     public void test2() {
         Bootstrapper.main(new String[]{"ins", "G:\\_list_Arrow.json", "G:\\links.csv"});
     }
