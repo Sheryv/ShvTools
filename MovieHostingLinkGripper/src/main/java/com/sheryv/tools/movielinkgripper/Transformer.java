@@ -66,11 +66,16 @@ public class Transformer {
     public static final Map<String, Creator> PROVIDERS = new HashMap<>();
 
     static {
-        PROVIDERS.put("alltube", AlltubeProvider::new);
-        PROVIDERS.put("zerion", ZerionProvider::new);
-        PROVIDERS.put("fmovies", FMoviesProvider::new);
-        PROVIDERS.put("fili", FiliProvider::new);
-        PROVIDERS.put("vodgo", VodGoProvider::new);
+        PROVIDERS.put(appendUrl("alltube ", AlltubeProvider.BASE_URL), AlltubeProvider::new);
+        PROVIDERS.put(appendUrl("zerion", ZerionProvider.BASE_URL), ZerionProvider::new);
+        PROVIDERS.put(appendUrl("fmovies", FMoviesProvider.BASE_URL), FMoviesProvider::new);
+        PROVIDERS.put(appendUrl("fili", FiliProvider.BASE_URL), FiliProvider::new);
+        PROVIDERS.put(appendUrl("vodgo", VodGoProvider.BASE_URL), VodGoProvider::new);
+        PROVIDERS.put(appendUrl("streamlord", StremalordProvider.BASE_URL), StremalordProvider::new);
+    }
+
+    private static String appendUrl(String name, String url) {
+        return name + " [" + url + "]";
     }
 
     interface Creator {

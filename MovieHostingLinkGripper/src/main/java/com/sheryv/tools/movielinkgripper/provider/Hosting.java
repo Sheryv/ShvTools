@@ -13,4 +13,6 @@ public class Hosting {
     private final Format format;
     private final int index;
     private final String videoLink;
+
+    public static final String UNKNOWN_NAME = "UNKNOWN";
 }
