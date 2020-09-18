@@ -16,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import javax.annotation.Nullable;
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -23,6 +25,8 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.List;
@@ -213,12 +217,63 @@ public class SearchWindow {
     }
 
     private void showFileNamesList(Series series) {
-        String collect = series.getEpisodes().stream().map(e -> e.generateFileName(series)).collect(Collectors.joining("\n"));
-        JTextArea textarea = new JTextArea(collect);
+        JPanel topPanel = new JPanel();
+        topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.X_AXIS));
+
+        JTextArea textarea = new JTextArea();
         textarea.setEditable(false);
         Font font = textarea.getFont();
         textarea.setFont(font.deriveFont(font.getSize() + 5f));
-        JOptionPane.showMessageDialog(null, textarea, "Episodes files list", JOptionPane.PLAIN_MESSAGE);
+
+        JTextField field = new JTextField();
+        field.getDocument().addDocumentListener(new DocumentListener() {
+            public void changedUpdate(DocumentEvent e) {
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+            }
+
+            public void insertUpdate(DocumentEvent e) {
+                String collect = series.getEpisodes().stream().map(ep -> ep.generateFileName(series, field.getText())).collect(Collectors.joining("\n"));
+                textarea.setText(collect);
+            }
+        });
+        field.setText("mp4");
+        JPanel panel = new JPanel();
+
+        JButton createFilesBtn = new JButton("Create empty templates files");
+        createFilesBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser(Configuration.get().getDownloadDir());
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int option = fileChooser.showOpenDialog(panel);
+            if (option == JFileChooser.APPROVE_OPTION) {
+                java.io.File file = fileChooser.getSelectedFile();
+                series.getEpisodes().stream().map(ep -> ep.generateFileName(series, field.getText())).forEach(f ->
+                        {
+                            try {
+                                Path dir = Paths.get(file.getAbsolutePath(), Gripper.createSeriesDirectoryName(series));
+                                Files.createDirectories(dir);
+                                Files.createFile(Paths.get(file.getAbsolutePath(), Gripper.createSeriesDirectoryName(series), f));
+                                log.info("Files generated in " + dir.toAbsolutePath());
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
+                            }
+                        }
+                );
+            }
+        });
+        topPanel.add(new JLabel("Extension:"));
+        topPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        topPanel.add(field);
+        topPanel.add(Box.createRigidArea(new Dimension(5, 5)));
+        topPanel.add(createFilesBtn);
+
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.add(topPanel);
+        panel.add(Box.createRigidArea(new Dimension(5, 5)));
+        panel.add(textarea);
+
+        JOptionPane.showMessageDialog(null, panel, "Episodes files list", JOptionPane.PLAIN_MESSAGE);
     }
 
     private void loadSize(Episode episode) {

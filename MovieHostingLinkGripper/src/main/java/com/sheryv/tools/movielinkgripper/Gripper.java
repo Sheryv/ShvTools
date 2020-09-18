@@ -133,7 +133,7 @@ public class Gripper implements AutoCloseable {
                                 break;
                             }
                         } catch (Exception e) {
-                            log.error("Error while searching dl url at " + hosting.getName() + " ["+hosting.getIndex()+"] | " + hosting.getVideoLink(), e);
+                            log.error("Error while searching dl url at " + hosting.getName() + " [" + hosting.getIndex() + "] | " + hosting.getVideoLink(), e);
                         }
                     }
                     if (!Strings.isNullOrEmpty(downloadLink)) {
@@ -214,12 +214,11 @@ public class Gripper implements AutoCloseable {
 
     public static void addToIDM(Series series, Episode episode, Configuration configuration) {
         String idmExePath = configuration.getIdmExePath();
-        String ex = String.format("\"%s\" /n /f \"%s\" /p \"" + configuration.getDownloadDir() + "\\%s %02d\"" +
+        String ex = String.format("\"%s\" /n /f \"%s\" /p \"" + configuration.getDownloadDir() + "\\%s\"" +
                         " /a /d %s",
                 idmExePath,
-                episode.generateFileName(series),
-                series.getName(),
-                series.getSeason(),
+                episode.generateFileName(series, "mp4"),
+                createSeriesDirectoryName(series),
                 episode.getDlLink());
         try {
             log.info("\n> {} {}", episode.getN(), ex);
@@ -227,6 +226,10 @@ public class Gripper implements AutoCloseable {
         } catch (Exception e) {
             log.error("Error while adding to IDM", e);
         }
+    }
+
+    public static String createSeriesDirectoryName(Series series) {
+        return String.format("%s %02d", series.getName(), series.getSeason());
     }
 
     public Object executeScript(String script) {

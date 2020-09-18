@@ -61,8 +61,7 @@ public class Episode {
         this.lastSize = lastSize == null ? 0 : lastSize;
     }
 
-    public String generateFileName(Series series) {
-        String ext = ".mp4";
+    public String generateFileName(Series series, String ext) {
         if (dlLink != null && !dlLink.isEmpty()) {
             int indexOf = dlLink.lastIndexOf(".");
             if (indexOf > 0 && dlLink.length() - indexOf <= 5) {
@@ -80,7 +79,7 @@ public class Episode {
         values.put("season", String.format("%02d", series.getSeason()));
         values.put("episode_number", String.format("%02d", n));
         values.put("episode_name", name);
-        values.put("file_extension", ext);
+        values.put("file_extension", "." + ext);
         return Strings.fillTemplate(config.getEpisodeCodeFormatter() + nameFormatter, values)
                 .replaceAll("[\\\\/:*?\"<>|]", "");
     }
