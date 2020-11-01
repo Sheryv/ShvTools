@@ -1,0 +1,220 @@
+/*
+ * This is an adjustment of the original modena.css for a consistent dark theme.
+ * Original modena.css here: https://gist.github.com/maxd/63691840fc372f22f470.
+ */
+
+/* Redefine base colors */
+.root {
+    -fx-base: rgb(50, 50, 50);
+    -fx-background: rgb(50, 50, 50);
+
+    /* make controls (buttons, thumb, etc.) slightly lighter */
+    -fx-color: derive(-fx-base, 10%);
+
+    /* text fields and table rows background */
+    -fx-control-inner-background: rgb(30, 30, 30);
+    /* version of -fx-control-inner-background for alternative rows */
+    -fx-control-inner-background-alt: derive(-fx-control-inner-background, 4.5%);
+
+    /* text colors depending on background's brightness */
+    -fx-light-text-color: rgb(220, 220, 220);
+    -fx-mid-text-color: rgb(100, 100, 100);
+    -fx-dark-text-color: rgb(20, 20, 20);
+
+    -fx-focus-color: rgb(0, 111, 135);
+    /*-fx-focus-color: rgb(197, 105, 0);*/
+
+
+    /*-fx-focus-color: rgb(222, 122, 0);*/
+    /* A bright blue for highlighting/accenting objects.  For example: selected
+     * text; selected items in menus, lists, trees, and tables; progress bars */
+    -fx-accent: rgb(0, 80, 100);
+
+
+    /*-fx-accent: rgb(234, 133, 0);*/
+
+    /* color of non-focused yet selected elements */
+    -fx-selection-bar-non-focused: rgb(50, 50, 50);
+}
+
+/* Fix derived prompt color for text fields */
+.text-input {
+    -fx-prompt-text-fill: derive(-fx-control-inner-background, +50%);
+}
+
+/* Keep prompt invisible when focused (above color fix overrides it) */
+.text-input:focused {
+    -fx-prompt-text-fill: transparent;
+}
+
+/* Fix scroll bar buttons arrows colors */
+.scroll-bar > .increment-button > .increment-arrow,
+.scroll-bar > .decrement-button > .decrement-arrow {
+    -fx-background-color: -fx-mark-highlight-color, rgb(220, 220, 220);
+}
+
+.scroll-bar > .increment-button:hover > .increment-arrow,
+.scroll-bar > .decrement-button:hover > .decrement-arrow {
+    -fx-background-color: -fx-mark-highlight-color, rgb(240, 240, 240);
+}
+
+.scroll-bar > .increment-button:pressed > .increment-arrow,
+.scroll-bar > .decrement-button:pressed > .decrement-arrow {
+    -fx-background-color: -fx-mark-highlight-color, rgb(255, 255, 255);
+}
+
+.menu-bar {
+    -fx-padding: 0.0em 0.666667em 0.0em 0.666667em; /* 0 8 0 8 */
+    /*-fx-spacing: 0.166667em; !* 2 *!*/
+    -fx-background-color: derive(-fx-base, 5%);
+    -fx-border-width: 0 0 1 0;
+    -fx-border-style: solid;
+    -fx-border-color: derive(-fx-control-inner-background, 10%);
+    /*linear-gradient(to bottom, derive(-fx-base,75%) 0%, -fx-outer-border 90%),*/
+    /*linear-gradient(to bottom, derive(-fx-base,46.9%) 2%, derive(-fx-base,-2.1%) 95%);*/
+    -fx-background-insets: 0 0 0 0, 1 0 1 0;
+    /*-fx-background-radius: 0, 0 ;*/
+}
+
+/*.menu-bar > .container > .menu:hover, .menu-bar > .container  > .menu:selected {*/
+/*    -fx-background-radius: 8;*/
+/*    -fx-border-radius: 8;*/
+/*}*/
+
+
+/*.tab-pane > .tab-header-area  {*/
+/*    -fx-background-color: derive(-fx-base, 10%);*/
+/*    !*-fx-padding: 0 0 -2 0;*!*/
+/*}*/
+.tab-pane > .tab-header-area > .tab-header-background {
+    -fx-background-color: -fx-base;
+    /*-fx-padding: 0 0 2 0;*/
+}
+
+.scroll-pane {
+    /*-fx-background-color: -fx-control-inner-background;*/
+    -fx-border-radius: 3;
+    -fx-border-width: 1;
+    -fx-border-style: solid;
+    -fx-border-color: derive(-fx-control-inner-background, 5%);
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: derive(-fx-control-inner-background, 5%);
+}
+
+.title-bar {
+    -fx-background-color: #2a2a2a
+}
+
+
+/*.table-view  {*/
+/*    -fx-accent: transparent; !*rgb(73, 33, 0);*!*/
+/*    -fx-dark-text-color: rgb(67, 193, 102);*/
+/*}*/
+
+.tree-table-row-cell:odd {
+    -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background, 4%);
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+.tree-table-row-cell:selected {
+    -fx-background-color: derive(-fx-control-inner-background, 17%);
+    -fx-background-insets: 0, 1, 2;
+}
+
+/*.tree-table-cell:selected {*/
+/*    -fx-background-color: transparent;*/
+/*}*/
+
+.table-view {
+    -fx-table-cell-border-color: transparent;
+}
+
+.tree-table-view {
+    -fx-table-cell-border-color: transparent;
+}
+
+.tree-table-row-cell .table-column {
+    -fx-start-margin: 1px;
+    -fx-start-end: 1px;
+
+}
+
+
+.btn-info {
+    -fx-color: #006bc5;
+}
+
+.btn-danger {
+    -fx-color: #8a1c29;
+}
+
+.btn-success {
+    -fx-color: #1d6c14;
+}
+
+.btn-info:hover {
+    -fx-color: #0080e4;
+}
+
+.btn-danger:hover {
+    -fx-color: #b21e31;
+}
+
+.btn-success:hover {
+    -fx-color: #2ba11d;
+}
+
+.t-success {
+    -fx-text-fill: #56c043;
+}
+
+.t-danger {
+    -fx-text-fill: #ff5451;
+}
+
+
+.i-success {
+    -icon-paint: #1d6c14
+}
+
+.i-info {
+    -icon-paint: #006bc5
+}
+
+.i-danger {
+    -icon-paint: #8a1c29
+}
+
+.i-success:hover {
+    -icon-paint: #2ba11d
+}
+
+.i-info:hover {
+    -icon-paint: #0080e4
+}
+
+.i-danger:hover {
+    -icon-paint: #b21e31
+}
+
+.important-bg {
+    -fx-background-color: rgba(255, 156, 189, 0.33);
+}
+
+.running-step-row {
+    -fx-background-color: #145112;
+}
+
+.running-step-row-parent {
+    -fx-background-color: derive(-fx-control-inner-background, 20%);
+}
+
+.hyperlink {
+    -fx-text-fill: #0070cf;
+}
+
+.hyperlink:hover {
+    -fx-text-fill: #008fff;
+}
