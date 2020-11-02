@@ -20,9 +20,10 @@ class Validator {
     val result = ValidationResult()
         .assert(repo.codeName.isNotBlank(), "Field 'codeName' in object 'Repository' cannot be empty.")
         .assert(repo.title.isNotBlank(), "Field 'title' in object 'Repository' cannot be empty.")
+        .assert(repo.schemaVersion == 1L, "Field 'schemaVersion' in object 'Repository' cannot be empty. Currently supported version of schema is '1'. Check for updates to get support for newer versions.")
         .assert(inRange(repo.title, 100), "Field 'title' in object 'Repository' cannot be longer than 100 chars.")
         .assert(inRange(repo.codeName, 50), "Field 'title' in object 'Repository' cannot be longer than 50 chars.")
-        .assert(inRange(repo.version, 50), "Field 'version' in object 'Repository' cannot be longer than 50 chars.")
+        .assert(inRange(repo.repoositoryVersion, 50), "Field 'version' in object 'Repository' cannot be longer than 50 chars.")
         .assert(inRange(repo.website, 1000), "Field 'website' in object 'Repository' cannot be longer than 1000 chars.")
         .assert(inRange(repo.baseUrl, 1000), "Field 'baseUrl' in object 'Repository' cannot be longer than 1000 chars.")
         .assert(inRange(repo.author, 100), "Field 'website' in object 'Repository' cannot be longer than 100 chars.")
@@ -81,8 +82,7 @@ class Validator {
     repo.bundles.forEach { b ->
       
       b.versions.forEach { v ->
-        val ids = mutableListOf<String>()
-        BundleUtils.forEachEntry(v.entries) { ids.add(it.id) }
+        val ids = v.entries.map { it.id }
         result.merge(validateEntryList(v.entries, ids, repo, b, v))
       }
     }
@@ -96,12 +96,12 @@ class Validator {
       val srcUrl = e.getSrcUrl(bundle.getBaseUrl(repo.baseUrl))
       result
           .assert(ids.count { it == e.id } == 1, errorForEntry("id", "Value '${e.id}' is duplicated in this bundle.", e, bundle, version))
-          .assert(inRange(e.name, 199), errorForEntry("id", "", e, bundle, version, "cannot be longer than 199 chars"))
+          .assert(inRange(e.name, 199), errorForEntry("name", "", e, bundle, version, "cannot be longer than 199 chars"))
           .assert(inRange(e.version, 100), errorForEntry("version", "", e, bundle, version, "cannot be longer than 100 chars"))
           .assert(inRange(e.website, 1000), errorForEntry("website", "", e, bundle, version, "cannot be longer than 1000 chars"))
           .assert(inRange(e.description, 6000), errorForEntry("description", "", e, bundle, version, "cannot be longer than 6000 chars"))
           .assert(!e.target.absolute || (e.target.absolute && e.target.path != null && e.target.path.findPath() != null
-              && !e.target.path.findPath().isNullOrBlank()), errorForEntry("target", "When 'absolute=true' path cannot be empty", e, bundle, version))
+              && !e.target.path.findPath().isNullOrBlank()), errorForEntry("target", "When 'absolute=true' path cannot be empty.", e, bundle, version))
       
       
       SystemUtils.fileNameForbiddenChars().forEach {
@@ -109,27 +109,37 @@ class Validator {
           result.addError(errorForEntry("name", "Name '${e.name}' contains forbidden character '$it', code: ${it.toInt()}.", e, bundle, version))
         }
       }
-      
-      if (e.isGroup()) {
-        val list = (e as Group).entries
+  
+      if (e.parent != null) {
+        val parent = entries.firstOrNull { it.id == e.parent }
+        if (parent == null) {
+          result.addError(errorForEntry("parent", "Parent item '${e.parent}' was not found.", e, bundle, version))
+        } else if (!parent.group) {
+          result.addError(errorForEntry("parent", "Parent item '${parent.name}' [id=${parent.id}] have to be group. 'group=true' is required. Defined by child [id=${e.id}]", e, bundle, version))
+        }
+        result.assert(e.parent != e.id, errorForEntry("parent", "Item cannot be parent of itself.", e, bundle, version, "is equal to 'id' of this item"))
+      }
+  
+      if (e.group) {
+        val children = BundleUtils.getFirstLevelChildren(e.id, entries)
         val s = mutableSetOf<String>()
-        for (entry in list) {
-          if (!s.add(entry.name)) {
-            result.addError(errorForEntry("name", "Name '${e.name}' is duplicated in group ${e.name}, ${e.id}.", e, bundle, version))
+        for (child in children) {
+          if (!s.add(child.name)) {
+            result.addError(errorForEntry("name", "Name '${child.name}' of item [id=${child.id}] is duplicated in group ${e.name}, ${e.id}.", e, bundle, version))
           }
         }
-        result.merge(validateEntryList(list, ids, repo, bundle, version))
+        result.assert(!e.target.absolute, errorForEntry("target", "When 'group=true' path.absolute cannot be true - absolute paths are not supported for groups.", e, bundle, version))
       } else {
         result
-            .assert(srcUrl.let { url(it).isOk() }, errorForEntry("src", "Url '$srcUrl' is not valid", e, bundle, version))
-            .assert(inRange(srcUrl, 3000), errorForEntry("src", "Concatenated url '$srcUrl' is too long", e, bundle, version, "cannot be longer than 1000 chars"))
+            .assert(srcUrl.let { url(it).isOk() }, errorForEntry("src", "Url '$srcUrl' is not valid.", e, bundle, version))
+            .assert(inRange(srcUrl, 3000), errorForEntry("src", "Concatenated url '$srcUrl' is too long.", e, bundle, version, "cannot be longer than 1000 chars"))
       }
     }
     return result
   }
   
   private fun errorForEntry(field: String, details: String, e: Entry, bundle: Bundle, version: BundleVersion, type: String = "has incorrect value"): String {
-    val ob = if (e.isGroup()) "Group" else "Item"
+    val ob = if (e.group) "Group" else "Item"
     return "Field '$field' of $ob $type, at [bundle-id=${bundle.id}, bundle-name=${bundle.name}, version=${version.versionId}, item-id=${e.id}, item-name=${e.name}]. " + details
   }
   

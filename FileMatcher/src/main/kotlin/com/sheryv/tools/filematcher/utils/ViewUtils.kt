@@ -1,7 +1,6 @@
 package com.sheryv.tools.filematcher.utils
 
 import com.sheryv.tools.filematcher.model.Entry
-import com.sheryv.tools.filematcher.model.Group
 import com.sheryv.tools.filematcher.model.TargetPath
 import javafx.beans.property.SimpleStringProperty
 import javafx.scene.Scene
@@ -22,9 +21,9 @@ object ViewUtils {
     }
   }
   
-  
+  /*
   fun fromTreeItems(tree: TreeItem<Entry>): List<Entry> {
-    val root = Group("ROOT__BundleInvisibleGroup", "", TargetPath(), false)
+    val root = BundleUtils.createGroup("ROOT__BundleInvisibleGroup", "", target = TargetPath())
     fromTreeItems(tree, root)
     return root.entries
   }
@@ -39,20 +38,18 @@ object ViewUtils {
     }
     child.entries = list
   }
-  
-  fun toTreeItems(entrys: List<Entry>): TreeItem<Entry> {
-    val root: TreeItem<Entry> = TreeItem(Group("ROOT__BundleInvisibleGroup", "", TargetPath(), false))
-    toTreeItems(entrys, root)
+  */
+  fun toTreeItems(entries: List<Entry>): TreeItem<Entry> {
+    val root: TreeItem<Entry> = TreeItem(BundleUtils.createGroup("ROOT__BundleInvisibleGroup", "", target = TargetPath()))
+    toTreeItems(entries.filter { it.parent == null }, entries, root)
     return root
   }
   
-  private fun toTreeItems(entrys: List<Entry>, root: TreeItem<Entry>) {
-    for (entry in entrys) {
+  private fun toTreeItems(singleLevel: List<Entry>, allEntries: List<Entry>, root: TreeItem<Entry>) {
+    for (entry in singleLevel) {
       val item = TreeItem(entry)
       root.children.add(item)
-      if (entry is Group) {
-        toTreeItems(entry.entries, item)
-      }
+      toTreeItems(BundleUtils.getFirstLevelChildren(entry.id, allEntries), allEntries, item)
     }
   }
   
@@ -100,6 +97,36 @@ object ViewUtils {
             }
             text = null
           }
+        }
+      }
+    }
+  }
+  
+  fun <Item> treeTableCellFactoryWithCustomCss(
+      allCssClasses: Set<String>,
+      cssClassMapper: (Item) -> List<String>
+  ): Callback<TreeTableColumn<Item, String>, TreeTableCell<Item, String>> {
+    return Callback<TreeTableColumn<Item, String>, TreeTableCell<Item, String>> {
+      object : TreeTableCell<Item, String>() {
+        override fun updateItem(item: String?, empty: Boolean) {
+          super.updateItem(item, empty)
+          
+          if (empty || treeTableRow.isEmpty || treeTableRow.treeItem?.value == null) {
+            graphic = null
+            text = null
+            styleClass.removeAll(allCssClasses)
+          } else {
+            val current = cssClassMapper.invoke(treeTableRow.treeItem.value)
+            if (current.all { styleClass.contains(it) }) {
+              styleClass.removeAll(allCssClasses.filter { !current.contains(it) })
+            } else {
+              styleClass.removeAll(allCssClasses)
+              styleClass.addAll(current)
+            }
+          }
+//            text = valueMapper.invoke(treeTableRow.treeItem.value)
+          text = item
+          graphic = null
         }
       }
     }

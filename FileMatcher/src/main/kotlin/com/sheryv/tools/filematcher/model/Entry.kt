@@ -9,27 +9,34 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.StringProperty
 import java.time.OffsetDateTime
 
-open class Entry(
+data class Entry(
     val id: String,
     val name: String,
     val src: String,
     val version: String? = null,
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     val type: ItemType = ItemType.ITEM,
     val target: TargetPath = TargetPath(),
     val selected: Boolean = true,
+    val parent: String? = null,
+    val group: Boolean = false,
     val website: String? = null,
     val description: String = "",
     val itemDate: OffsetDateTime? = null,
     val hashes: Hash? = null,
     val category: String? = null,
     val tags: List<String>? = null,
+    val additionalFields: Map<String, String?> = emptyMap(),
+    @JsonIgnore
     val linkedItemBundleId: String? = null,
+    @JsonIgnore
     val linkedItemBundleVersionId: Long? = null,
+    @JsonIgnore
     val linkedItemId: String? = null
 
 ) {
   
-  @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+  @JsonIgnore
   var state: ItemState = ItemState.UNKNOWN
     set(value) {
       field = value
@@ -38,15 +45,6 @@ open class Entry(
   
   @JsonIgnore
   var stateProperty = SimpleObjectProperty(state)
-  
-  @JsonIgnore
-  fun isGroup(): Boolean {
-    val g = type == ItemType.GROUP
-    if (g && this !is Group) {
-      throw IllegalStateException("Defined as Group but not Group class")
-    }
-    return g
-  }
   
   @JsonIgnore
   fun getSrcUrl(bundleBase: String?): String {

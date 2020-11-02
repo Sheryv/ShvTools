@@ -22,5 +22,11 @@ class ValidationResult(val errors: MutableList<String> = mutableListOf()) {
     return this
   }
   
+  fun toLongText(): String {
+    return errors.mapIndexed() { i, e ->
+      "${(i + 1).toString().padStart(2)}. $e\n"
+    }.joinToString("\n")
+  }
+  
   constructor(vararg errors: String) : this(mutableListOf(*errors))
 }

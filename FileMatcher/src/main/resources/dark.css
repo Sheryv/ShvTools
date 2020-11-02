@@ -28,7 +28,7 @@
     /*-fx-focus-color: rgb(222, 122, 0);*/
     /* A bright blue for highlighting/accenting objects.  For example: selected
      * text; selected items in menus, lists, trees, and tables; progress bars */
-    -fx-accent: rgb(0, 80, 100);
+    -fx-accent: rgb(0, 108, 129);
 
 
     /*-fx-accent: rgb(234, 133, 0);*/
@@ -91,6 +91,34 @@
     /*-fx-padding: 0 0 2 0;*/
 }
 
+.bg-blue {
+    -fx-background-color: #0052a0;
+}
+
+.bg-green {
+    -fx-background-color: #175412;
+}
+
+.bg-red {
+    -fx-background-color: #54001b;
+}
+
+.bg-orange {
+    -fx-background-color: #542b00;
+}
+
+.bg-grey {
+    -fx-background-color: #2f382e;
+}
+
+.bg-yellow {
+    -fx-background-color: #796e00;
+}
+
+.bg-purple {
+    -fx-background-color: #2f2435;
+}
+
 .scroll-pane {
     /*-fx-background-color: -fx-control-inner-background;*/
     -fx-border-radius: 3;
@@ -115,30 +143,38 @@
 
 .tree-table-row-cell:odd {
     -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background, 4%);
-    -fx-background-insets: 0, 0 0 1 0;
 }
 
-.tree-table-row-cell:selected {
+.tree-table-row-cell:selected, .table-row-cell:selected {
     -fx-background-color: derive(-fx-control-inner-background, 17%);
     -fx-background-insets: 0, 1, 2;
 }
 
-/*.tree-table-cell:selected {*/
-/*    -fx-background-color: transparent;*/
-/*}*/
-
-.table-view {
-    -fx-table-cell-border-color: transparent;
+.tree-table-view:focused .tree-table-row-cell:selected,
+.table-view:focused .table-row-cell:selected {
+    -fx-background-color: derive(-fx-accent, -20%);
 }
+
+/*.tree-table-row-cell:selected .bg-blue,
+.tree-table-row-cell:selected .bg-green,
+.tree-table-row-cell:selected .bg-red,
+.tree-table-row-cell:selected .bg-orange,
+.tree-table-row-cell:selected .bg-grey,
+.tree-table-row-cell:selected .bg-yellow,
+.tree-table-row-cell:selected .bg-purple {
+    -fx-background-color: transparent;
+}*/
 
 .tree-table-view {
     -fx-table-cell-border-color: transparent;
 }
 
-.tree-table-row-cell .table-column {
-    -fx-start-margin: 1px;
-    -fx-start-end: 1px;
+.progress-bar .bar {
+    /*-fx-background-color: green;*/
+}
 
+.progress-indicator {
+    -fx-progress-color: #0080e4;
 }
 
 
@@ -212,9 +248,9 @@
 }
 
 .hyperlink {
-    -fx-text-fill: #0070cf;
+    -fx-text-fill: #00aec8;
 }
 
 .hyperlink:hover {
-    -fx-text-fill: #008fff;
+    -fx-text-fill: #00e1f8;
 }

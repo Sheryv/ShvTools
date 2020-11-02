@@ -2,7 +2,7 @@ package com.sheryv.tools.filematcher.model
 
 import com.sheryv.tools.filematcher.utils.SystemUtils
 
-class BasePath(
+data class BasePath(
     val default: String? = null,
     val windows: String? = null,
     val unix: String? = null

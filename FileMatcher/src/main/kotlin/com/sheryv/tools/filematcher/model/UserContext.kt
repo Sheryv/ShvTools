@@ -3,6 +3,7 @@ package com.sheryv.tools.filematcher.model
 import com.sheryv.tools.filematcher.utils.BundleUtils
 import java.io.File
 import java.nio.file.Path
+import java.nio.file.Paths
 
 class UserContext(var repo: Repository? = null,
                   var bundle: String? = null,
@@ -16,6 +17,10 @@ class UserContext(var repo: Repository? = null,
     return repo!!.bundles.first { it.id == bundle }
   }
   
+  fun getBundleOrNull(): Bundle? {
+    return repo?.bundles?.firstOrNull { it.id == bundle }
+  }
+  
   fun getVersion(): BundleVersion {
     return getBundle().versions.first { it.versionId == version }
   }
@@ -26,7 +31,7 @@ class UserContext(var repo: Repository? = null,
     if (bundl.versioningMode == BundleMode.AGGREGATE_OLD) {
       val previous = bundl.versions.filter { it.versionId < version!! }.sortedBy { it.versionId }
       previous.forEach { v ->
-        BundleUtils.forEachEntry(v.entries) { e ->
+        v.entries.forEach { e ->
           if (result.none { it.id == e.id }) {
             result.add(e)
           }
@@ -36,25 +41,20 @@ class UserContext(var repo: Repository? = null,
     return result
   }
   
-  fun buildDirPathForEntry(entry: Entry): Path {
-    val entries = getEntries()
-    return fillPath(entries, basePath!!.toPath()) { it.id == entry.id }
-        ?: throw IllegalArgumentException("Entry not found in context: ${entry.id}, ${entry.name}")
+  fun getParentEntry(parentId: String): Entry {
+    return getEntries().firstOrNull { it.id == parentId }
+        ?: throw IllegalArgumentException("Parent entry not found in context: ${parentId}")
   }
   
-  private fun fillPath(entries: List<Entry>, basePath: Path, matcher: (Entry) -> Boolean): Path? {
-    for (entry in entries) {
-      if (matcher.invoke(entry)) {
-        return basePath
-      }
-      if (entry.isGroup()) {
-        val newPath = entry.target.path?.findPath()?.let { basePath.resolve(it) } ?: basePath
-        val path = fillPath((entry as Group).entries, newPath, matcher)
-        if (path != null)
-          return path
-      }
+  fun buildDirPathForEntry(entry: Entry): Path {
+    val entries = getEntries()
+    val found = entries.firstOrNull { it.id == entry.id }
+        ?: throw IllegalArgumentException("Entry not found in context: ${entry.id}, ${entry.name}")
+  
+    if (found.parent != null) {
+      return Paths.get(basePath!!.absolutePath, *BundleUtils.getParents(found.parent, entries).mapNotNull { it.target.path?.findPath() }.reversed().toTypedArray())
     }
-    return null
+    return basePath!!.toPath()
   }
   
 }

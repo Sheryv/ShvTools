@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.sheryv.tools.filematcher.utils.DataUtils
 import java.time.OffsetDateTime
 
-class Bundle(
+data class Bundle(
     val id: String,
     val name: String = "",
     val description: String = "",
@@ -15,8 +15,11 @@ class Bundle(
     val baseItemUrl: String? = null,
     val updateDate: OffsetDateTime? = null,
     val additionalFields: Map<String, String?> = emptyMap(),
+    @JsonIgnore
     val link: String? = null,
+    @JsonIgnore
     val linkedId: String? = null,
+    @JsonIgnore
     val experimental: Boolean = false
 ) {
   

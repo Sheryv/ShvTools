@@ -4,11 +4,12 @@ import com.sheryv.util.SerialisationUtils
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
-import java.util.concurrent.ArrayBlockingQueue
 
 class Configuration {
   var findItemsByHash: Boolean = false
   var recentRepositories: MutableList<String> = LinkedList()
+  var lastLoadedRepoFile: String? = null
+  var devTools: DevToolConfig = DevToolConfig()
   
   fun save() {
     val s = SerialisationUtils.toJson(this)
@@ -33,4 +34,12 @@ class Configuration {
     }
   }
   
+}
+
+class DevToolConfig(
+    var outputPath: String? = null,
+    var sourcePath: String? = null,
+    var mcCursePath: String? = null
+) {
+
 }

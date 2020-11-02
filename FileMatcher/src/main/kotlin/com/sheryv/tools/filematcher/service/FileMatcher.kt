@@ -5,32 +5,29 @@ import com.sheryv.tools.filematcher.utils.BundleUtils
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonType
+import java.nio.file.Path
 import java.nio.file.Paths
 
-class FileMatcher(val context: UserContext) {
+class FileMatcher(val context: UserContext, onFinish: ((ProcessResult<FileSynchronizer>) -> Unit)? = null) : Process(onFinish as ((ProcessResult<out Process>) -> Unit)?) {
   
-  fun verifyLocal() {
+  override fun preValidation(): Boolean {
     if (!context.isFilled()) {
       DialogUtils.dialog("", "Bundle or version is not selected", Alert.AlertType.ERROR, ButtonType.OK)
-      return
+      return false
     }
-    
-    val p = context.basePath!!
-    
-    BundleUtils.forEachEntry(context.getEntries()) {
+    return true
+  }
+  
+  override suspend fun process() {
+    context.getEntries().filter { !it.group }.forEach {
       verifyEntryState(it)
     }
   }
   
   fun verifyEntryState(entry: Entry) {
     entry.state = ItemState.VERIFICATION
-    val path = if (entry.target.absolute) {
-      Paths.get(entry.target.path!!.findPath()!!)
-    } else {
-      context.buildDirPathForEntry(entry).resolve(entry.target.path?.findPath() ?: "")
-    }
-//    val dir = context.buildDirPathForEntry(entry)
-    val dir = path.toFile()
+  
+    val dir = getEntryDir(entry).toFile()
     if (dir.exists()) {
       if (!dir.isDirectory) {
         throw ValidationError(ValidationResult("Target path '${entry.target.path}' does not point to " +
@@ -61,5 +58,12 @@ class FileMatcher(val context: UserContext) {
     
   }
   
+  fun getEntryDir(entry: Entry): Path {
+    return if (entry.target.absolute) {
+      Paths.get(entry.target.path!!.findPath()!!)
+    } else {
+      context.buildDirPathForEntry(entry).resolve(entry.target.path?.findPath() ?: "")
+    }
+  }
   
 }

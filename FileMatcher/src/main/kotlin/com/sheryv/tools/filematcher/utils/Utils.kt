@@ -1,5 +1,7 @@
 package com.sheryv.tools.filematcher.utils
 
+import com.fasterxml.jackson.databind.util.ISO8601DateFormat
+import com.sheryv.tools.filematcher.model.event.ShvEvent
 import kotlinx.coroutines.*
 import org.greenrobot.eventbus.EventBus
 import org.slf4j.Logger
@@ -17,10 +19,19 @@ fun inBackground(start: CoroutineStart = CoroutineStart.DEFAULT,
   return GlobalScope.launch(Dispatchers.IO, start, block)
 }
 
+fun inViewThread(start: CoroutineStart = CoroutineStart.DEFAULT,
+                 block: suspend CoroutineScope.() -> Unit): Job {
+  return GlobalScope.launch(Dispatchers.Main, start, block)
+}
+
 inline fun <reified T, R> T.timeLog(name: String, repeats: Int = 1, noinline b: () -> R): R {
   return Hashing.time(name, T::class.java, repeats, b)
 }
 
+
+fun Boolean.toEnglishWord(): String {
+  return if (this) "Yes" else "No"
+}
 
 object Utils {
   private var DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
@@ -71,7 +82,7 @@ object Utils {
   
   
   fun now(): OffsetDateTime {
-    return OffsetDateTime.now().withOffsetSameInstant(ZoneOffset.UTC)
+    return OffsetDateTime.now().withOffsetSameInstant(ZoneOffset.UTC).withNano(0)
   }
 }
 
@@ -80,7 +91,7 @@ object LoggingUtils {
   //  val history = LimitedQueue<String>(500)
   val hiddenMarker = MarkerFactory.getMarker("hid")
   private val loggers = mutableMapOf<String, Logger>()
-//  val eventBus: EventBus = EventBus.builder().logger(org.greenrobot.eventbus.Logger.JavaLogger(EventBus::class.java.name)).build()
+  val eventBus: EventBus = EventBus.builder().logger(org.greenrobot.eventbus.Logger.JavaLogger(EventBus::class.java.name)).build()
   
   fun getLogger(clazz: Class<*>): Logger {
     return if (!loggers.contains(clazz.name)) {
@@ -113,4 +124,23 @@ inline fun <reified T> T.lg(clazz: Class<*> = T::class.java): Logger {
 
 inline fun Any.lg(name: String): Logger {
   return LoggingUtils.getLogger(name)
+}
+
+
+fun eventsAttach(receiver: Any) {
+  LoggingUtils.eventBus.register(receiver)
+  LoggingUtils.getLogger(receiver::class.java).debug("Registered event bus to ${receiver::class.simpleName}")
+}
+
+fun eventsDetach(receiver: Any) {
+  if (LoggingUtils.eventBus.isRegistered(receiver)) {
+    LoggingUtils.eventBus.unregister(receiver)
+    LoggingUtils.getLogger(receiver::class.java).debug("Unregistered event bus from ${receiver::class.simpleName}")
+  } else {
+    LoggingUtils.getLogger(receiver::class.java).warn("Trying to unregister event listener that was not registered")
+  }
+}
+
+fun postEvent(event: ShvEvent) {
+  LoggingUtils.eventBus.post(event)
 }

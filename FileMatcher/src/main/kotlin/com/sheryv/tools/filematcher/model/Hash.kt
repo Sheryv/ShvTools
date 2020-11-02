@@ -1,9 +1,12 @@
 package com.sheryv.tools.filematcher.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.sheryv.tools.filematcher.utils.Hashing
 import java.io.File
 
-class Hash(
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class Hash(
     val md5: String? = null,
     val sha256: String? = null,
     val sha1: String? = null,
@@ -12,6 +15,7 @@ class Hash(
   
   fun hasAny() = md5 != null || sha256 != null || sha1 != null || crc32 != null
   
+  @JsonIgnore
   fun getCorrespondingHasherAndCompare(): (File) -> Boolean {
     if (sha256 != null) {
       return { Hashing.sha256(it.toPath()) == sha256 }

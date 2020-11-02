@@ -1,6 +1,6 @@
 package com.sheryv.tools.filematcher.model
 
-class BundleVersion(
+data class BundleVersion(
     val versionId: Long = 0,
     val versionName: String,
     val changesDescription: String = "",
