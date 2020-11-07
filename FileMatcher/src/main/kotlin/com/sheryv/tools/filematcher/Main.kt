@@ -4,6 +4,8 @@ package com.sheryv.tools.filematcher
 
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.utils.ViewUtils
+import com.sheryv.tools.filematcher.view.BaseView
+import com.sheryv.tools.filematcher.view.MainView
 import javafx.application.Application
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
@@ -17,13 +19,6 @@ fun main(args: Array<String>) {
 class Main : Application() {
   override fun start(stage: Stage) {
     Configuration.get()
-    val root: Parent = FXMLLoader.load(javaClass.classLoader.getResource("main.fxml"))
-    stage.title = "ShvFileMatcher"
-    val scene = Scene(root, 900.0, 600.0)
-    stage.scene = scene
-    ViewUtils.appendStyleSheets(stage.scene)
-    stage.show()
+    ViewUtils.createWindow<MainView>("main.fxml", "ShvFileMatcher", stage)
   }
-  
-  
 }

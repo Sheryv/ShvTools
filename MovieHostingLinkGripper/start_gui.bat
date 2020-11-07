@@ -1,1 +1,1 @@
-F:\Data\Open-JDK-13\bin\java.exe -jar build\libs\movie-link-gripper-all-0.2.jar i
+java11 -jar build\libs\movie-link-gripper-all-0.2.jar i

@@ -26,7 +26,7 @@ public class Strings {
     }
 
     public static StringSubstitutor getTemplater(Map<String, Object> values){
-        return new StringSubstitutor(values, "{{", "}}");
+      return new StringSubstitutor(values, "${", "}");
     }
     
     public static String fillTemplate(String template, Map<String, Object> values){

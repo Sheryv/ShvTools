@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 data class Repository(
     val baseUrl: String,
     val codeName: String = "",
-    val repoositoryVersion: String? = null,
+    val repositoryVersion: String? = null,
     val schemaVersion: Long? = null,
     val website: String? = null,
     val title: String = "",

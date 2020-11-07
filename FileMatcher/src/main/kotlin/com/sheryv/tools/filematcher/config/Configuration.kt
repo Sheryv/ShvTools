@@ -39,7 +39,8 @@ class Configuration {
 class DevToolConfig(
     var outputPath: String? = null,
     var sourcePath: String? = null,
-    var mcCursePath: String? = null
+    var mcCursePath: String? = null,
+    var bundlePreferredPath: String? = null
 ) {
 
 }

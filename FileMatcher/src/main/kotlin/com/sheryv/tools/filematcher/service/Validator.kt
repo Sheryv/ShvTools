@@ -23,7 +23,7 @@ class Validator {
         .assert(repo.schemaVersion == 1L, "Field 'schemaVersion' in object 'Repository' cannot be empty. Currently supported version of schema is '1'. Check for updates to get support for newer versions.")
         .assert(inRange(repo.title, 100), "Field 'title' in object 'Repository' cannot be longer than 100 chars.")
         .assert(inRange(repo.codeName, 50), "Field 'title' in object 'Repository' cannot be longer than 50 chars.")
-        .assert(inRange(repo.repoositoryVersion, 50), "Field 'version' in object 'Repository' cannot be longer than 50 chars.")
+        .assert(inRange(repo.repositoryVersion, 50), "Field 'version' in object 'Repository' cannot be longer than 50 chars.")
         .assert(inRange(repo.website, 1000), "Field 'website' in object 'Repository' cannot be longer than 1000 chars.")
         .assert(inRange(repo.baseUrl, 1000), "Field 'baseUrl' in object 'Repository' cannot be longer than 1000 chars.")
         .assert(inRange(repo.author, 100), "Field 'website' in object 'Repository' cannot be longer than 100 chars.")

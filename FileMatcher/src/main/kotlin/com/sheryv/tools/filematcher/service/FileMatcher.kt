@@ -1,14 +1,20 @@
 package com.sheryv.tools.filematcher.service
 
 import com.sheryv.tools.filematcher.model.*
+import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
 import com.sheryv.tools.filematcher.utils.BundleUtils
 import com.sheryv.tools.filematcher.utils.DialogUtils
+import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.tools.filematcher.utils.postEvent
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonType
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import java.nio.file.Paths
 
-class FileMatcher(val context: UserContext, onFinish: ((ProcessResult<FileSynchronizer>) -> Unit)? = null) : Process(onFinish as ((ProcessResult<out Process>) -> Unit)?) {
+class FileMatcher(private val context: UserContext, onFinish: ((ProcessResult<Unit, FileSynchronizer>) -> Unit)? = null)
+  : Process<Unit>(onFinish as ((ProcessResult<Unit, out Process<Unit>>) -> Unit)?) {
   
   override fun preValidation(): Boolean {
     if (!context.isFilled()) {
@@ -20,40 +26,52 @@ class FileMatcher(val context: UserContext, onFinish: ((ProcessResult<FileSynchr
   
   override suspend fun process() {
     context.getEntries().filter { !it.group }.forEach {
-      verifyEntryState(it)
+      updateEntryState(it)
     }
   }
   
-  fun verifyEntryState(entry: Entry) {
-    entry.state = ItemState.VERIFICATION
+  suspend fun updateEntryState(it: Entry) {
+    withContext(Dispatchers.Main) {
+      it.state = ItemState.VERIFICATION
+    }
+    val state = verifyEntryState(it)
+    withContext(Dispatchers.Main) {
+      it.state = state
+      postEvent(ItemStateChangedEvent(it))
+    }
+  }
   
+  fun verifyEntryState(entry: Entry): ItemState {
     val dir = getEntryDir(entry).toFile()
-    if (dir.exists()) {
+    return if (dir.exists()) {
       if (!dir.isDirectory) {
         throw ValidationError(ValidationResult("Target path '${entry.target.path}' does not point to " +
             "directory for item [name=${entry.name}, id=${entry.id}]. Problematic file: ${dir.absolutePath}"))
       }
+      lg().info("Item state verification '${entry.name}' [id=${entry.id}]")
       val file = dir.resolve(entry.name)
       if (file.exists()) {
         if (entry.hashes != null && entry.hashes.hasAny()) {
+          lg().debug("Calculating hash '${entry.name}' [id=${entry.id}], file: ${file.absolutePath}")
           val match = entry.hashes.getCorrespondingHasherAndCompare().invoke(file)
           if (match) {
-            entry.state = ItemState.SYNCED
+            ItemState.SYNCED
           } else if (entry.target.override) {
-            entry.state = ItemState.MODIFIED
+            ItemState.MODIFIED
           } else {
-            entry.state = ItemState.SKIPPED
+            ItemState.SKIPPED
           }
         } else if (entry.target.override) {
-          entry.state = ItemState.NEEDS_UPDATE
+          ItemState.NEEDS_UPDATE
         } else {
-          entry.state = ItemState.SKIPPED
+          ItemState.SKIPPED
         }
       } else {
-        entry.state = ItemState.NOT_EXISTS
+        ItemState.NOT_EXISTS
       }
     } else {
-      entry.state = ItemState.NOT_EXISTS
+      lg().info("Item does not exists: ${entry.name} [id=${entry.id}]")
+      ItemState.NOT_EXISTS
     }
     
   }

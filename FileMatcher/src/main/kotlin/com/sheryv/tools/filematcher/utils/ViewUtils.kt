@@ -2,13 +2,17 @@ package com.sheryv.tools.filematcher.utils
 
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.TargetPath
+import com.sheryv.tools.filematcher.view.BaseView
 import javafx.beans.property.SimpleStringProperty
+import javafx.fxml.FXMLLoader
+import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.control.TreeItem
 import javafx.scene.control.TreeTableCell
 import javafx.scene.control.TreeTableColumn
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Region
+import javafx.stage.Stage
 import javafx.util.Callback
 
 object ViewUtils {
@@ -130,5 +134,18 @@ object ViewUtils {
         }
       }
     }
+  }
+  
+  fun <T : BaseView> createWindow(fxml: String, title: String, stage: Stage = Stage()): T {
+    val loader = FXMLLoader(javaClass.classLoader.getResource(fxml))
+    val root: Parent = loader.load()
+    val controller = loader.getController<T>()
+    controller.initStage(stage)
+    stage.title = title
+    val scene = Scene(root, 900.0, 600.0)
+    stage.scene = scene
+    appendStyleSheets(stage.scene)
+    stage.show()
+    return controller
   }
 }

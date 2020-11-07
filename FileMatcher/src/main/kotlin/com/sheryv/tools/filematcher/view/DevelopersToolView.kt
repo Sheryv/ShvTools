@@ -2,7 +2,9 @@ package com.sheryv.tools.filematcher.view
 
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.model.Entry
+import com.sheryv.tools.filematcher.model.ResultType
 import com.sheryv.tools.filematcher.service.MinecraftService
+import com.sheryv.tools.filematcher.service.RepositoryGenerator
 import com.sheryv.tools.filematcher.service.RepositoryService
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.SystemUtils
@@ -12,15 +14,18 @@ import javafx.scene.control.*
 import java.io.File
 import java.nio.file.Paths
 
-class DevelopersToolView {
+class DevelopersToolView : BaseView() {
   
-  @FXML
-  fun initialize() {
+  override fun initialize() {
+    super.initialize()
     if (Configuration.get().devTools.sourcePath != null) {
       tfPath.text = Configuration.get().devTools.sourcePath
     }
     if (Configuration.get().devTools.outputPath != null) {
       tfOutput.text = Configuration.get().devTools.outputPath
+    }
+    if (Configuration.get().devTools.bundlePreferredPath != null) {
+      tfBundlePath.text = Configuration.get().devTools.bundlePreferredPath
     }
     
     btnPath.setOnAction {
@@ -29,6 +34,15 @@ class DevelopersToolView {
       DialogUtils.directoryDialog(btnPath.scene.window, initialDirectory = initialDirectory).ifPresent {
         tfPath.text = it.toAbsolutePath().toString()
         Configuration.get().devTools.sourcePath = it.toAbsolutePath().toString()
+        Configuration.get().save()
+      }
+    }
+    btnBundlePath.setOnAction {
+      val initialDirectory = if (tfBundlePath.text.isNullOrBlank()) Configuration.get().devTools.bundlePreferredPath
+          ?: SystemUtils.userDownloadDir() else tfBundlePath.text
+      DialogUtils.directoryDialog(btnBundlePath.scene.window, initialDirectory = initialDirectory).ifPresent {
+        tfBundlePath.text = it.toAbsolutePath().toString()
+        Configuration.get().devTools.bundlePreferredPath = it.toAbsolutePath().toString()
         Configuration.get().save()
       }
     }
@@ -93,10 +107,32 @@ class DevelopersToolView {
       return
     }
     try {
+      lbProcessState.text = "Generating..."
+      pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
+      listOf(btnBundlePath, btnOutput, btnPath, btnGenerate).forEach { it.isDisable = true }
+      
       val service = RepositoryService()
-      val repository = service.generateFromLocalDir(file)
-      service.saveToFile(repository, File(tfOutput.text), cmFormat.selectionModel.selectedItem)
-      treeView.root = ViewUtils.toTreeItems(repository.bundles.last().versions.last().entries)
+      RepositoryGenerator(file) {
+        lbProcessState.text = ""
+        pbProcess.progress = 0.0
+        listOf(btnBundlePath, btnOutput, btnPath, btnGenerate).forEach { it.isDisable = false }
+    
+        when (it.type) {
+          ResultType.SUCCESS -> {
+            service.saveToFile(it.data!!, File(tfOutput.text), cmFormat.selectionModel.selectedItem)
+    
+            Configuration.get().devTools.sourcePath = tfPath.text
+            Configuration.get().devTools.outputPath = tfOutput.text
+            Configuration.get().devTools.bundlePreferredPath = tfBundlePath.text
+            Configuration.get().save()
+            treeView.root = ViewUtils.toTreeItems(it.data.bundles.last().versions.last().entries)
+          }
+          ResultType.ERROR -> DialogUtils.textAreaDialog(
+              "Details",
+              it.error?.message.orEmpty(),
+              "Error occurred when generating")
+        }
+      }.start()
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
           "Details",
@@ -124,6 +160,9 @@ class DevelopersToolView {
   lateinit var btnOutput: Button
   
   @FXML
+  lateinit var btnBundlePath: Button
+  
+  @FXML
   lateinit var btnCurseForge: Button
   
   @FXML
@@ -131,6 +170,9 @@ class DevelopersToolView {
   
   @FXML
   lateinit var tfOutput: TextField
+  
+  @FXML
+  lateinit var tfBundlePath: TextField
   
   @FXML
   lateinit var tfMcPath: TextField

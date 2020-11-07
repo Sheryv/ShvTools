@@ -24,7 +24,7 @@ allprojects {
             }
             baseName = project.name + '-all'
             archiveName = "${baseName}-${p.ext.shortVersion}.${extension}"
-            from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+            from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
             with jar
         }
     }

@@ -74,25 +74,25 @@
                                                    prefWidth="315.0" promptText="Source dir"
                                                    AnchorPane.leftAnchor="75.0" AnchorPane.rightAnchor="249.0"
                                                    AnchorPane.topAnchor="34.0"/>
-                                        <Button fx:id="btnGenerate" layoutX="565.0" layoutY="67.0"
-                                                mnemonicParsing="false" text="Generate" AnchorPane.rightAnchor="10.0"
-                                                AnchorPane.topAnchor="67.0"/>
+                                        <Button fx:id="btnGenerate" layoutX="548.0" layoutY="67.0"
+                                                mnemonicParsing="false" text="Generate all"
+                                                AnchorPane.rightAnchor="12.0" AnchorPane.topAnchor="67.0"/>
                                         <Button fx:id="btnPath" layoutX="401.0" layoutY="34.0" mnemonicParsing="false"
                                                 text="..." AnchorPane.rightAnchor="215.0" AnchorPane.topAnchor="34.0"/>
 
                                         <TreeTableView fx:id="treeView" showRoot="false" AnchorPane.bottomAnchor="3.0"
                                                        AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0"
-                                                       AnchorPane.topAnchor="100.0">
+                                                       AnchorPane.topAnchor="130.0">
                                             <columns>
                                                 <TreeTableColumn prefWidth="220.0" text="C1"/>
                                                 <TreeTableColumn minWidth="0.0" prefWidth="211.0" text="C2"/>
                                             </columns>
                                         </TreeTableView>
-                                        <ComboBox fx:id="cmFormat" layoutX="482.0" layoutY="67.0" prefHeight="25.0"
-                                                  prefWidth="74.0" AnchorPane.rightAnchor="84.0"
-                                                  AnchorPane.topAnchor="67.0"/>
-                                        <Label layoutX="434.0" layoutY="71.0" text="Format"
-                                               AnchorPane.rightAnchor="168.0"/>
+                                        <ComboBox fx:id="cmFormat" layoutX="548.0" layoutY="34.0" prefHeight="25.0"
+                                                  prefWidth="79.0" AnchorPane.rightAnchor="13.0"
+                                                  AnchorPane.topAnchor="34.0"/>
+                                        <Label layoutX="547.0" layoutY="19.0" text="Format"
+                                               AnchorPane.rightAnchor="55.0"/>
                                         <TextField fx:id="tfOutput" layoutX="76.0" layoutY="67.0" prefHeight="25.0"
                                                    prefWidth="316.0" promptText="Output file"
                                                    AnchorPane.leftAnchor="75.0" AnchorPane.rightAnchor="249.0"
@@ -111,6 +111,15 @@
                                                 <Font size="13.0"/>
                                             </font>
                                         </Label>
+                                        <TextField fx:id="tfBundlePath" layoutX="76.0" layoutY="92.0" prefHeight="25.0"
+                                                   prefWidth="315.0" promptText="Source dir"
+                                                   AnchorPane.leftAnchor="120.0" AnchorPane.rightAnchor="249.0"
+                                                   AnchorPane.topAnchor="100.0"/>
+                                        <Label layoutX="11.0" layoutY="104.0" text="Bundle preferred dir"
+                                               AnchorPane.leftAnchor="10.0" AnchorPane.topAnchor="104.0"/>
+                                        <Button fx:id="btnBundlePath" layoutX="401.0" layoutY="100.0"
+                                                mnemonicParsing="false" text="..." AnchorPane.rightAnchor="215.0"
+                                                AnchorPane.topAnchor="100.0"/>
                                     </children>
                                 </AnchorPane>
                             </content>

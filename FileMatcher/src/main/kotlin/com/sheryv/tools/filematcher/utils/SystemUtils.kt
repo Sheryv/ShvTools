@@ -1,6 +1,7 @@
 package com.sheryv.tools.filematcher.utils
 
 
+import com.sheryv.util.Strings
 import javafx.scene.input.Clipboard
 import javafx.scene.input.ClipboardContent
 import java.awt.Desktop
@@ -50,13 +51,17 @@ object SystemUtils {
     return initialDirectory?.let {
       val f = File(it)
       if (f.exists()) {
-        if (f.isDirectory) {
+        val res = if (f.isDirectory) {
           f
         } else {
           f.parent?.let { File(it) }
         }
-      } else null
-      
+        lg().debug("Directory parse result: [$it] -> [$res]")
+        res
+      } else {
+        lg().info("Directory parse with null result: [$it]")
+        null
+      }
     } ?: default?.let { File(it) }
   }
   
@@ -88,6 +93,11 @@ object SystemUtils {
         Runtime.getRuntime().exec(arrayOf("sh", "-c", cmd.toString()))
       }
     }
+  }
+  
+  fun resolveEnvironmentVariables(s: String): String {
+    val map = System.getenv() as Map<String, Any>
+    return Strings.fillTemplate(s, map)
   }
 }
 

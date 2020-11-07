@@ -66,6 +66,7 @@ object DataUtils {
   }
   
   fun <T> downloadAndParse(url: String, output: Class<T>): T {
+    lg().info("Downloading text from: $url")
     val indexOf = url.lastIndexOf('.')
     val extension = url.substring(indexOf + 1)
     

@@ -13,8 +13,8 @@ import kotlinx.coroutines.withContext
 import org.greenrobot.eventbus.Subscribe
 import java.io.File
 
-class FileSynchronizer(val context: UserContext, val state: ViewProgressState, onFinish: ((ProcessResult<FileSynchronizer>) -> Unit)? = null)
-  : Process(onFinish as ((ProcessResult<out Process>) -> Unit)?, true) {
+class FileSynchronizer(private val context: UserContext, private val state: ViewProgressState, onFinish: ((ProcessResult<Unit, FileSynchronizer>) -> Unit)? = null)
+  : Process<Unit>(onFinish as ((ProcessResult<Unit, out Process<Unit>>) -> Unit)?, true) {
   
   override fun preValidation(): Boolean {
     if (!context.isFilled()) {
@@ -30,8 +30,8 @@ class FileSynchronizer(val context: UserContext, val state: ViewProgressState, o
     val all = entries.size
     var processed = 0
     for (entry in entries) {
-      
-      matcher.verifyEntryState(entry)
+  
+      matcher.updateEntryState(entry)
       
       if (entry.selected && !entry.group && entry.type == ItemType.ITEM
           && (entry.state == ItemState.MODIFIED || entry.state == ItemState.NEEDS_UPDATE || entry.state == ItemState.NOT_EXISTS)) {
@@ -46,12 +46,12 @@ class FileSynchronizer(val context: UserContext, val state: ViewProgressState, o
 //
 //        }
         processed++
-        matcher.verifyEntryState(entry)
+        matcher.updateEntryState(entry)
       }
     }
   }
   
-  private fun downloadEntry(entry: Entry, matcher: FileMatcher): File? {
+  private suspend fun downloadEntry(entry: Entry, matcher: FileMatcher): File? {
     val dir = matcher.getEntryDir(entry)
     dir.toFile().mkdirs()
     val file = dir.resolve(entry.name).toFile()
@@ -59,7 +59,7 @@ class FileSynchronizer(val context: UserContext, val state: ViewProgressState, o
     return try {
       DataUtils.downloadFile(url, file) { !isActive() }
     } catch (e: Exception) {
-      matcher.verifyEntryState(entry)
+      matcher.updateEntryState(entry)
       throw IllegalStateException("Enable to download '${entry.name}' from: $url", e)
     }
   }

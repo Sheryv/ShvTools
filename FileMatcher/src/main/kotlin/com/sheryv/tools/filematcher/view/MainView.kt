@@ -3,11 +3,10 @@ package com.sheryv.tools.filematcher.view
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.model.*
 import com.sheryv.tools.filematcher.model.event.AbortEvent
-import com.sheryv.tools.filematcher.service.FileMatcher
-import com.sheryv.tools.filematcher.service.FileSynchronizer
-import com.sheryv.tools.filematcher.service.RepositoryService
-import com.sheryv.tools.filematcher.service.Validator
+import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
+import com.sheryv.tools.filematcher.service.*
 import com.sheryv.tools.filematcher.utils.*
+import com.sheryv.tools.lasso.util.OnChangeScheduledExecutor
 import com.sheryv.util.VersionUtils
 import javafx.application.Platform
 import javafx.beans.property.SimpleStringProperty
@@ -15,32 +14,41 @@ import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.event.EventHandler
 import javafx.fxml.FXML
-import javafx.fxml.FXMLLoader
 import javafx.geometry.HPos
 import javafx.geometry.Insets
 import javafx.geometry.Orientation
-import javafx.scene.Parent
-import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.input.*
 import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
-import javafx.stage.Stage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.apache.commons.lang3.exception.ExceptionUtils
+import org.greenrobot.eventbus.Subscribe
 import java.io.File
 
 class MainView : BaseView() {
   private var context: UserContext = UserContext()
   private var state: ViewProgressState = ViewProgressState()
+  private lateinit var filterProvider: () -> List<ItemState>
+  val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 400) {
+    if (context.isFilled()) {
+      withContext(Dispatchers.Main) {
+        filterItems()
+      }
+    }
+  }
+  
   
   init {
     instance = this
   }
   
-  @FXML
-  fun initialize() {
+  override fun initialize() {
+    super.initialize()
     createMenu()
+    updater.start()
     initializeTreeTable(treeView, context)
     
     treeView.selectionModel.selectedItems.addListener { item: ListChangeListener.Change<out TreeItem<Entry>> ->
@@ -49,9 +57,7 @@ class MainView : BaseView() {
       } else {
       }
     }
-
-//    val item = ViewUtils.toTreeItems(BundleUtils.createExample().bundles.first().versions.first().entries)
-//    ViewUtils.forEachTreeItem(item) { if (!it.isLeaf) it.isExpanded = true }
+    
     treeView.root = TreeItem()
     pbIndicator.isVisible = false
     lbProcessState.textProperty().bind(state.messageProp)
@@ -66,7 +72,7 @@ class MainView : BaseView() {
       btnLoad.isDisable = inProgress
       tfPath.isDisable = inProgress
       pbIndicator.isVisible = inProgress
-    
+  
       if (inProgress) {
         btnDownload.text = "Abort"
       } else {
@@ -101,17 +107,7 @@ class MainView : BaseView() {
         
         val ok = Validator().url(res).isOk()
         if (ok) {
-          if (recentRepositories.contains(res)) {
-            recentRepositories.remove(res)
-          }
-          recentRepositories.add(0, res)
-          if (recentRepositories.size >= 30) {
-            recentRepositories.removeAt(recentRepositories.size - 1)
-          }
-          Configuration.get().save()
-          cmRepositoryUrl.items.clear()
-          cmRepositoryUrl.items.addAll(recentRepositories)
-          cmRepositoryUrl.selectionModel.select(0)
+          addRepositoryUrlToList(res)
           return@setOnAction
         }
         s = "Error"
@@ -131,9 +127,7 @@ class MainView : BaseView() {
     cmVersion.selectionModel.selectedItemProperty().addListener { _, _, v ->
       if (v != null) {
         context = UserContext(context.repo, cmBundle.selectionModel.selectedItem?.id, v.versionId, context.basePath)
-        val entries = context.getEntries()
-        fillEntries(entries)
-        lbTreeState.text = "Items: " + entries.count { !it.group }
+        updater.executeNow()
       } else {
         lbTreeState.text = ""
       }
@@ -144,17 +138,18 @@ class MainView : BaseView() {
     btnLoad.setOnAction {
       state.setMessage("Loading repo...")
       state.progessIndeterminate()
-      try {
-        val load = RepositoryService().loadRepositoryConfig(cmRepositoryUrl.selectionModel.selectedItem)
-        initializeRepo(load)
-      } catch (e: ValidationError) {
-        DialogUtils.textAreaDialog(
-            "Following problems were found at: \n${cmRepositoryUrl.selectionModel.selectedItem}",
-            e.result.toLongText(),
-            "Found problems when validating repository configuration")
-      } finally {
+      RepositoryLoader(cmRepositoryUrl.selectionModel.selectedItem) {
         state.stop()
-      }
+        when (it.type) {
+          ResultType.SUCCESS -> {
+            initializeRepo(it.data!!)
+          }
+          ResultType.ERROR -> DialogUtils.textAreaDialog(
+              "Following problems were found at: \n${cmRepositoryUrl.selectionModel.selectedItem}",
+              it.error?.message.orEmpty(),
+              "Found problems when validating repository configuration")
+        }
+      }.start()
     }
     
     btnPath.setOnAction {
@@ -175,7 +170,7 @@ class MainView : BaseView() {
             ResultType.ERROR ->
               DialogUtils.textAreaDialog("Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
                   "Error verifying: ", Alert.AlertType.ERROR, wrapText = false)
-        
+  
           }
         }.start()
       }
@@ -206,6 +201,21 @@ class MainView : BaseView() {
     }
   }
   
+  private fun addRepositoryUrlToList(url: String) {
+    val recentRepositories = Configuration.get().recentRepositories
+    if (recentRepositories.contains(url)) {
+      recentRepositories.remove(url)
+    }
+    recentRepositories.add(0, url)
+    if (recentRepositories.size >= 30) {
+      recentRepositories.removeAt(recentRepositories.size - 1)
+    }
+    Configuration.get().save()
+    cmRepositoryUrl.items.clear()
+    cmRepositoryUrl.items.addAll(recentRepositories)
+    cmRepositoryUrl.selectionModel.select(0)
+  }
+  
   private fun initializeRepo(load: Repository) {
     context = UserContext(load)
     
@@ -232,7 +242,7 @@ class MainView : BaseView() {
     
     addDetailsRow("Name", r.codeName)
     addDetailsRow("BaseUrl", r.baseUrl)
-    addDetailsRow("Version", r.repoositoryVersion)
+    addDetailsRow("Version", r.repositoryVersion)
     addDetailsRow("Website", r.website)
     addDetailsRow("Title", r.title)
     addDetailsRow("Author", r.author)
@@ -292,6 +302,42 @@ class MainView : BaseView() {
   }
   
   private fun createMenu() {
+    val states = ItemState.values().mapIndexed { i, state ->
+      val keyCode = KeyCode.values().first { it.code == KeyCode.DIGIT1.code + i }
+      CheckMenuItem(state.label).apply {
+        userData = state
+        isSelected = true
+        accelerator = KeyCodeCombination(keyCode, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN)
+      }
+    }
+    filterProvider = { states.filter { it.isSelected }.map { it.userData as ItemState } }
+    states.forEach { item ->
+      item.setOnAction {
+        val userData = item.userData as ItemState
+        filterItems(states.filter { it.isSelected }.map { it.userData as ItemState }, item.isSelected, userData)
+      }
+    }
+  
+    val filters = mutableListOf(
+        MenuItem("Only in progress states").apply {
+          setOnAction {
+            states.forEach {
+              it.isSelected = (it.userData as ItemState).toModify
+              filterItems()
+            }
+          }
+        },
+        MenuItem("None").apply {
+          setOnAction {
+            states.forEach {
+              it.isSelected = false
+              filterItems()
+            }
+          }
+        },
+        SeparatorMenuItem())
+        .apply { addAll(states) }
+    
     menuBar.menus.setAll(listOf(
         Menu("File").apply {
           items.setAll(
@@ -301,23 +347,38 @@ class MainView : BaseView() {
               },
               SeparatorMenuItem(),
               MenuItem("Load repository from file").apply {
+                accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
                 setOnAction {
                   RepositoryService().loadRepositoryFromFile(treeView.scene.window)?.run { initializeRepo(this) }
-                  accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN)
                 }
               },
               SeparatorMenuItem(),
               MenuItem("Exit").apply {
-                setOnAction { Platform.exit() }
                 accelerator = KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN)
+                setOnAction { Platform.exit() }
               }
+          )
+        },
+        Menu("Items").apply {
+          items.setAll(
+              Menu("Filter").apply {
+                items.setAll(filters)
+              },
+              MenuItem("Clear filters").apply {
+                setOnAction {
+                  states.forEach { it.isSelected = true }
+                  filterItems(ItemState.values().toList())
+                }
+                accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
+              },
+              SeparatorMenuItem()
           )
         },
         Menu("Predefined repositories").apply {
           items.setAll(
               Menu("Minecraft").apply {
                 items.setAll(
-                    MenuItem("Modpack")
+                    MenuItem("Xenypack - Modpack").apply { setOnAction { addRepositoryUrlToList("https://raw.githubusercontent.com/Detronit/xenypack-modpack/master/repository-xenypack.yaml") } }
                 )
               }
           )
@@ -345,14 +406,41 @@ class MainView : BaseView() {
     )
   }
   
+  private fun filterItems(all: List<ItemState> = filterProvider(), selected: Boolean? = null, state: ItemState? = null) {
+    if (!context.isFilled()) {
+      return
+    }
+    
+    val entries = context.getEntries()
+    val filter = entries.filter { all.contains(it.state) || it.group }
+    fillEntries(filter)
+    updateStatusBar(entries)
+  }
+  
   private fun createDevToolsWindow() {
-    val root: Parent = FXMLLoader.load(javaClass.classLoader.getResource("developer-tools.fxml"))
-    val stage = Stage()
-    stage.title = "ShvFileMatcher - Developer Tools"
-    val scene = Scene(root, 900.0, 600.0)
-    stage.scene = scene
-    ViewUtils.appendStyleSheets(stage.scene)
-    stage.show()
+    ViewUtils.createWindow<DevelopersToolView>("developer-tools.fxml", "ShvFileMatcher - Developer Tools")
+  }
+  
+  @Subscribe
+  fun itemStateChangedEvent(e: ItemStateChangedEvent) {
+    updateStatusBar(context.getEntries())
+    updater.markChanged()
+  }
+  
+  private fun updateStatusBar(list: List<Entry>, filteredStates: List<ItemState> = filterProvider()) {
+    val entries = list.filter { !it.group }
+    val filter = entries.filter { filteredStates.contains(it.state) }
+    val synced = entries.count { it.state == ItemState.SYNCED }
+    val skipped = entries.count { it.state == ItemState.SKIPPED }
+    val download = entries.count { it.state.toModify }
+    if (filter.size == entries.size) {
+      lbTreeState.text = "Items: ${entries.size}; Synced: $synced, Skipped: $skipped, To download: $download"
+    } else {
+      val syncedFiltered = filter.count { it.state == ItemState.SYNCED }
+      val skippedFiltered = filter.count { it.state == ItemState.SKIPPED }
+      val downloadFiltered = filter.count { it.state.toModify }
+      lbTreeState.text = "[Filtered/All] Items: ${filter.size}/${entries.size}; Synced: $syncedFiltered/$synced, Skipped: $skippedFiltered/$skipped, To download: $downloadFiltered/$download"
+    }
   }
   
   companion object {
@@ -361,9 +449,6 @@ class MainView : BaseView() {
     
     @JvmStatic
     fun initializeTreeTable(treeView: TreeTableView<Entry>, context: UserContext? = null) {
-      val buttons = {
-        mapOf("copy" to Button("Copy").apply { padding = Insets(0.0, 5.0, 0.0, 5.0) })
-      }
       treeView.columns.setAll(
           ViewUtils.createTreeColumn("Name", 300) { it.name },
           TreeTableColumn<Entry, String>("State").also {
@@ -379,22 +464,23 @@ class MainView : BaseView() {
           ViewUtils.createTreeColumn("Override") { if (!it.group) (if (it.target.override) "Yes" else "No") else "" },
           ViewUtils.createTreeColumn("Category") { it.category.orEmpty() },
           ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
-          ViewUtils.createTreeColumn("ID") { it.id }
+          ViewUtils.createTreeColumn("ID") { it.id },
+          ViewUtils.createTreeColumn("URL") { it.getSrcUrl(context?.getBundleOrNull()?.getBaseUrl(context.repo?.baseUrl)) }
       )
-      
-      if (context != null && context.isFilled()) {
-        treeView.columns.add(TreeTableColumn<Entry, String>("URL").also {
-          it.cellFactory = ViewUtils.buttonsInTreeTableCellFactory(buttons) { treeItem, map ->
-            val e = treeItem.value!!
-            map.values.first().setOnAction {
-              val content = ClipboardContent()
-              content.putString(e.getSrcUrl(context.getBundle()!!.getBaseUrl(context.repo!!.baseUrl)))
-              Clipboard.getSystemClipboard().setContent(content)
-            }
-            return@buttonsInTreeTableCellFactory if (e.group) emptyList() else map.values
-          }
-        })
-      }
+
+//        treeView.columns.add(TreeTableColumn<Entry, String>("URL").also {
+
+
+//          it.cellFactory = ViewUtils.buttonsInTreeTableCellFactory(buttons) { treeItem, map ->
+//            val e = treeItem.value!!
+//            map.values.first().setOnAction {
+//              val content = ClipboardContent()
+//              content.putString(e.getSrcUrl(context.getBundle()!!.getBaseUrl(context.repo!!.baseUrl)))
+//              Clipboard.getSystemClipboard().setContent(content)
+//            }
+//            return@buttonsInTreeTableCellFactory if (e.group) emptyList() else map.values
+//          }
+//        })
       
       treeView.onMousePressed = EventHandler { event ->
         if (event.isPrimaryButtonDown && event.clickCount == 2 && treeView.selectionModel.selectedItem.value != null) {
@@ -472,6 +558,7 @@ class MainView : BaseView() {
       val lk = Label(key)
       lk.minHeight = height
       lk.prefHeight = height
+      lk.tooltip = Tooltip(key)
       val lv = if (value != null && Validator().url(value).isOk()) {
         Hyperlink(value).apply {
           maxHeight = height
@@ -492,7 +579,6 @@ class MainView : BaseView() {
         cp.maxHeight = height - 10
         cp.prefHeight = height - 10
         cp.setOnAction {
-          lg().debug("Click $value")
           val content = ClipboardContent()
           content.putString(value)
           Clipboard.getSystemClipboard().setContent(content)
