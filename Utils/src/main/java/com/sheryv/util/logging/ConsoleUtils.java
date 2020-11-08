@@ -1,5 +1,8 @@
 package com.sheryv.util.logging;
 
+import org.apache.commons.lang3.RegExUtils;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -13,6 +16,7 @@ public class ConsoleUtils {
 
     public static String parseAndReplaceWithColors(String text) {
         Matcher matcher = PATTERN_COLOR.matcher(text);
+
         return matcher.replaceAll(matchResult -> {
             String group = matchResult.group();
             String code = group.substring(1, group.length() - 1);

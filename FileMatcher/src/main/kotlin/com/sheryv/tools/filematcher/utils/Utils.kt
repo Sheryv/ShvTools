@@ -2,6 +2,7 @@ package com.sheryv.tools.filematcher.utils
 
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat
 import com.sheryv.tools.filematcher.model.event.ShvEvent
+import com.sheryv.util.logging.LoggingUtils
 import kotlinx.coroutines.*
 import org.greenrobot.eventbus.EventBus
 import org.slf4j.Logger
@@ -34,6 +35,8 @@ fun Boolean.toEnglishWord(): String {
 }
 
 object Utils {
+  internal val eventBus: EventBus = EventBus.builder().logger(org.greenrobot.eventbus.Logger.JavaLogger(EventBus::class.java.name)).build()
+
   private var DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
       .parseCaseInsensitive()
       .appendValue(ChronoField.HOUR_OF_DAY, 2)
@@ -86,38 +89,6 @@ object Utils {
   }
 }
 
-object LoggingUtils {
-  
-  //  val history = LimitedQueue<String>(500)
-  val hiddenMarker = MarkerFactory.getMarker("hid")
-  private val loggers = mutableMapOf<String, Logger>()
-  val eventBus: EventBus = EventBus.builder().logger(org.greenrobot.eventbus.Logger.JavaLogger(EventBus::class.java.name)).build()
-  
-  fun getLogger(clazz: Class<*>): Logger {
-    return if (!loggers.contains(clazz.name)) {
-      val logger = LoggerFactory.getLogger(clazz)
-      loggers[clazz.name] = logger
-      logger
-    } else loggers[clazz.name]!!
-  }
-  
-  fun getLogger(name: String): Logger {
-    return if (!loggers.contains(name)) {
-      val logger = LoggerFactory.getLogger(name)
-      loggers[name] = logger
-      logger
-    } else loggers[name]!!
-  }
-  
-  inline fun <reified T> hidden(msg: String) {
-    getLogger(T::class.java).debug(hiddenMarker, msg)
-  }
-
-//  fun appendHistory(log: String) {
-//    history.add(log)
-//  }
-}
-
 inline fun <reified T> T.lg(clazz: Class<*> = T::class.java): Logger {
   return LoggingUtils.getLogger(clazz)
 }
@@ -128,13 +99,13 @@ inline fun Any.lg(name: String): Logger {
 
 
 fun eventsAttach(receiver: Any) {
-  LoggingUtils.eventBus.register(receiver)
+  Utils.eventBus.register(receiver)
   LoggingUtils.getLogger(receiver::class.java).debug("Registered event bus to ${receiver::class.simpleName}")
 }
 
 fun eventsDetach(receiver: Any) {
-  if (LoggingUtils.eventBus.isRegistered(receiver)) {
-    LoggingUtils.eventBus.unregister(receiver)
+  if (Utils.eventBus.isRegistered(receiver)) {
+    Utils.eventBus.unregister(receiver)
     LoggingUtils.getLogger(receiver::class.java).debug("Unregistered event bus from ${receiver::class.simpleName}")
   } else {
     LoggingUtils.getLogger(receiver::class.java).warn("Trying to unregister event listener that was not registered")
@@ -142,5 +113,5 @@ fun eventsDetach(receiver: Any) {
 }
 
 fun postEvent(event: ShvEvent) {
-  LoggingUtils.eventBus.post(event)
+  Utils.eventBus.post(event)
 }

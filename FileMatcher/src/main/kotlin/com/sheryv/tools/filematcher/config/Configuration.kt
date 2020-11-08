@@ -1,6 +1,7 @@
 package com.sheryv.tools.filematcher.config
 
 import com.sheryv.util.SerialisationUtils
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
@@ -12,8 +13,7 @@ class Configuration {
   var devTools: DevToolConfig = DevToolConfig()
   
   fun save() {
-    val s = SerialisationUtils.toJson(this)
-    Files.writeString(Paths.get(FILE), s)
+    SerialisationUtils.toJson(File(FILE), this)
   }
   
   
@@ -25,7 +25,7 @@ class Configuration {
     @JvmStatic
     fun get(): Configuration {
       if (instance == null && Files.exists(Paths.get(FILE))) {
-        instance = SerialisationUtils.fromJson(Files.readString(Paths.get(FILE)), Configuration::class.java)
+        instance = SerialisationUtils.fromJson(File(FILE), Configuration::class.java)
       } else if (instance == null) {
         instance = Configuration()
         instance!!.save()

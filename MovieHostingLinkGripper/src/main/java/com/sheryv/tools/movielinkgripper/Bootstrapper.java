@@ -6,6 +6,7 @@ import com.sheryv.tools.movielinkgripper.ui.MainWindow;
 import com.sheryv.util.FileUtils;
 import com.sheryv.util.SerialisationUtils;
 import com.sheryv.util.logging.Lg;
+import com.sheryv.util.logging.LoggingUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
@@ -93,7 +94,7 @@ public class Bootstrapper {
                 }
                 s = String.format(s, msg);
             }
-            Lg.console(s);
+            Lg.colored(s);
         } catch (IOException e) {
             log.error("Error while printing docs", e);
         }

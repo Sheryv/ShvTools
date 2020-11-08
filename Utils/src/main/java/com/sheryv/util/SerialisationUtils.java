@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 
+import java.io.File;
 import java.io.IOException;
 
 public class SerialisationUtils {
@@ -51,6 +52,10 @@ public class SerialisationUtils {
         return jsonMapper;
     }
 
+    public static void toJson(File f, Object o) throws IOException {
+        getJsonMapper().writeValue(f, o);
+    }
+    
     public static String toJson(Object o) throws JsonProcessingException {
         return getJsonMapper().writeValueAsString(o);
     }
@@ -66,5 +71,9 @@ public class SerialisationUtils {
 
     public static <T> T fromJson(String s, Class<T> clazz) throws IOException {
         return getJsonMapper().readValue(s, clazz);
+    }
+    
+    public static <T> T fromJson(File f, Class<T> clazz) throws IOException {
+        return getJsonMapper().readValue(f, clazz);
     }
 }

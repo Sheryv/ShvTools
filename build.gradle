@@ -22,13 +22,18 @@ allprojects {
                         'Implementation-Vendor': p.author + ', ' + p.site,
                         'Main-Class': p.className
             }
-            baseName = project.name + '-all'
+            baseName = project.name + '-all-java11'
             archiveName = "${baseName}-${p.ext.shortVersion}.${extension}"
             from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
             with jar
         }
     }
 
+    jar {
+        afterEvaluate { p ->
+            archiveName = "${baseName}-${project.ext.shortVersion}.${extension}"
+        }
+    }
 
     ext.getVersionName = { module, folder = '\\src\\main\\resources\\' ->
 //    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
@@ -56,6 +61,28 @@ allprojects {
 
         f.write(newVer)
         return newVer
+    }
+    ext.getShortVersion = { module, folder = '\\src\\main\\resources\\' ->
+//    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
+//    println "VersionCode is set to $code"
+//    return code
+
+        def suffix = "-version.txt"
+        def nm = projectDir.absolutePath + folder + module + suffix
+        def f = new File((String) nm);
+        if (!f.exists()) {
+            f = new File((String) nm)
+            f.write("0.1.0")
+        }
+        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
+        def version = f.getText()
+        def matcherVersionNumber = patternVersionNumber.matcher(version)
+        matcherVersionNumber.find()
+        def majorVersion = Integer.parseInt(matcherVersionNumber.group(1))
+        def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
+        def begin = majorVersion + "." + minorVersion
+        project.ext.shortVersion = begin
+        return begin
     }
 
     publishing {

@@ -9,23 +9,54 @@ buildscript {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
         classpath "org.openjfx:javafx-plugin:0.0.8"
+        classpath 'edu.sc.seis.gradle:launch4j:2.4.6'
     }
 }
 
-group 'sheryv.updater'
-version '2.0-SNAPSHOT'
+group 'com.sheryv'
 ext.longName = "Tool to synchronize files from configured web location with local folder"
 ext.className = "com.sheryv.tools.filematcher.MainLauncher"
+ext.file = "ShvFileMatcher"
 
 apply plugin: 'kotlin'
 apply plugin: "application"
 apply plugin: "maven-publish"
 apply plugin: "org.openjfx.javafxplugin"
+apply plugin: 'edu.sc.seis.launch4j'
 
 javafx {
     modules = ["javafx.controls", "javafx.fxml"]
     version = "13"
 }
+
+launch4j {
+    jar = "${project.buildDir}\\libs\\${project.name}-${project.ext.getShortVersion(project.name)}" + '.jar'
+    mainClassName = project.ext["className"]
+    icon = "${projectDir}\\src\\main\\resources\\icons\\app.ico"
+    mutexName = 'com.sheryv.tools.lasso.LassoGUIMutex'
+    outfile = project.ext["file"] + "_" + project.ext.shortVersion + ".exe"
+    fileDescription = project.ext["file"] + "startup file"
+    copyright = project.ext["site"]
+    companyName = project.ext["author"]
+    bundledJrePath = "jre"
+    jvmOptions = ["-Xms32m", "-Xmx256m"]
+//    jvmOptions = ["-Xms32m", "-Xmx256m", "-Dspring.profiles.active=dev"]
+//    bundledJrePath = '%JAVA_HOME%'
+//    headerType = 'console'
+//    splashFileName = '..\\..\\..\\res\\splash.bmp'
+    splashTimeout = 15
+    println '>>> Icon >> ' + icon
+    println '>>> Jar  >> ' + jar
+
+}
+
+createExe {
+    doFirst {
+        launch4j.textVersion = project.ext.shortVersion
+        launch4j.version = project.version
+    }
+}
+
 
 mainClassName = ext.className
 
@@ -33,7 +64,7 @@ repositories {
     mavenCentral()
 }
 
-version getVersionName(name)
+version getVersionName(project.name)
 
 dependencies {
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
@@ -46,14 +77,12 @@ dependencies {
     compile group: 'org.kocakosm', name: 'jblake2', version: '0.4'
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
 
 compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
 }
 compileTestKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "11"
 }
 
 dependencies {

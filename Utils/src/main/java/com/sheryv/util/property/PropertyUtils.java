@@ -43,22 +43,22 @@ public class PropertyUtils {
         }
     }
 
-    public static void initLogging() {
-        LogManager logManager = LogManager.getLogManager();
-        try {
-            logManager.updateConfiguration(
-                    s -> (s1, s2) -> PropertyUtils.getDefaultProperty(true)
-                            .getStartupSystemProperties().get(s));
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        try {
-            String level = logManager.getProperty(".level");
-            Level parse = Level.parse(level);
-//            logManager.getLogger("").setLevel(parse);
-        } catch (Exception e) {
-        }
-    }
+//    public static void initLogging() {
+//        LogManager logManager = LogManager.getLogManager();
+//        try {
+//            logManager.updateConfiguration(
+//                    s -> (s1, s2) -> PropertyUtils.getDefaultProperty(true)
+//                            .getStartupSystemProperties().get(s));
+//
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//        try {
+//            String level = logManager.getProperty(".level");
+//            Level parse = Level.parse(level);
+////            logManager.getLogger("").setLevel(parse);
+//        } catch (Exception e) {
+//        }
+//    }
 
 }

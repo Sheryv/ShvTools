@@ -10,6 +10,7 @@ import javafx.scene.Scene
 import javafx.scene.control.TreeItem
 import javafx.scene.control.TreeTableCell
 import javafx.scene.control.TreeTableColumn
+import javafx.scene.image.Image
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Region
 import javafx.stage.Stage
@@ -138,6 +139,7 @@ object ViewUtils {
   
   fun <T : BaseView> createWindow(fxml: String, title: String, stage: Stage = Stage()): T {
     val loader = FXMLLoader(javaClass.classLoader.getResource(fxml))
+    stage.icons.add(Image(javaClass.classLoader.getResourceAsStream("icons/app.png")))
     val root: Parent = loader.load()
     val controller = loader.getController<T>()
     controller.initStage(stage)

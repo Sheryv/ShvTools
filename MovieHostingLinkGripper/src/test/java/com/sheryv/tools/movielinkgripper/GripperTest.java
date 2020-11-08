@@ -35,7 +35,6 @@ public class GripperTest {
 
     @Test
     public void printDoc() {
-        PropertyUtils.initLogging();
         Bootstrapper.main(new String[]{});
         Logger logger = LoggerFactory.getLogger(getClass());
         logger.info("Lo&1&gger&0& test");
