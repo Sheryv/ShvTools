@@ -5,6 +5,7 @@ import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.ResultType
 import com.sheryv.tools.filematcher.service.MinecraftService
 import com.sheryv.tools.filematcher.service.RepositoryGenerator
+import com.sheryv.tools.filematcher.service.RepositoryHashUpdater
 import com.sheryv.tools.filematcher.service.RepositoryService
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.SystemUtils
@@ -93,36 +94,84 @@ class DevelopersToolView : BaseView() {
     cmFormat.selectionModel.select(0)
     
     MainView.initializeTreeTable(treeView)
+    
+    menuBar.menus.setAll(listOf(
+        Menu("Operations").apply {
+          items.setAll(listOf(
+              MenuItem("Update hashes").apply {
+                setOnAction {
+                  updateHashes()
+                }
+              }
+          ))
+        }
+    ))
   }
   
-  private fun generate() {
-    var file = tfPath.text?.let { SystemUtils.parseDirectory(it, null) }
-    if (file == null) {
-      DialogUtils.dialog("'${tfPath.text}' is not correct directory path", "Target directory is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
-      return
-    }
-    val output = File(tfOutput.text)
-    if (output.isDirectory) {
-      DialogUtils.dialog("'${tfOutput.text}' is not correct output file path", "Target path is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
+  private fun updateHashes() {
+    val sourceDir = validateSourceDir() ?: return
+    val output = validateOutputFile() ?: return
+    if (!output.exists()) {
+      DialogUtils.dialog("File does not exists: '${output}'", "Output file is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
       return
     }
     try {
-      lbProcessState.text = "Generating..."
+      lbProcessState.text = "Updating..."
       pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
-      listOf(btnBundlePath, btnOutput, btnPath, btnGenerate).forEach { it.isDisable = true }
+      changeButtonEnable(false)
       
       val service = RepositoryService()
-      RepositoryGenerator(file) {
+      RepositoryHashUpdater(sourceDir, output) {
         lbProcessState.text = ""
         pbProcess.progress = 0.0
-        listOf(btnBundlePath, btnOutput, btnPath, btnGenerate).forEach { it.isDisable = false }
-    
+        changeButtonEnable(true)
+        
         when (it.type) {
           ResultType.SUCCESS -> {
-            service.saveToFile(it.data!!, File(tfOutput.text), cmFormat.selectionModel.selectedItem)
+            service.saveToFile(it.data!!, output, cmFormat.selectionModel.selectedItem)
     
-            Configuration.get().devTools.sourcePath = tfPath.text
-            Configuration.get().devTools.outputPath = tfOutput.text
+            Configuration.get().devTools.sourcePath = sourceDir.absolutePath
+            Configuration.get().devTools.outputPath = output.absolutePath
+            Configuration.get().save()
+            treeView.root = ViewUtils.toTreeItems(it.data.bundles.last().versions.last().entries)
+          }
+          ResultType.ERROR -> DialogUtils.textAreaDialog(
+              "Details",
+              it.error?.message.orEmpty(),
+              "Error occurred when updating")
+        }
+      }.start()
+    } catch (e: Exception) {
+      DialogUtils.textAreaDialog(
+          "Details",
+          e.message.orEmpty(),
+          "Error occurred when updating")
+    }
+    
+    
+  }
+  
+  private fun generate() {
+    var sourceDir = validateSourceDir() ?: return
+    val output = validateOutputFile() ?: return
+    
+    try {
+      lbProcessState.text = "Generating..."
+      pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
+      changeButtonEnable(false)
+      
+      val service = RepositoryService()
+      RepositoryGenerator(sourceDir) {
+        lbProcessState.text = ""
+        pbProcess.progress = 0.0
+        changeButtonEnable(true)
+        
+        when (it.type) {
+          ResultType.SUCCESS -> {
+            service.saveToFile(it.data!!, output, cmFormat.selectionModel.selectedItem)
+    
+            Configuration.get().devTools.sourcePath = sourceDir.absolutePath
+            Configuration.get().devTools.outputPath = output.absolutePath
             Configuration.get().devTools.bundlePreferredPath = tfBundlePath.text
             Configuration.get().save()
             treeView.root = ViewUtils.toTreeItems(it.data.bundles.last().versions.last().entries)
@@ -139,6 +188,29 @@ class DevelopersToolView : BaseView() {
           e.message.orEmpty(),
           "Error occurred when generating")
     }
+  }
+  
+  private fun changeButtonEnable(enabled: Boolean) {
+    listOf(btnBundlePath, btnOutput, btnPath, btnGenerate).forEach { it.isDisable = !enabled }
+  }
+  
+  
+  private fun validateSourceDir(): File? {
+    var file = tfPath.text?.let { SystemUtils.parseDirectory(it, null) }
+    if (file == null) {
+      DialogUtils.dialog("'${tfPath.text}' is not correct directory path", "Source directory is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
+      return null
+    }
+    return file
+  }
+  
+  private fun validateOutputFile(): File? {
+    val output = File(tfOutput.text)
+    if (output.exists() && !output.isFile) {
+      DialogUtils.dialog("'${tfOutput.text}' is not correct output file path", "Output path is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
+      return null
+    }
+    return output
   }
   
   @FXML

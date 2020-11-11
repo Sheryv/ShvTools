@@ -9,6 +9,7 @@ import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.net.URISyntaxException
+import java.net.URLEncoder
 import java.nio.file.Paths
 
 
@@ -45,6 +46,10 @@ object SystemUtils {
     } else {
       UNIX_CHARS
     }
+  }
+  
+  fun encodeNameForWeb(text: String): String {
+    return URLEncoder.encode(text, Charsets.UTF_8).replace("+", "%20")
   }
   
   fun parseDirectory(initialDirectory: String?, default: String? = userDownloadDir()): File? {

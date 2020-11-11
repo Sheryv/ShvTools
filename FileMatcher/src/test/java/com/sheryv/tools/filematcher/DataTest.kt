@@ -14,7 +14,7 @@ class DataTest {
   
   @Test
   fun download() {
-    DataUtils.downloadFile("https://edge.forgecdn.net/files/2902/483/TConstruct-1.12.2-2.13.0.183.jar", File("C:temp\\tc-test.jar"))
+    DataUtils.downloadFile("https://media.forgecdn.net/files/2491/32/ae2stuff-0.7.0.4-mc1.12.2.jar", File("C:temp\\tc-test.jar"))
 //    DataUtils.downloadFile("https://media.forgecdn.net/files/2902/483/TConstruct-1.12.2-2.13.0.183.jar", File("C:temp\\tc-test.jar"))
   }
 }

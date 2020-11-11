@@ -5,6 +5,12 @@ ext.longName = "Shared project with utility classes"
 
 version getVersionName(name)
 
+jar {
+    afterEvaluate { p ->
+        archiveName = "shvtools-${baseName}-${project.ext.shortVersion}.${extension}"
+    }
+}
+
 
 dependencies {
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'

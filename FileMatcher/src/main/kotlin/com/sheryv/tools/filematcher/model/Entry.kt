@@ -7,6 +7,7 @@ import com.sheryv.tools.filematcher.utils.Utils
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.StringProperty
+import java.net.URLEncoder
 import java.time.OffsetDateTime
 
 data class Entry(
@@ -23,7 +24,7 @@ data class Entry(
     val website: String? = null,
     val description: String = "",
     val itemDate: OffsetDateTime? = null,
-    val hashes: Hash? = null,
+    var hashes: Hash? = null,
     val category: String? = null,
     val tags: List<String>? = null,
     val additionalFields: Map<String, String?> = emptyMap(),

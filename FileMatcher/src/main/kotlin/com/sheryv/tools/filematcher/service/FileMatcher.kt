@@ -51,9 +51,9 @@ class FileMatcher(private val context: UserContext, onFinish: ((ProcessResult<Un
       lg().info("Item state verification '${entry.name}' [id=${entry.id}]")
       val file = dir.resolve(entry.name)
       if (file.exists()) {
-        if (entry.hashes != null && entry.hashes.hasAny()) {
+        if (entry.hashes != null && entry.hashes!!.hasAny()) {
           lg().debug("Calculating hash '${entry.name}' [id=${entry.id}], file: ${file.absolutePath}")
-          val match = entry.hashes.getCorrespondingHasherAndCompare().invoke(file)
+          val match = entry.hashes!!.getCorrespondingHasherAndCompare().invoke(file)
           if (match) {
             ItemState.SYNCED
           } else if (entry.target.override) {

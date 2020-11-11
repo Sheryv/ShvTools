@@ -8,11 +8,11 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import java.io.*
 import java.net.URL
-import java.net.URLConnection
 import java.nio.channels.Channels
-import javax.net.ssl.HttpsURLConnection
+
 
 object DataUtils {
+  
   fun downloadFile(urlStr: String, file: File, isCancelled: () -> Boolean = { false }): File? {
     if (file.exists())
       file.delete()
@@ -33,7 +33,7 @@ object DataUtils {
               cancelled = true
               break
             }
-  
+            
             done = fos.channel.transferFrom(rbc, pos, java.lang.Long.MAX_VALUE)
             pos += done
           } while (done >= len)

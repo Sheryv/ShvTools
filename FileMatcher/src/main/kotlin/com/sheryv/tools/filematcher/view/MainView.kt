@@ -72,7 +72,7 @@ class MainView : BaseView() {
       btnLoad.isDisable = inProgress
       tfPath.isDisable = inProgress
       pbIndicator.isVisible = inProgress
-  
+      
       if (inProgress) {
         btnDownload.text = "Abort"
       } else {
@@ -170,7 +170,7 @@ class MainView : BaseView() {
             ResultType.ERROR ->
               DialogUtils.textAreaDialog("Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
                   "Error verifying: ", Alert.AlertType.ERROR, wrapText = false)
-  
+            
           }
         }.start()
       }
@@ -181,7 +181,7 @@ class MainView : BaseView() {
         postEvent(AbortEvent())
         return@setOnAction
       }
-  
+      
       val directory = verifyAndGetDirectory()
       if (directory != null) {
         state.setMessage("Downloading files...")
@@ -247,7 +247,7 @@ class MainView : BaseView() {
     addDetailsRow("Title", r.title)
     addDetailsRow("Author", r.author)
     addDetailsRow("Update date", Utils.dateFormat(r.updateDate), withSeparator = false)
-  
+    
     val b = context.getBundle()
     val v = context.getVersion()
     addDetailsHeaderLocal("Bundle")
@@ -260,16 +260,16 @@ class MainView : BaseView() {
     addDetailsRow("Version", v.versionName)
     addDetailsRow("Version ID", v.versionId.toString())
     addDetailsRow("Release notes", v.changesDescription, withSeparator = false)
-  
-  
+    
+    
     addDetailsHeaderLocal("Additional fields: Repository")
     
     r.additionalFields.forEach { (t, u) ->
       addDetailsRow(t, u)
     }
-  
+    
     addDetailsHeaderLocal("Additional fields: Bundle")
-  
+    
     b.additionalFields.forEach { (t, u) ->
       addDetailsRow(t, u)
     }
@@ -317,7 +317,7 @@ class MainView : BaseView() {
         filterItems(states.filter { it.isSelected }.map { it.userData as ItemState }, item.isSelected, userData)
       }
     }
-  
+    
     val filters = mutableListOf(
         MenuItem("Only in progress states").apply {
           setOnAction {
@@ -511,18 +511,19 @@ class MainView : BaseView() {
           addDetailsRow("Tags", item.tags?.joinToString(), grid, false)
           
           if (item.hashes?.hasAny() == true) {
+            val h = item.hashes!!
             addDetailsHeader("Hashes", grid)
-            if (item.hashes.md5 != null) {
-              addDetailsRow("MD5", item.hashes.md5, grid)
+            if (h.md5 != null) {
+              addDetailsRow("MD5", h.md5, grid)
             }
-            if (item.hashes.sha1 != null) {
-              addDetailsRow("SHA-1", item.hashes.sha1, grid)
+            if (h.sha1 != null) {
+              addDetailsRow("SHA-1", h.sha1, grid)
             }
-            if (item.hashes.sha256 != null) {
-              addDetailsRow("SHA-256", item.hashes.sha256, grid)
+            if (h.sha256 != null) {
+              addDetailsRow("SHA-256", h.sha256, grid)
             }
-            if (item.hashes.crc32 != null) {
-              addDetailsRow("CRC32", item.hashes.crc32, grid)
+            if (h.crc32 != null) {
+              addDetailsRow("CRC32", h.crc32, grid)
             }
           }
           

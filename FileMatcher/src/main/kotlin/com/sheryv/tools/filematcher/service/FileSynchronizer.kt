@@ -12,6 +12,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.greenrobot.eventbus.Subscribe
 import java.io.File
+import java.net.URLEncoder
+import java.nio.charset.Charset
 
 class FileSynchronizer(private val context: UserContext, private val state: ViewProgressState, onFinish: ((ProcessResult<Unit, FileSynchronizer>) -> Unit)? = null)
   : Process<Unit>(onFinish as ((ProcessResult<Unit, out Process<Unit>>) -> Unit)?, true) {
@@ -30,7 +32,7 @@ class FileSynchronizer(private val context: UserContext, private val state: View
     val all = entries.size
     var processed = 0
     for (entry in entries) {
-  
+      
       matcher.updateEntryState(entry)
       
       if (entry.selected && !entry.group && entry.type == ItemType.ITEM
@@ -60,7 +62,7 @@ class FileSynchronizer(private val context: UserContext, private val state: View
       DataUtils.downloadFile(url, file) { !isActive() }
     } catch (e: Exception) {
       matcher.updateEntryState(entry)
-      throw IllegalStateException("Enable to download '${entry.name}' from: $url", e)
+      throw IllegalStateException("Enable to download '${entry.name}' from '$url'", e)
     }
   }
   
