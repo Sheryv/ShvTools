@@ -23,5 +23,9 @@ public class SearchItem {
     private double voteAverage;
     @JsonProperty("vote_count")
     private long voteCount;
-
+  
+  @Override
+  public String toString() {
+    return String.format("%-40s | %2.1f [%s] %7d (%.1f) %d", name, popularity, firstAirDate, id, voteAverage, voteCount);
+  }
 }

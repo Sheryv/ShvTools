@@ -12,6 +12,7 @@ import com.sheryv.util.FileUtils;
 import com.sheryv.util.SerialisationUtils;
 import com.sheryv.util.ThrowableFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.annotation.Nullable;
 import javax.swing.*;
@@ -51,6 +52,7 @@ public class SearchWindow {
   private JButton showFileListButton;
   private JProgressBar progressBar;
   private JButton findSizeBtn;
+  private JComboBox cbVersion;
   private TmdbApi api = new TmdbApi();
   private Series lastSeries;
   private Configuration configuration;
@@ -58,40 +60,30 @@ public class SearchWindow {
   public SearchWindow init() {
     configuration = Configuration.get();
     seasonNumber.setValue(1);
+    Font font;
+    try {
+      font = new Font("Consolas", Font.PLAIN, cbVersion.getFont().getSize());
+    } catch (Exception e) {
+      e.printStackTrace();
+      font = new Font("monospaced", Font.PLAIN, cbVersion.getFont().getSize());
+    }
+    cbVersion.setFont(font);
     searchBtn.addActionListener(e -> {
       detailsField.setText("");
       nameField.setText("");
-      api.searchTv(searchText.getText()).ifPresent(i -> {
-        setProgress(-1);
-        searchBtn.setEnabled(false);
-        Integer season = (Integer) seasonNumber.getValue();
-        setDetails(i, season);
-        fillList(null);
-        
-        this.doInBackground(i, item ->
-                api.getTvEpisodes(i.getId(), season).getEpisodes()
-                    .stream()
-                    .map(ep -> {
-                      Optional<Episode> found = lastSeries.getEpisodes().stream()
-                          .filter(l -> l.getN() == ep.getEpisodeNumber() && season == lastSeries.getSeason())
-                          .findAny();
-                      if (found.isPresent()) {
-                        Episode f = found.get();
-                        return new Episode(f.getPage(), ep.getName(), (int) ep.getEpisodeNumber(), f.getDlLink(), 0, f.getType(), f.getFormat(), f.getLastSize());
-                      }
-                      return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
-                    })
-                    .collect(Collectors.toList()),
-            episodeList -> {
-              if (!episodeList.isEmpty()) {
-                Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), episodeList);
-                fillList(series);
-              }
-            }, o -> {
-              searchBtn.setEnabled(true);
-              setProgress(100);
-            });
-      });
+      List<SearchItem> result = api.searchTv(searchText.getText());
+      if (!result.isEmpty()) {
+        cbVersion.removeAllItems();
+        for (SearchItem searchItem : result) {
+          cbVersion.addItem(searchItem);
+        }
+        cbVersion.setSelectedIndex(0);
+      }
+    });
+    
+    cbVersion.addActionListener(e -> {
+      Object item = cbVersion.getSelectedItem();
+      onVersionChanged((SearchItem) item);
     });
     
     loadFromFileBtn.addActionListener(e -> {
@@ -210,8 +202,41 @@ public class SearchWindow {
     episodes.updateUI();
   }
   
+  private void onVersionChanged(SearchItem i) {
+    setProgress(-1);
+    searchBtn.setEnabled(false);
+    Integer season = (Integer) seasonNumber.getValue();
+    setDetails(i, season);
+    fillList(null);
+    
+    this.doInBackground(i, item ->
+            api.getTvEpisodes(i.getId(), season).getEpisodes()
+                .stream()
+                .map(ep -> {
+                  Optional<Episode> found = lastSeries.getEpisodes().stream()
+                      .filter(l -> l.getN() == ep.getEpisodeNumber() && season == lastSeries.getSeason())
+                      .findAny();
+                  if (found.isPresent()) {
+                    Episode f = found.get();
+                    return new Episode(f.getPage(), ep.getName(), (int) ep.getEpisodeNumber(), f.getDlLink(), 0, f.getType(), f.getFormat(), f.getLastSize());
+                  }
+                  return new Episode("", ep.getName(), (int) ep.getEpisodeNumber(), "");
+                })
+                .collect(Collectors.toList()),
+        episodeList -> {
+          if (!episodeList.isEmpty()) {
+            Series series = new Series(i.getName(), season, lastSeries.getLang(), lastSeries.getProviderUrl(), episodeList);
+            fillList(series);
+          }
+        }, o -> {
+          searchBtn.setEnabled(true);
+          setProgress(100);
+        });
+  }
+  
+  
   private void setDetails(SearchItem i, int season) {
-    nameField.setText(i.getName());
+    nameField.setText(StringUtils.defaultString(i.getName(), i.getOriginalName()));
     detailsField.setText(String.format("%s [%d, %s, S%d] %s | %.2f", i.getOriginalName(),
         i.getId(), i.getOriginalLanguage(), season, i.getFirstAirDate(), i.getPopularity()));
     
@@ -356,7 +381,7 @@ public class SearchWindow {
     final JPanel spacer1 = new JPanel();
     GridBagConstraints gbc;
     gbc = new GridBagConstraints();
-    gbc.gridx = 4;
+    gbc.gridx = 5;
     gbc.gridy = 1;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     mainPanel.add(spacer1, gbc);
@@ -364,7 +389,7 @@ public class SearchWindow {
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 2;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 4;
     gbc.fill = GridBagConstraints.VERTICAL;
     mainPanel.add(spacer2, gbc);
     final JPanel spacer3 = new JPanel();
@@ -377,14 +402,14 @@ public class SearchWindow {
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 0;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 4;
     gbc.fill = GridBagConstraints.VERTICAL;
     mainPanel.add(spacer4, gbc);
     final JPanel spacer5 = new JPanel();
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 6;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 4;
     gbc.fill = GridBagConstraints.VERTICAL;
     mainPanel.add(spacer5, gbc);
     final JPanel panel1 = new JPanel();
@@ -392,13 +417,14 @@ public class SearchWindow {
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 7;
+    gbc.gridwidth = 2;
     gbc.fill = GridBagConstraints.BOTH;
     mainPanel.add(panel1, gbc);
     final JPanel spacer6 = new JPanel();
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 8;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 4;
     gbc.fill = GridBagConstraints.VERTICAL;
     mainPanel.add(spacer6, gbc);
     properties = new JPanel();
@@ -406,7 +432,7 @@ public class SearchWindow {
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 1;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 4;
     gbc.weightx = 1.0;
     gbc.fill = GridBagConstraints.BOTH;
     mainPanel.add(properties, gbc);
@@ -425,7 +451,7 @@ public class SearchWindow {
     properties.add(spacer7, gbc);
     searchText = new JTextField();
     gbc = new GridBagConstraints();
-    gbc.gridx = 2;
+    gbc.gridx = 3;
     gbc.gridy = 0;
     gbc.gridwidth = 7;
     gbc.weightx = 1.0;
@@ -435,40 +461,24 @@ public class SearchWindow {
     loadFromFileBtn = new JButton();
     loadFromFileBtn.setText("Load From File");
     gbc = new GridBagConstraints();
-    gbc.gridx = 6;
+    gbc.gridx = 7;
     gbc.gridy = 2;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     properties.add(loadFromFileBtn, gbc);
     searchBtn = new JButton();
     searchBtn.setText("Search");
     gbc = new GridBagConstraints();
-    gbc.gridx = 10;
+    gbc.gridx = 11;
     gbc.gridy = 0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     properties.add(searchBtn, gbc);
     saveToFileBtn = new JButton();
     saveToFileBtn.setText("Save to File");
     gbc = new GridBagConstraints();
-    gbc.gridx = 8;
+    gbc.gridx = 9;
     gbc.gridy = 2;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     properties.add(saveToFileBtn, gbc);
-    seasonNumber = new JSpinner();
-    seasonNumber.setMinimumSize(new Dimension(50, 30));
-    gbc = new GridBagConstraints();
-    gbc.gridx = 2;
-    gbc.gridy = 2;
-    gbc.weightx = 0.1;
-    gbc.anchor = GridBagConstraints.WEST;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    properties.add(seasonNumber, gbc);
-    final JPanel spacer8 = new JPanel();
-    gbc = new GridBagConstraints();
-    gbc.gridx = 3;
-    gbc.gridy = 2;
-    gbc.weightx = 0.9;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    properties.add(spacer8, gbc);
     final JLabel label2 = new JLabel();
     label2.setText("Season");
     gbc = new GridBagConstraints();
@@ -476,49 +486,78 @@ public class SearchWindow {
     gbc.gridy = 2;
     gbc.anchor = GridBagConstraints.WEST;
     properties.add(label2, gbc);
-    final JPanel spacer9 = new JPanel();
+    final JPanel spacer8 = new JPanel();
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
-    properties.add(spacer9, gbc);
-    final JPanel spacer10 = new JPanel();
+    properties.add(spacer8, gbc);
+    final JPanel spacer9 = new JPanel();
     gbc = new GridBagConstraints();
-    gbc.gridx = 9;
+    gbc.gridx = 10;
     gbc.gridy = 0;
     gbc.fill = GridBagConstraints.HORIZONTAL;
-    properties.add(spacer10, gbc);
+    properties.add(spacer9, gbc);
     showFileListButton = new JButton();
     showFileListButton.setText("Show File List");
     gbc = new GridBagConstraints();
-    gbc.gridx = 10;
+    gbc.gridx = 11;
     gbc.gridy = 2;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     properties.add(showFileListButton, gbc);
-    final JPanel spacer11 = new JPanel();
+    final JPanel spacer10 = new JPanel();
     gbc = new GridBagConstraints();
-    gbc.gridx = 7;
+    gbc.gridx = 8;
     gbc.gridy = 2;
     gbc.fill = GridBagConstraints.HORIZONTAL;
-    properties.add(spacer11, gbc);
+    properties.add(spacer10, gbc);
     findSizeBtn = new JButton();
     findSizeBtn.setText("Find file size");
-    gbc = new GridBagConstraints();
-    gbc.gridx = 4;
-    gbc.gridy = 2;
-    gbc.fill = GridBagConstraints.HORIZONTAL;
-    properties.add(findSizeBtn, gbc);
-    final JPanel spacer12 = new JPanel();
     gbc = new GridBagConstraints();
     gbc.gridx = 5;
     gbc.gridy = 2;
     gbc.fill = GridBagConstraints.HORIZONTAL;
+    properties.add(findSizeBtn, gbc);
+    final JPanel spacer11 = new JPanel();
+    gbc = new GridBagConstraints();
+    gbc.gridx = 6;
+    gbc.gridy = 2;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    properties.add(spacer11, gbc);
+    seasonNumber = new JSpinner();
+    seasonNumber.setMinimumSize(new Dimension(50, 30));
+    seasonNumber.setPreferredSize(new Dimension(50, 30));
+    gbc = new GridBagConstraints();
+    gbc.gridx = 1;
+    gbc.gridy = 2;
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    properties.add(seasonNumber, gbc);
+    final JPanel spacer12 = new JPanel();
+    gbc = new GridBagConstraints();
+    gbc.gridx = 4;
+    gbc.gridy = 2;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
     properties.add(spacer12, gbc);
+    cbVersion = new JComboBox();
+    gbc = new GridBagConstraints();
+    gbc.gridx = 3;
+    gbc.gridy = 2;
+    gbc.weightx = 0.9;
+    gbc.anchor = GridBagConstraints.WEST;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    properties.add(cbVersion, gbc);
+    final JPanel spacer13 = new JPanel();
+    gbc = new GridBagConstraints();
+    gbc.gridx = 2;
+    gbc.gridy = 2;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    properties.add(spacer13, gbc);
     final JScrollPane scrollPane1 = new JScrollPane();
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 5;
-    gbc.gridwidth = 3;
+    gbc.gridwidth = 4;
     gbc.weightx = 1.0;
     gbc.weighty = 0.7;
     gbc.fill = GridBagConstraints.BOTH;
@@ -526,17 +565,17 @@ public class SearchWindow {
     episodes = new JPanel();
     episodes.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
     scrollPane1.setViewportView(episodes);
-    final JPanel spacer13 = new JPanel();
+    final JPanel spacer14 = new JPanel();
     gbc = new GridBagConstraints();
-    gbc.gridx = 1;
+    gbc.gridx = 2;
     gbc.gridy = 4;
     gbc.gridwidth = 3;
     gbc.fill = GridBagConstraints.VERTICAL;
-    mainPanel.add(spacer13, gbc);
+    mainPanel.add(spacer14, gbc);
     detailsField = new JTextField();
     detailsField.setEditable(false);
     gbc = new GridBagConstraints();
-    gbc.gridx = 3;
+    gbc.gridx = 4;
     gbc.gridy = 3;
     gbc.weightx = 0.8;
     gbc.anchor = GridBagConstraints.WEST;
@@ -547,21 +586,22 @@ public class SearchWindow {
     gbc = new GridBagConstraints();
     gbc.gridx = 1;
     gbc.gridy = 3;
+    gbc.gridwidth = 2;
     gbc.weightx = 0.2;
     gbc.anchor = GridBagConstraints.WEST;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     mainPanel.add(nameField, gbc);
-    final JPanel spacer14 = new JPanel();
+    final JPanel spacer15 = new JPanel();
     gbc = new GridBagConstraints();
-    gbc.gridx = 2;
+    gbc.gridx = 3;
     gbc.gridy = 3;
     gbc.fill = GridBagConstraints.HORIZONTAL;
-    mainPanel.add(spacer14, gbc);
+    mainPanel.add(spacer15, gbc);
     progressBar = new JProgressBar();
     progressBar.setMinimumSize(new Dimension(10, 15));
     progressBar.setPreferredSize(new Dimension(146, 15));
     gbc = new GridBagConstraints();
-    gbc.gridx = 3;
+    gbc.gridx = 4;
     gbc.gridy = 7;
     gbc.fill = GridBagConstraints.HORIZONTAL;
     mainPanel.add(progressBar, gbc);

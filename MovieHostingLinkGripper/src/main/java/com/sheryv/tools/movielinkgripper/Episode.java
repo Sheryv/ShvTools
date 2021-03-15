@@ -65,7 +65,7 @@ public class Episode {
         if (dlLink != null && !dlLink.isEmpty()) {
             int indexOf = dlLink.lastIndexOf(".");
             if (indexOf > 0 && dlLink.length() - indexOf <= 5) {
-                ext = dlLink.substring(indexOf, dlLink.length());
+                ext = dlLink.substring(indexOf+1, dlLink.length());
             }
         }
         String name = getName();
