@@ -7,15 +7,15 @@ import com.sheryv.tools.movielinkgripper.config.Configuration;
 import com.sheryv.tools.movielinkgripper.provider.AlltubeProvider;
 import com.sheryv.tools.movielinkgripper.provider.Hosting;
 import com.sheryv.tools.movielinkgripper.provider.Item;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.LinkedHashMap;
 import java.util.List;
 
-@Ignore
+@Disabled
 public class GripperTest {
 
     @Test

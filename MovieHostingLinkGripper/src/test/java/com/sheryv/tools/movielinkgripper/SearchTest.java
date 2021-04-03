@@ -3,7 +3,7 @@ package com.sheryv.tools.movielinkgripper;
 import com.sheryv.tools.movielinkgripper.search.TmdbSeason;
 import com.sheryv.tools.movielinkgripper.search.TmdbApi;
 import com.sheryv.util.SerialisationUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 

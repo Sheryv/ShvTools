@@ -12,6 +12,6 @@ public class Pair<K, V> {
     private final V value;
 
     public static <K, V> Pair of(K key, V value) {
-        return new Pair<>(key, value);
+        return new Pair<K, V>(key, value);
     }
 }

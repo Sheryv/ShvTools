@@ -83,7 +83,9 @@ public class SearchWindow {
     
     cbVersion.addActionListener(e -> {
       Object item = cbVersion.getSelectedItem();
-      onVersionChanged((SearchItem) item);
+      if (item != null) {
+        onVersionChanged((SearchItem) item);
+      }
     });
     
     loadFromFileBtn.addActionListener(e -> {
