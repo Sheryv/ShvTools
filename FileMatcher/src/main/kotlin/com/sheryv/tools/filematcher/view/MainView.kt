@@ -17,12 +17,14 @@ import javafx.fxml.FXML
 import javafx.geometry.HPos
 import javafx.geometry.Insets
 import javafx.geometry.Orientation
+import javafx.scene.Node
 import javafx.scene.control.*
 import javafx.scene.input.*
 import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.greenrobot.eventbus.Subscribe
@@ -103,7 +105,7 @@ class MainView : BaseView() {
       var h = "Insert url for repository file"
       do {
         val res = DialogUtils.inputDialog(s, h).orElse(null)
-            ?: return@setOnAction
+          ?: return@setOnAction
         
         val ok = Validator().url(res).isOk()
         if (ok) {
@@ -145,9 +147,10 @@ class MainView : BaseView() {
             initializeRepo(it.data!!)
           }
           ResultType.ERROR -> DialogUtils.textAreaDialog(
-              "Following problems were found at: \n${cmRepositoryUrl.selectionModel.selectedItem}",
-              it.error?.message.orEmpty(),
-              "Found problems when validating repository configuration")
+            "Following problems were found at: \n${cmRepositoryUrl.selectionModel.selectedItem}",
+            it.error?.message.orEmpty(),
+            "Found problems when validating repository configuration"
+          )
         }
       }.start()
     }
@@ -168,8 +171,10 @@ class MainView : BaseView() {
           state.stop()
           when (r.type) {
             ResultType.ERROR ->
-              DialogUtils.textAreaDialog("Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
-                  "Error verifying: ", Alert.AlertType.ERROR, wrapText = false)
+              DialogUtils.textAreaDialog(
+                "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
+                "Error verifying: ", Alert.AlertType.ERROR, wrapText = false
+              )
             
           }
         }.start()
@@ -191,10 +196,17 @@ class MainView : BaseView() {
           state.stop()
           when (r.type) {
             ResultType.ERROR ->
-              DialogUtils.textAreaDialog("Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
-                  "Error while downloading", Alert.AlertType.ERROR, wrapText = false)
-  
-            ResultType.SUCCESS -> DialogUtils.dialog("", "Completed", Alert.AlertType.INFORMATION, ButtonType.OK)
+              DialogUtils.textAreaDialog(
+                "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
+                "Error while downloading", Alert.AlertType.ERROR, wrapText = false
+              )
+            
+            ResultType.SUCCESS -> {
+              state.setMessage("Download completed")
+              if (stage.isFocused) {
+                DialogUtils.dialog("", "Download completed", Alert.AlertType.INFORMATION, ButtonType.OK)
+              }
+            }
           }
         }.start()
       }
@@ -319,94 +331,100 @@ class MainView : BaseView() {
     }
     
     val filters = mutableListOf(
-        MenuItem("Only in progress states").apply {
-          setOnAction {
-            states.forEach {
-              it.isSelected = (it.userData as ItemState).toModify
-              filterItems()
-            }
+      MenuItem("Only in progress states").apply {
+        setOnAction {
+          states.forEach {
+            it.isSelected = (it.userData as ItemState).toModify
+            filterItems()
           }
-        },
-        MenuItem("None").apply {
-          setOnAction {
-            states.forEach {
-              it.isSelected = false
-              filterItems()
-            }
+        }
+      },
+      MenuItem("None").apply {
+        setOnAction {
+          states.forEach {
+            it.isSelected = false
+            filterItems()
           }
-        },
-        SeparatorMenuItem())
-        .apply { addAll(states) }
+        }
+      },
+      SeparatorMenuItem()
+    )
+      .apply { addAll(states) }
     
     menuBar.menus.setAll(listOf(
-        Menu("File").apply {
-          items.setAll(
-              MenuItem("Developer tools").apply {
-                setOnAction { createDevToolsWindow() }
-                accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN)
-              },
-              SeparatorMenuItem(),
-              MenuItem("Load repository from file").apply {
-                accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
-                setOnAction {
-                  RepositoryService().loadRepositoryFromFile(treeView.scene.window)?.run { initializeRepo(this) }
-                }
-              },
-              SeparatorMenuItem(),
-              MenuItem("Exit").apply {
-                accelerator = KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN)
-                setOnAction { Platform.exit() }
-              }
-          )
-        },
-        Menu("Items").apply {
-          items.setAll(
-              Menu("Filter").apply {
-                items.setAll(filters)
-              },
-              MenuItem("Clear filters").apply {
-                setOnAction {
-                  states.forEach { it.isSelected = true }
-                  filterItems(ItemState.values().toList())
-                }
-                accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
-              },
-              SeparatorMenuItem()
-          )
-        },
-        Menu("Predefined repositories").apply {
-          items.setAll(
-              Menu("Minecraft").apply {
-                items.setAll(
-                    MenuItem("Xenypack - Modpack").apply { setOnAction { addRepositoryUrlToList("https://raw.githubusercontent.com/Detronit/xenypack-modpack/master/repository-xenypack.yaml") } }
-                )
-              }
-          )
-        },
-        Menu("Info").apply {
-          items.setAll(MenuItem("About").apply {
+      Menu("File").apply {
+        items.setAll(
+          MenuItem("Developer tools").apply {
+            setOnAction { createDevToolsWindow() }
+            accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN)
+          },
+          SeparatorMenuItem(),
+          MenuItem("Load repository from file").apply {
+            accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
             setOnAction {
-              val msg = "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("file-matcher-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
-              val textArea = TextArea(msg)
-              textArea.isEditable = false
-              textArea.isWrapText = true
-              textArea.prefRowCount = 5
-              val gridPane = GridPane()
-              gridPane.maxWidth = Double.MAX_VALUE
-              gridPane.add(textArea, 0, 0)
-              val alert = Alert(Alert.AlertType.NONE, msg, ButtonType.OK)
-              alert.dialogPane.content = gridPane
-              ViewUtils.appendStyleSheets(alert.dialogPane.content.scene)
-              alert.title = "About"
-              alert.showAndWait()
+              RepositoryService().loadRepositoryFromFile(treeView.scene.window)?.run { initializeRepo(this) }
             }
-          })
-        }
+          },
+          SeparatorMenuItem(),
+          MenuItem("Exit").apply {
+            accelerator = KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN)
+            setOnAction { Platform.exit() }
+          }
+        )
+      },
+      Menu("Items").apply {
+        items.setAll(
+          Menu("Filter").apply {
+            items.setAll(filters)
+          },
+          MenuItem("Clear filters").apply {
+            setOnAction {
+              states.forEach { it.isSelected = true }
+              filterItems(ItemState.values().toList())
+            }
+            accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
+          },
+          SeparatorMenuItem()
+        )
+      },
+      Menu("Predefined repositories").apply {
+        items.setAll(
+          Menu("Minecraft").apply {
+            items.setAll(
+              MenuItem("Xenypack - Modpack").apply { setOnAction { addRepositoryUrlToList("https://raw.githubusercontent.com/Detronit/xenypack-modpack/master/repository-xenypack.yaml") } }
+            )
+          }
+        )
+      },
+      Menu("Info").apply {
+        items.setAll(MenuItem("About").apply {
+          setOnAction {
+            val msg =
+              "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("file-matcher-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
+            val textArea = TextArea(msg)
+            textArea.isEditable = false
+            textArea.isWrapText = true
+            textArea.prefRowCount = 5
+            val gridPane = GridPane()
+            gridPane.maxWidth = Double.MAX_VALUE
+            gridPane.add(textArea, 0, 0)
+            val alert = Alert(Alert.AlertType.NONE, msg, ButtonType.OK)
+            alert.dialogPane.content = gridPane
+            ViewUtils.appendStyleSheets(alert.dialogPane.content.scene)
+            alert.title = "About"
+            alert.showAndWait()
+          }
+        })
+      }
     )
     )
   }
   
-  private fun filterItems(all: List<ItemState> = filterProvider(), selected: Boolean? = null, state: ItemState? = null) {
+  private fun filterItems(
+    all: List<ItemState> = filterProvider(),
+    selected: Boolean? = null,
+    state: ItemState? = null
+  ) {
     if (!context.isFilled()) {
       return
     }
@@ -429,17 +447,32 @@ class MainView : BaseView() {
   
   private fun updateStatusBar(list: List<Entry>, filteredStates: List<ItemState> = filterProvider()) {
     val entries = list.filter { !it.group }
+    val entriesSize = Utils.fileSizeFormat(entries.mapNotNull { it.fileSize }.sum())
     val filter = entries.filter { filteredStates.contains(it.state) }
+    val filterSize = Utils.fileSizeFormat(filter.mapNotNull { it.fileSize }.sum())
     val synced = entries.count { it.state == ItemState.SYNCED }
+    val syncedSize =
+      Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SYNCED }.mapNotNull { it.fileSize }
+        .sum())
     val skipped = entries.count { it.state == ItemState.SKIPPED }
+    val skippedSize =
+      Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SKIPPED }.mapNotNull { it.fileSize }
+        .sum())
     val download = entries.count { it.state.toModify }
+    val downloadSize =
+      Utils.fileSizeFormat(entries.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
+    
     if (filter.size == entries.size) {
-      lbTreeState.text = "Items: ${entries.size}; Synced: $synced, Skipped: $skipped, To download: $download"
+      lbTreeState.text =
+        "Items: ${entries.size} [$entriesSize]; Synced: $synced [$syncedSize], Skipped: $skipped [$skippedSize], To download: $download [$downloadSize]"
     } else {
       val syncedFiltered = filter.count { it.state == ItemState.SYNCED }
       val skippedFiltered = filter.count { it.state == ItemState.SKIPPED }
       val downloadFiltered = filter.count { it.state.toModify }
-      lbTreeState.text = "[Filtered/All] Items: ${filter.size}/${entries.size}; Synced: $syncedFiltered/$synced, Skipped: $skippedFiltered/$skipped, To download: $downloadFiltered/$download"
+      val downloadFilteredSize =
+        Utils.fileSizeFormat(filter.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
+      lbTreeState.text =
+        "[Filtered/All] Items: ${filter.size}/${entries.size} [$filterSize/$entriesSize]; Synced: $syncedFiltered/$synced [$syncedSize], Skipped: $skippedFiltered/$skipped [$skippedSize], To download: $downloadFiltered/$download [$downloadFilteredSize/$downloadSize]"
     }
   }
   
@@ -450,22 +483,43 @@ class MainView : BaseView() {
     @JvmStatic
     fun initializeTreeTable(treeView: TreeTableView<Entry>, context: UserContext? = null) {
       treeView.columns.setAll(
-          ViewUtils.createTreeColumn("Name", 300) { it.name },
-          TreeTableColumn<Entry, String>("State").also {
-            it.setCellValueFactory { if (it.value.value.group) SimpleStringProperty("") else it.value.value.stateProperty.asString() }
-            it.cellFactory = ViewUtils.treeTableCellFactoryWithCustomCss<Entry>(setOf("bg-purple", "bg-yellow", "bg-green", "bg-red", "bg-grey", "bg-blue", "bg-orange")) {
-              if (it.group) emptyList() else listOf(it.state.cssClass)
-            }
-            it.prefWidth = 210.0
-          },
-          ViewUtils.createTreeColumn("Path") { it.target.path?.findPath().orEmpty() },
-          ViewUtils.createTreeColumn("Version") { it.version ?: if (it.group) "" else "-" },
-          ViewUtils.createTreeColumn("Date") { if (!it.group) Utils.dateFormat(it.itemDate) else "" },
-          ViewUtils.createTreeColumn("Override") { if (!it.group) (if (it.target.override) "Yes" else "No") else "" },
-          ViewUtils.createTreeColumn("Category") { it.category.orEmpty() },
-          ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
-          ViewUtils.createTreeColumn("ID") { it.id },
-          ViewUtils.createTreeColumn("URL") { it.getSrcUrl(context?.getBundleOrNull()?.getBaseUrl(context.repo?.baseUrl)) }
+        ViewUtils.createTreeColumn("Name", 300) { it.name },
+        TreeTableColumn<Entry, String>("State").also {
+          it.setCellValueFactory { if (it.value.value.group) SimpleStringProperty("") else it.value.value.stateProperty.asString() }
+          it.cellFactory = ViewUtils.treeTableCellFactoryWithCustomCss<Entry>(
+            setOf(
+              "bg-purple",
+              "bg-yellow",
+              "bg-green",
+              "bg-red",
+              "bg-grey",
+              "bg-blue",
+              "bg-orange"
+            )
+          ) {
+            if (it.group) emptyList() else listOf(it.state.cssClass)
+          }
+          it.prefWidth = 210.0
+        },
+        ViewUtils.createTreeColumn("Path") { it.target.path?.findPath().orEmpty() },
+        ViewUtils.createTreeColumn("Version") { it.version ?: if (it.group) "" else "-" },
+        ViewUtils.createTreeColumn("Date") { if (!it.group) Utils.dateFormat(it.itemDate) else "" },
+        ViewUtils.createTreeColumn(
+          "Size",
+          alignRight = true
+        ) { if (!it.group) Utils.fileSizeFormat(it.fileSize) else "" },
+        ViewUtils.createTreeColumn(
+          "Override",
+          alignRight = true
+        ) { if (!it.group) (if (it.target.override) "Yes" else "No") else "" },
+        ViewUtils.createTreeColumn("Category") { it.category.orEmpty() },
+        ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
+        ViewUtils.createTreeColumn("ID") { it.id },
+        ViewUtils.createTreeColumn("URL") {
+          it.getSrcUrl(
+            context?.getBundleOrNull()?.getBaseUrl(context.repo?.baseUrl)
+          )
+        }
       )
 
 //        treeView.columns.add(TreeTableColumn<Entry, String>("URL").also {
@@ -483,7 +537,7 @@ class MainView : BaseView() {
 //        })
       
       treeView.onMousePressed = EventHandler { event ->
-        if (event.isPrimaryButtonDown && event.clickCount == 2 && treeView.selectionModel.selectedItem.value != null) {
+        if (event.isPrimaryButtonDown && event.clickCount == 2 && treeView.selectionModel?.selectedItem?.value != null) {
           val item = treeView.selectionModel.selectedItem.value
           val alert = Alert(Alert.AlertType.INFORMATION, "Details", ButtonType.OK)
           alert.headerText = item.name
@@ -491,9 +545,9 @@ class MainView : BaseView() {
           val grid = GridPane()
           grid.maxWidth = java.lang.Double.MAX_VALUE
           grid.columnConstraints.setAll(
-              ColumnConstraints(150.0),
-              ColumnConstraints(10.0, 100.0, Double.MAX_VALUE, Priority.ALWAYS, HPos.LEFT, true),
-              ColumnConstraints(10.0, 60.0, Double.MAX_VALUE, Priority.NEVER, HPos.CENTER, true)
+            ColumnConstraints(150.0),
+            ColumnConstraints(10.0, 100.0, Double.MAX_VALUE, Priority.ALWAYS, HPos.LEFT, true),
+            ColumnConstraints(10.0, 60.0, Double.MAX_VALUE, Priority.NEVER, HPos.CENTER, true)
           )
           
           addDetailsHeader("Details", grid)
@@ -503,6 +557,7 @@ class MainView : BaseView() {
           addDetailsRow("Parent", item.parent, grid)
           addDetailsRow("Target Path", item.target.path?.findPath(), grid)
           addDetailsRow("Override", item.target.override.toEnglishWord(), grid)
+          addDetailsRow("Size", Utils.fileSizeFormat(item.fileSize), grid)
           addDetailsRow("Target Path is absolute", item.target.absolute.toEnglishWord(), grid)
           addDetailsRow("Description", item.description, grid)
           addDetailsRow("Version", item.version, grid)
@@ -541,6 +596,22 @@ class MainView : BaseView() {
           ViewUtils.appendStyleSheets(alert.dialogPane.scene)
           alert.isResizable = true
           alert.showAndWait()
+        } else if (event.isSecondaryButtonDown) {
+          val item = treeView.selectionModel.selectedItem
+          
+          if (item != null) {
+            treeView.contextMenu?.hide()
+            if (item.value.state != ItemState.SKIPPED) {
+              treeView.contextMenu = ContextMenu(
+                MenuItem("Set state to SKIPPED").apply { setOnAction { item.value.state = ItemState.SKIPPED } },
+              )
+            } else {
+              treeView.contextMenu = ContextMenu(
+                MenuItem("Set state to UNKNOWN").apply { setOnAction { item.value.state = ItemState.UNKNOWN } },
+              )
+            }
+            treeView.contextMenu.show(item.graphic, event.screenX, event.screenY)
+          }
         }
       }
     }

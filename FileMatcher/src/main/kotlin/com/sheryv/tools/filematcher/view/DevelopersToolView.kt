@@ -2,6 +2,7 @@ package com.sheryv.tools.filematcher.view
 
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.model.Entry
+import com.sheryv.tools.filematcher.model.Repository
 import com.sheryv.tools.filematcher.model.ResultType
 import com.sheryv.tools.filematcher.service.MinecraftService
 import com.sheryv.tools.filematcher.service.RepositoryGenerator
@@ -10,12 +11,24 @@ import com.sheryv.tools.filematcher.service.RepositoryService
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.ViewUtils
+import com.sheryv.tools.filematcher.utils.lg
+import javafx.beans.property.BooleanProperty
+import javafx.beans.property.SimpleBooleanProperty
+import javafx.beans.property.SimpleStringProperty
 import javafx.fxml.FXML
+import javafx.geometry.Insets
 import javafx.scene.control.*
 import java.io.File
 import java.nio.file.Paths
 
 class DevelopersToolView : BaseView() {
+  
+  private val saveBtnVisibility: BooleanProperty = SimpleBooleanProperty(true)
+  private var repository: Repository? = null
+    set(value) {
+      field = value
+      saveBtnVisibility.set(value == null)
+    }
   
   override fun initialize() {
     super.initialize()
@@ -31,7 +44,7 @@ class DevelopersToolView : BaseView() {
     
     btnPath.setOnAction {
       val initialDirectory = if (tfOutput.text.isNullOrBlank()) Configuration.get().devTools.sourcePath
-          ?: SystemUtils.userDownloadDir() else tfPath.text
+        ?: SystemUtils.userDownloadDir() else tfPath.text
       DialogUtils.directoryDialog(btnPath.scene.window, initialDirectory = initialDirectory).ifPresent {
         tfPath.text = it.toAbsolutePath().toString()
         Configuration.get().devTools.sourcePath = it.toAbsolutePath().toString()
@@ -40,7 +53,7 @@ class DevelopersToolView : BaseView() {
     }
     btnBundlePath.setOnAction {
       val initialDirectory = if (tfBundlePath.text.isNullOrBlank()) Configuration.get().devTools.bundlePreferredPath
-          ?: SystemUtils.userDownloadDir() else tfBundlePath.text
+        ?: SystemUtils.userDownloadDir() else tfBundlePath.text
       DialogUtils.directoryDialog(btnBundlePath.scene.window, initialDirectory = initialDirectory).ifPresent {
         tfBundlePath.text = it.toAbsolutePath().toString()
         Configuration.get().devTools.bundlePreferredPath = it.toAbsolutePath().toString()
@@ -50,7 +63,7 @@ class DevelopersToolView : BaseView() {
     btnOutput.setOnAction {
       val path = if (tfOutput.text.isNullOrBlank()) {
         Configuration.get().devTools.outputPath?.let { Paths.get(it) }
-            ?: Paths.get(SystemUtils.userDownloadDir(), "repository.yaml")
+          ?: Paths.get(SystemUtils.userDownloadDir(), "repository.yaml")
       } else {
         Paths.get(tfOutput.text)
       }
@@ -65,46 +78,71 @@ class DevelopersToolView : BaseView() {
       generate()
     }
     
+    btnSave.setOnAction {
+      repository?.let { save(it) }
+    }
+    btnSave.disableProperty().bind(saveBtnVisibility)
+    
     btnCurseForge.setOnAction {
       if (tfOutput.text == null || !File(tfOutput.text).exists() || !File(tfOutput.text).isFile) {
-        DialogUtils.dialog("'${tfOutput.text}' is not correct output file path", "Target path is incorrect or empty and it is required by this action", Alert.AlertType.ERROR, ButtonType.OK)
+        DialogUtils.dialog(
+          "'${tfOutput.text}' is not correct output file path",
+          "Target path is incorrect or empty and it is required by this action",
+          Alert.AlertType.ERROR,
+          ButtonType.OK
+        )
         return@setOnAction
       }
-      DialogUtils.openFileDialog(btnCurseForge.scene.window, initialFile = Configuration.get().devTools.mcCursePath).ifPresent {
-        Configuration.get().devTools.mcCursePath = it.toAbsolutePath().toString()
-        Configuration.get().save()
-        
-        MinecraftService().fillDataFromCurseForgeJson(it.toFile(), tfOutput.text)
-        DialogUtils.dialog("", "Completed", Alert.AlertType.INFORMATION, ButtonType.OK)
-        val repo = RepositoryService().loadRepositoryFromFile(Paths.get(tfOutput.text))
-        treeView.root = ViewUtils.toTreeItems(repo!!.bundles.last().versions.last().entries)
-      }
+      DialogUtils.openFileDialog(btnCurseForge.scene.window, initialFile = Configuration.get().devTools.mcCursePath)
+        .ifPresent {
+          Configuration.get().devTools.mcCursePath = it.toAbsolutePath().toString()
+          Configuration.get().save()
+          
+          repository = MinecraftService().fillDataFromCurseForgeJson(repository, it.toFile(), tfOutput.text)
+          DialogUtils.dialog("", "Completed", Alert.AlertType.INFORMATION, ButtonType.OK)
+          displayRepository()
+        }
     }
     
     btnInfo.setOnAction {
-      DialogUtils.dialog("This option allows to replace some data in repository file pointed in Output field in " +
-          "General tab. Uses CurseForge/Twitch modpack configuration file 'minecraftinstance.json' usually located at " +
-          "\n'C:\\Users\\<your_username>\\Twitch\\Minecraft\\Instances\\<modpack_name>\\minecraftinstance.json' " +
-          "(in Windows). \nIt loads download urls, project ID, file ID and fills them to selected repository." +
-          " Matching is based on file names.", "Fill some data from CurseForge",
-          Alert.AlertType.INFORMATION, ButtonType.OK)
+      DialogUtils.dialog(
+        "This option allows to replace some data in repository file pointed in Output field in " +
+            "General tab. Uses CurseForge/Twitch modpack configuration file 'minecraftinstance.json' usually located at " +
+            "\n'C:\\Users\\<your_username>\\Twitch\\Minecraft\\Instances\\<modpack_name>\\minecraftinstance.json' " +
+            "(in Windows). \nIt loads download urls, project ID, file ID and fills them to selected repository." +
+            " Matching is based on file names.", "Fill some data from CurseForge",
+        Alert.AlertType.INFORMATION, ButtonType.OK
+      )
     }
     
     cmFormat.items.setAll(listOf("YAML", "JSON"))
     cmFormat.selectionModel.select(0)
     
     MainView.initializeTreeTable(treeView)
+    treeView.columns.add(TreeTableColumn<Entry, String>("Action").also {
+      it.cellFactory = ViewUtils.buttonsInTreeTableCellFactory(
+        { mapOf("setUrl" to Button("Set Url").apply { padding = Insets(0.0, 5.0, 0.0, 5.0) }) },
+        { item, map ->
+          if (!item.value.group) {
+            listOf(map["setUrl"]!!.apply {
+              setOnAction { DialogUtils.inputDialog("ShvFileMatcher - Set URL", "URL for entry '${item.value.name}'").let { item.value.src = it.get() }; treeView.refresh() }
+            })
+          } else {
+            emptyList()
+          }
+        })
+    })
     
     menuBar.menus.setAll(listOf(
-        Menu("Operations").apply {
-          items.setAll(listOf(
-              MenuItem("Update hashes").apply {
-                setOnAction {
-                  updateHashes()
-                }
-              }
-          ))
-        }
+      Menu("Operations").apply {
+        items.setAll(listOf(
+          MenuItem("Update hashes").apply {
+            setOnAction {
+              updateHashes()
+            }
+          }
+        ))
+      }
     ))
   }
   
@@ -112,7 +150,12 @@ class DevelopersToolView : BaseView() {
     val sourceDir = validateSourceDir() ?: return
     val output = validateOutputFile() ?: return
     if (!output.exists()) {
-      DialogUtils.dialog("File does not exists: '${output}'", "Output file is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
+      DialogUtils.dialog(
+        "File does not exists: '${output}'",
+        "Output file is incorrect or empty",
+        Alert.AlertType.ERROR,
+        ButtonType.OK
+      )
       return
     }
     try {
@@ -121,46 +164,53 @@ class DevelopersToolView : BaseView() {
       changeButtonEnable(false)
       
       val service = RepositoryService()
-      RepositoryHashUpdater(sourceDir, output) {
+      RepositoryHashUpdater(sourceDir, repository ?: service.loadRepositoryFromFile(output)) {
         lbProcessState.text = ""
         pbProcess.progress = 0.0
         changeButtonEnable(true)
         
         when (it.type) {
           ResultType.SUCCESS -> {
-            service.saveToFile(it.data!!, output, cmFormat.selectionModel.selectedItem)
-    
             Configuration.get().devTools.sourcePath = sourceDir.absolutePath
             Configuration.get().devTools.outputPath = output.absolutePath
             Configuration.get().save()
-            treeView.root = ViewUtils.toTreeItems(it.data.bundles.last().versions.last().entries)
+            repository = it.data
+            displayRepository()
           }
           ResultType.ERROR -> DialogUtils.textAreaDialog(
-              "Details",
-              it.error?.message.orEmpty(),
-              "Error occurred when updating")
+            "Details",
+            it.error?.message.orEmpty(),
+            "Error occurred when updating"
+          )
         }
       }.start()
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
-          "Details",
-          e.message.orEmpty(),
-          "Error occurred when updating")
+        "Details",
+        e.message.orEmpty(),
+        "Error occurred when updating"
+      )
     }
     
     
   }
   
+  private fun displayRepository() {
+    if (repository != null) {
+      treeView.root = ViewUtils.toTreeItems(repository!!.bundles.last().versions.last().entries)
+    } else {
+      treeView.root = TreeItem()
+    }
+  }
+  
   private fun generate() {
     var sourceDir = validateSourceDir() ?: return
-    val output = validateOutputFile() ?: return
     
     try {
       lbProcessState.text = "Generating..."
       pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
       changeButtonEnable(false)
       
-      val service = RepositoryService()
       RepositoryGenerator(sourceDir) {
         lbProcessState.text = ""
         pbProcess.progress = 0.0
@@ -168,26 +218,36 @@ class DevelopersToolView : BaseView() {
         
         when (it.type) {
           ResultType.SUCCESS -> {
-            service.saveToFile(it.data!!, output, cmFormat.selectionModel.selectedItem)
-    
+            
             Configuration.get().devTools.sourcePath = sourceDir.absolutePath
-            Configuration.get().devTools.outputPath = output.absolutePath
             Configuration.get().devTools.bundlePreferredPath = tfBundlePath.text
             Configuration.get().save()
-            treeView.root = ViewUtils.toTreeItems(it.data.bundles.last().versions.last().entries)
+            repository = it.data
+            treeView.root = ViewUtils.toTreeItems(it.data!!.bundles.last().versions.last().entries)
           }
           ResultType.ERROR -> DialogUtils.textAreaDialog(
-              "Details",
-              it.error?.message.orEmpty(),
-              "Error occurred when generating")
+            "Details",
+            it.error?.message.orEmpty(),
+            "Error occurred when generating"
+          )
         }
       }.start()
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
-          "Details",
-          e.message.orEmpty(),
-          "Error occurred when generating")
+        "Details",
+        e.message.orEmpty(),
+        "Error occurred when generating"
+      )
     }
+  }
+  
+  private fun save(repo: Repository) {
+    val output = validateOutputFile() ?: return
+    val service = RepositoryService()
+    service.saveToFile(repo, output, cmFormat.selectionModel.selectedItem)
+    Configuration.get().devTools.outputPath = output.absolutePath
+    Configuration.get().save()
+    lbProcessState.text = "Saved"
   }
   
   private fun changeButtonEnable(enabled: Boolean) {
@@ -198,7 +258,12 @@ class DevelopersToolView : BaseView() {
   private fun validateSourceDir(): File? {
     var file = tfPath.text?.let { SystemUtils.parseDirectory(it, null) }
     if (file == null) {
-      DialogUtils.dialog("'${tfPath.text}' is not correct directory path", "Source directory is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
+      DialogUtils.dialog(
+        "'${tfPath.text}' is not correct directory path",
+        "Source directory is incorrect or empty",
+        Alert.AlertType.ERROR,
+        ButtonType.OK
+      )
       return null
     }
     return file
@@ -207,7 +272,12 @@ class DevelopersToolView : BaseView() {
   private fun validateOutputFile(): File? {
     val output = File(tfOutput.text)
     if (output.exists() && !output.isFile) {
-      DialogUtils.dialog("'${tfOutput.text}' is not correct output file path", "Output path is incorrect or empty", Alert.AlertType.ERROR, ButtonType.OK)
+      DialogUtils.dialog(
+        "'${tfOutput.text}' is not correct output file path",
+        "Output path is incorrect or empty",
+        Alert.AlertType.ERROR,
+        ButtonType.OK
+      )
       return null
     }
     return output
@@ -263,4 +333,7 @@ class DevelopersToolView : BaseView() {
   
   @FXML
   lateinit var menuBar: MenuBar
+  
+  @FXML
+  lateinit var btnSave: Button
 }

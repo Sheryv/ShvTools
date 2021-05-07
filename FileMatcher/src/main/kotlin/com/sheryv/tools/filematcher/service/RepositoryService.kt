@@ -1,13 +1,15 @@
 package com.sheryv.tools.filematcher.service
 
 import com.sheryv.tools.filematcher.config.Configuration
-import com.sheryv.tools.filematcher.model.Repository
-import com.sheryv.tools.filematcher.model.ValidationError
+import com.sheryv.tools.filematcher.model.*
 import com.sheryv.tools.filematcher.utils.DataUtils
 import com.sheryv.tools.filematcher.utils.DialogUtils
+import com.sheryv.tools.filematcher.utils.Hashing
+import com.sheryv.tools.filematcher.utils.lg
 import javafx.stage.Window
 import java.io.File
 import java.nio.file.Path
+import java.nio.file.Paths
 
 class RepositoryService {
   
@@ -28,9 +30,13 @@ class RepositoryService {
     }.orElse(null)
   }
   
-  fun loadRepositoryFromFile(file: Path): Repository? {
-    val mapper = if (file.toFile().extension.toLowerCase() == "json") DataUtils.jsonMapper() else DataUtils.yamlMapper()
-    val repo = mapper.readValue(file.toFile(), Repository::class.java)
+  fun loadRepositoryFromFile(file: Path): Repository {
+    return loadRepositoryFromFile(file.toFile())
+  }
+  
+  fun loadRepositoryFromFile(file: File): Repository {
+    val mapper = if (file.extension.lowercase() == "json") DataUtils.jsonMapper() else DataUtils.yamlMapper()
+    val repo = mapper.readValue(file, Repository::class.java)
     
     val result = Validator().validateRepo(repo)
     if (!result.isOk()) {
@@ -40,10 +46,20 @@ class RepositoryService {
   }
   
   fun saveToFile(repo: Repository, file: File, format: String) {
-    val mapper = if (format.toUpperCase() == "JSON") {
+    val mapper = if (format.uppercase() == "JSON") {
       DataUtils.jsonMapper()
     } else {
       DataUtils.yamlMapper()
+    }
+    
+    repo.bundles.forEach { b ->
+      b.versions.forEach { v ->
+        v.entries.forEach { e ->
+          if (!e.group) {
+            e.selected = e.state != ItemState.SKIPPED
+          }
+        }
+      }
     }
     
     mapper.writeValue(file, repo)

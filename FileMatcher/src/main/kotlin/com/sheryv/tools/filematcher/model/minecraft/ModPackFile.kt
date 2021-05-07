@@ -15,7 +15,7 @@ data class ModPackFile(
 //    val categorySectionPackageType: Int? = null,
 //    val dependencies: List<Any>? = null,
     val displayName: String? = null,
-    val fileLength: Int? = null,
+    val fileLength: Long? = null,
     val fileStatus: Int? = null,
 //    val gameId: Int? = null,
     val gameVersion: List<String>? = null,

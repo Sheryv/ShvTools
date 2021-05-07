@@ -9,7 +9,7 @@ allprojects {
     ext.longName = "ShvTools root"
     ext.className = ""
     ext.site = 'https://github.com/Sheryv/ShvTools'
-    ext.kotlin_version = '1.3.72'
+    ext.kotlin_version = '1.5.0'
     ext.shortVersion = "0.1"
 
     group = 'com.sheryv'

@@ -16,10 +16,10 @@ import java.util.*
 object DialogUtils {
   
   fun dialog(
-      text: String,
-      header: String? = null,
-      type: Alert.AlertType = Alert.AlertType.WARNING,
-      vararg buttons: ButtonType = arrayOf(ButtonType.YES, ButtonType.NO, ButtonType.CANCEL)
+    text: String,
+    header: String? = null,
+    type: Alert.AlertType = Alert.AlertType.WARNING,
+    vararg buttons: ButtonType = arrayOf(ButtonType.YES, ButtonType.NO, ButtonType.CANCEL)
   ): Optional<ButtonType> {
     return Alert(type, text, *buttons).apply {
       if (header != null) {
@@ -31,11 +31,11 @@ object DialogUtils {
   }
   
   fun inputDialog(
-      text: String,
-      header: String? = null
+    title: String,
+    header: String? = null
   ): Optional<String> {
     val dialog = TextInputDialog()
-    dialog.title = text
+    dialog.title = title
     dialog.headerText = header?.padEnd(60)
     dialog.isResizable = true
     ViewUtils.appendStyleSheets(dialog.dialogPane.scene)
@@ -43,9 +43,9 @@ object DialogUtils {
   }
   
   fun directoryDialog(
-      owner: Window,
-      text: String = "Choose directory",
-      initialDirectory: String? = null
+    owner: Window,
+    text: String = "Choose directory",
+    initialDirectory: String? = null
   ): Optional<Path> {
     val directoryChooser = DirectoryChooser()
     val dir = SystemUtils.parseDirectory(initialDirectory)
@@ -56,27 +56,32 @@ object DialogUtils {
   }
   
   fun openFileDialog(
-      owner: Window,
-      text: String = "Choose file",
-      initialFile: String? = null
+    owner: Window,
+    text: String = "Choose file",
+    initialFile: String? = null
   ): Optional<Path> {
     val directoryChooser = FileChooser()
-    initialFile?.run {
+    initialFile?.let {
       val dir = Paths.get(initialFile).toFile()
       directoryChooser.initialDirectory = dir.parentFile
       directoryChooser.initialFileName = dir.name
+      if (!dir.parentFile.exists()) {
+        return@let null
+      }
+      dir.parentFile
     } ?: run {
       directoryChooser.initialDirectory = File(SystemUtils.userDownloadDir())
     }
+    
     directoryChooser.title = text
     val selectedFile = directoryChooser.showOpenDialog(owner)
     return Optional.ofNullable(selectedFile?.toPath())
   }
   
   fun saveFileDialog(
-      owner: Window,
-      text: String = "Save file as",
-      initialFile: String? = null
+    owner: Window,
+    text: String = "Save file as",
+    initialFile: String? = null
   ): Optional<Path> {
     val directoryChooser = FileChooser()
     initialFile?.run {
@@ -96,12 +101,12 @@ object DialogUtils {
   }
   
   fun textAreaDialog(
-      label: String,
-      content: String,
-      header: String? = null,
-      type: Alert.AlertType = Alert.AlertType.WARNING,
-      wrapText: Boolean = true,
-      vararg buttons: ButtonType = arrayOf(ButtonType.OK)
+    label: String,
+    content: String,
+    header: String? = null,
+    type: Alert.AlertType = Alert.AlertType.WARNING,
+    wrapText: Boolean = true,
+    vararg buttons: ButtonType = arrayOf(ButtonType.OK)
   ): Optional<ButtonType> {
     
     val alert = Alert(type, label, *buttons)
@@ -129,7 +134,7 @@ object DialogUtils {
     expContent.minHeight = 450.0
     expContent.minWidth = 800.0
     alert.isResizable = true
-  
+    
     alert.dialogPane.content = expContent
     ViewUtils.appendStyleSheets(alert.dialogPane.scene)
     return alert.showAndWait()

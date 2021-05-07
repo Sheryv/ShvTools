@@ -6,7 +6,7 @@ import com.sheryv.tools.filematcher.utils.lg
 import java.io.File
 import java.nio.file.Paths
 
-class RepositoryHashUpdater(private val dir: File, private val repoPath: File, onFinish: ((ProcessResult<Repository, RepositoryHashUpdater>) -> Unit)? = null)
+class RepositoryHashUpdater(private val dir: File, private val repository: Repository, onFinish: ((ProcessResult<Repository, RepositoryHashUpdater>) -> Unit)? = null)
   : Process<Repository>(onFinish as ((ProcessResult<Repository, out Process<Repository>>) -> Unit)?, false) {
   
   
@@ -21,8 +21,6 @@ class RepositoryHashUpdater(private val dir: File, private val repoPath: File, o
     } else {
       dir
     }
-    
-    val repository = RepositoryService().loadRepositoryFromFile(repoPath.toPath())!!
     
     repository.bundles.forEach { b ->
       b.versions.forEach { v ->

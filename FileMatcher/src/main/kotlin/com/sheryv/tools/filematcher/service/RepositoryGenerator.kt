@@ -11,8 +11,10 @@ import java.io.File
 import java.net.URLEncoder
 import java.time.format.DateTimeFormatter
 
-class RepositoryGenerator(private val dir: File, onFinish: ((ProcessResult<Repository, RepositoryGenerator>) -> Unit)? = null)
-  : Process<Repository>(onFinish as ((ProcessResult<Repository, out Process<Repository>>) -> Unit)?, false) {
+class RepositoryGenerator(
+  private val dir: File,
+  onFinish: ((ProcessResult<Repository, RepositoryGenerator>) -> Unit)? = null
+) : Process<Repository>(onFinish as ((ProcessResult<Repository, out Process<Repository>>) -> Unit)?, false) {
   
   
   override suspend fun process(): Repository {
@@ -28,16 +30,24 @@ class RepositoryGenerator(private val dir: File, onFinish: ((ProcessResult<Repos
     }
     val entries = loadEntriesFromFiles(file!!, file)
     
-    val bundles = listOf(Bundle("bundle1", "Example bundle", preferredBasePath = BasePath(Configuration.get().devTools.bundlePreferredPath),
-        versions = listOf(BundleVersion(
+    val bundles = listOf(
+      Bundle(
+        "bundle1", "Example bundle", preferredBasePath = BasePath(Configuration.get().devTools.bundlePreferredPath),
+        versions = listOf(
+          BundleVersion(
             versionId = 1,
             versionName = "0.1.0",
             entries = entries
-        ))))
+          )
+        )
+      )
+    )
     
-    return Repository("http://localhost/", "codeName", "1.0", 1,
-        "http://localhost/",
-        "Example title", "", mapOf("param1" to 123.toString()), bundles = bundles)
+    return Repository(
+      "http://localhost/", "codeName", "1.0", 1,
+      "http://localhost/",
+      "Example title", "", mapOf("param1" to 123.toString()), bundles = bundles
+    )
   }
   
   private fun loadEntriesFromFiles(dir: File, rootDir: File, parent: Entry? = null): List<Entry> {
@@ -72,7 +82,18 @@ class RepositoryGenerator(private val dir: File, onFinish: ((ProcessResult<Repos
       BundleUtils.createGroup(id!!, file.name, parent = parent?.id, itemDate = Utils.now(), additionalFields = map)
     } else {
       val md5 = Hashing.md5(file.toPath())
-      Entry(id!!, file.name, p, null, parent = parent?.id, itemDate = Utils.now(), hashes = Hash(md5), additionalFields = map)
+      val fileSize = file.length().let { if (it == 0L) null else it }
+      Entry(
+        id!!,
+        file.name,
+        p,
+        null,
+        parent = parent?.id,
+        itemDate = Utils.now(),
+        hashes = Hash(md5),
+        additionalFields = map,
+        fileSize = fileSize
+      )
     }
   }
 }

@@ -18,11 +18,19 @@ import javafx.util.Callback
 
 object ViewUtils {
   
-  fun createTreeColumn(name: String, preferredWidth: Int = 0, mapper: (Entry) -> String): TreeTableColumn<Entry, String> {
+  fun createTreeColumn(
+    name: String,
+    preferredWidth: Int = 0,
+    alignRight: Boolean = false,
+    mapper: (Entry) -> String
+  ): TreeTableColumn<Entry, String> {
     return TreeTableColumn<Entry, String>(name).apply {
       setCellValueFactory { SimpleStringProperty(mapper(it.value.value)) }
       if (preferredWidth > 0)
         prefWidth = preferredWidth.toDouble()
+      if (alignRight) {
+        style = "-fx-alignment: CENTER-RIGHT;"
+      }
     }
   }
   
@@ -45,7 +53,8 @@ object ViewUtils {
   }
   */
   fun toTreeItems(entries: List<Entry>): TreeItem<Entry> {
-    val root: TreeItem<Entry> = TreeItem(BundleUtils.createGroup("ROOT__BundleInvisibleGroup", "", target = TargetPath()))
+    val root: TreeItem<Entry> =
+      TreeItem(BundleUtils.createGroup("ROOT__BundleInvisibleGroup", "", target = TargetPath()))
     toTreeItems(entries.filter { it.parent == null }, entries, root)
     return root
   }
@@ -77,8 +86,8 @@ object ViewUtils {
   
   
   fun <Item, Label, Control : Region> buttonsInTreeTableCellFactory(
-      buttonsFactory: () -> Map<String, Control>,
-      build: (TreeItem<Item>, Map<String, Control>) -> Collection<Control>
+    buttonsFactory: () -> Map<String, Control>,
+    build: (TreeItem<Item>, Map<String, Control>) -> Collection<Control>
   ): Callback<TreeTableColumn<Item, Label>, TreeTableCell<Item, Label>> {
     return Callback<TreeTableColumn<Item, Label>, TreeTableCell<Item, Label>> {
       object : TreeTableCell<Item, Label>() {
@@ -87,18 +96,19 @@ object ViewUtils {
         
         override fun updateItem(item: Label, empty: Boolean) {
           super.updateItem(item, empty)
-          if (empty || treeTableRow.isEmpty || treeTableRow.treeItem?.value == null) {
+          if (empty || this.treeTableRow == null) {
             graphic = null
             text = null
           } else {
-            val treeItem = treeTableRow.treeItem!!
+            val treeItem = treeTableRow.treeItem ?: return
             
             val result = build.invoke(treeItem, buttonsMap)
             
             if (result.isNotEmpty()) {
-              hBox.children.clear()
-              hBox.children.addAll(result)
+              hBox.children.setAll(result)
               graphic = hBox
+            } else {
+              graphic = null
             }
             text = null
           }
@@ -108,8 +118,8 @@ object ViewUtils {
   }
   
   fun <Item> treeTableCellFactoryWithCustomCss(
-      allCssClasses: Set<String>,
-      cssClassMapper: (Item) -> List<String>
+    allCssClasses: Set<String>,
+    cssClassMapper: (Item) -> List<String>
   ): Callback<TreeTableColumn<Item, String>, TreeTableCell<Item, String>> {
     return Callback<TreeTableColumn<Item, String>, TreeTableCell<Item, String>> {
       object : TreeTableCell<Item, String>() {

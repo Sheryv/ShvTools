@@ -13,15 +13,22 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeFormatterBuilder
 import java.time.format.SignStyle
 import java.time.temporal.ChronoField
+import java.text.DecimalFormat
+import kotlin.math.log10
+import kotlin.math.pow
 
 
-fun inBackground(start: CoroutineStart = CoroutineStart.DEFAULT,
-                 block: suspend CoroutineScope.() -> Unit): Job {
+fun inBackground(
+  start: CoroutineStart = CoroutineStart.DEFAULT,
+  block: suspend CoroutineScope.() -> Unit
+): Job {
   return GlobalScope.launch(Dispatchers.IO, start, block)
 }
 
-fun inViewThread(start: CoroutineStart = CoroutineStart.DEFAULT,
-                 block: suspend CoroutineScope.() -> Unit): Job {
+fun inViewThread(
+  start: CoroutineStart = CoroutineStart.DEFAULT,
+  block: suspend CoroutineScope.() -> Unit
+): Job {
   return GlobalScope.launch(Dispatchers.Main, start, block)
 }
 
@@ -35,20 +42,21 @@ fun Boolean.toEnglishWord(): String {
 }
 
 object Utils {
-  internal val eventBus: EventBus = EventBus.builder().logger(org.greenrobot.eventbus.Logger.JavaLogger(EventBus::class.java.name)).build()
-
+  internal val eventBus: EventBus =
+    EventBus.builder().logger(org.greenrobot.eventbus.Logger.JavaLogger(EventBus::class.java.name)).build()
+  
   private var DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
-      .parseCaseInsensitive()
-      .appendValue(ChronoField.HOUR_OF_DAY, 2)
-      .appendLiteral(':')
-      .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
-      .appendLiteral(' ')
-      .appendValue(ChronoField.DAY_OF_MONTH, 2)
-      .appendLiteral('-')
-      .appendValue(ChronoField.MONTH_OF_YEAR, 2)
-      .appendLiteral('-')
-      .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
-      .toFormatter()
+    .parseCaseInsensitive()
+    .appendValue(ChronoField.HOUR_OF_DAY, 2)
+    .appendLiteral(':')
+    .appendValue(ChronoField.MINUTE_OF_HOUR, 2)
+    .appendLiteral(' ')
+    .appendValue(ChronoField.DAY_OF_MONTH, 2)
+    .appendLiteral('-')
+    .appendValue(ChronoField.MONTH_OF_YEAR, 2)
+    .appendLiteral('-')
+    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+    .toFormatter()
 
 /*  private var LONG_DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
       .parseCaseInsensitive()
@@ -86,6 +94,15 @@ object Utils {
   
   fun now(): OffsetDateTime {
     return OffsetDateTime.now().withOffsetSameInstant(ZoneOffset.UTC).withNano(0)
+  }
+  
+  fun fileSizeFormat(size: Long?): String {
+    if (size == null || size <= 0) return "-"
+    val units = arrayOf("B  ", "kB", "MB", "GB", "TB")
+    val digitGroups = (log10(size.toDouble()) / log10(1024.0)).toInt()
+    return DecimalFormat("#,##0.#")
+      .format(size / 1024.0.pow(digitGroups.toDouble()))
+      .toString() + " " + units[digitGroups]
   }
 }
 

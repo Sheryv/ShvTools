@@ -1,18 +1,18 @@
 package com.sheryv.tools.filematcher.service
 
+import com.sheryv.tools.filematcher.model.Repository
 import com.sheryv.tools.filematcher.model.minecraft.Addon
 import com.sheryv.tools.filematcher.model.minecraft.InstanceConfig
-import com.sheryv.tools.filematcher.model.minecraft.ModPackFile
 import com.sheryv.tools.filematcher.utils.DataUtils
 import java.io.File
 import java.nio.file.Paths
 
 class MinecraftService {
-  fun fillDataFromCurseForgeJson(source: File, output: String) {
-    val repository = RepositoryService().loadRepositoryFromFile(Paths.get(output))
+  fun fillDataFromCurseForgeJson(repo: Repository? = null, curseForgeSource: File, output: String): Repository {
+    val repository = repo ?: RepositoryService().loadRepositoryFromFile(Paths.get(output))
         ?: throw IllegalStateException("Cannot load repository from: $output")
     
-    val instance = DataUtils.jsonMapper().readValue(source, InstanceConfig::class.java)
+    val instance = DataUtils.jsonMapper().readValue(curseForgeSource, InstanceConfig::class.java)
     repository.bundles.forEach { b ->
       b.versions.forEach { v ->
         v.entries = v.entries.map { e ->
@@ -23,14 +23,12 @@ class MinecraftService {
                 "fileFingerPrint" to a.installedFile.packageFingerprint,
                 "fileLength" to a.installedFile.fileLength.toString()
             )
-            e.copy(src = a.installedFile.downloadUrl, itemDate = a.installedFile.fileDate, additionalFields = map)
+            e.copy(src = a.installedFile.downloadUrl, itemDate = a.installedFile.fileDate, additionalFields = map, fileSize = a.installedFile.fileLength)
           } ?: e
         }
       }
     }
-    
-    val file = File(output)
-    RepositoryService().saveToFile(repository, file, file.extension.toUpperCase())
+    return repository
   }
   
   private fun findAddon(name: String, instanceConfig: InstanceConfig): Addon? {
