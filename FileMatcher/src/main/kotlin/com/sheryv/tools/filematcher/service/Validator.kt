@@ -100,8 +100,8 @@ class Validator {
           .assert(inRange(e.version, 100), errorForEntry("version", "", e, bundle, version, "cannot be longer than 100 chars"))
           .assert(inRange(e.website, 1000), errorForEntry("website", "", e, bundle, version, "cannot be longer than 1000 chars"))
           .assert(inRange(e.description, 6000), errorForEntry("description", "", e, bundle, version, "cannot be longer than 6000 chars"))
-          .assert(!e.target.absolute || (e.target.absolute && e.target.path != null && e.target.path.findPath() != null
-              && !e.target.path.findPath().isNullOrBlank()), errorForEntry("target", "When 'absolute=true' path cannot be empty.", e, bundle, version))
+          .assert(!e.target.absolute || (e.target.absolute && e.target.directory != null && e.target.directory.findPath() != null
+              && !e.target.directory.findPath().isNullOrBlank()), errorForEntry("target", "When 'absolute=true' path cannot be empty.", e, bundle, version))
       
       
       SystemUtils.fileNameForbiddenChars().forEach {

@@ -1,8 +1,9 @@
 package com.sheryv.tools.filematcher.model
 
 data class TargetPath(
-    val path: BasePath? = null,
-    val absolute: Boolean = false,
-    val override: Boolean = true
+  val directory: BasePath? = null,
+  val matching: Matching = Matching(),
+  val absolute: Boolean = false,
+  val override: Boolean = true,
 ) {
 }

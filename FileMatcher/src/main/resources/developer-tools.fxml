@@ -104,13 +104,15 @@
                                     <children>
                                         <TextField fx:id="tfMcPath" disable="true" layoutX="15.0" layoutY="33.0" prefHeight="25.0" prefWidth="325.0" promptText="Working dir" />
                                         <Button disable="true" layoutX="347.0" layoutY="33.0" mnemonicParsing="false" text="Generate" />
-                                        <Button fx:id="btnCurseForge" layoutX="420.0" layoutY="33.0" mnemonicParsing="false" text="Load from curseforge json" AnchorPane.rightAnchor="40.0" />
+                                        <Button fx:id="btnCurseForge" layoutX="420.0" layoutY="33.0" mnemonicParsing="false" text="Load from Curseforge json" AnchorPane.rightAnchor="40.0" />
                                         <Label layoutX="19.0" layoutY="21.0" text="WIP. This screen and its features are not completed and may change anytime" textFill="#8a2a2a" AnchorPane.topAnchor="8.0">
                                             <font>
                                                 <Font size="13.0" />
                                             </font>
                                         </Label>
                                         <Button fx:id="btnInfo" layoutX="604.0" layoutY="33.0" mnemonicParsing="false" text="?" AnchorPane.rightAnchor="10.0" />
+                              <Button fx:id="btnTransformUrls" layoutX="347.0" layoutY="67.0" mnemonicParsing="false" text="Fix Curse urls" AnchorPane.rightAnchor="207.0" />
+                              <Button fx:id="btnAddMatchingStrategyToMods" layoutX="444.0" layoutY="67.0" mnemonicParsing="false" text="Add matchers for mods files" AnchorPane.rightAnchor="32.0" />
                                     </children>
                                 </AnchorPane>
                             </content>

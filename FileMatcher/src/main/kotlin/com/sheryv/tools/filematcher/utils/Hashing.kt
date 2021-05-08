@@ -38,7 +38,7 @@ object Hashing {
       cnt = inputStream.read()
     }
     
-    return java.lang.Long.toHexString(crc.value)
+    return java.lang.Long.toHexString(crc.value).uppercase()
   }
   
   

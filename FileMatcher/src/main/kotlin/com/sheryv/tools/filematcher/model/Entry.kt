@@ -63,4 +63,19 @@ data class Entry(
   
   @JsonIgnore
   fun isStdItem() = type == ItemType.ITEM
+  
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (javaClass != other?.javaClass) return false
+    
+    other as Entry
+    
+    if (id != other.id) return false
+    
+    return true
+  }
+  
+  override fun hashCode(): Int {
+    return id.hashCode()
+  }
 }

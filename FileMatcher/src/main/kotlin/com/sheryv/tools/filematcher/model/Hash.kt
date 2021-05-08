@@ -18,16 +18,16 @@ data class Hash(
   @JsonIgnore
   fun getCorrespondingHasherAndCompare(): (File) -> Boolean {
     if (sha256 != null) {
-      return { Hashing.sha256(it.toPath()) == sha256 }
+      return { Hashing.sha256(it.toPath()) == sha256.uppercase() }
     }
     if (md5 != null) {
-      return { Hashing.md5(it.toPath()) == md5 }
+      return { Hashing.md5(it.toPath()) == md5.uppercase() }
     }
     if (sha1 != null) {
-      return { Hashing.sha1(it.toPath()) == sha1 }
+      return { Hashing.sha1(it.toPath()) == sha1.uppercase() }
     }
     if (crc32 != null) {
-      return { Hashing.crc32(it.toPath()) == crc32 }
+      return { Hashing.crc32(it.toPath()) == crc32.uppercase() }
     }
     throw IllegalStateException("No hash found")
   }

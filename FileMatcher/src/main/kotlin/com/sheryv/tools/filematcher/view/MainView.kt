@@ -17,14 +17,12 @@ import javafx.fxml.FXML
 import javafx.geometry.HPos
 import javafx.geometry.Insets
 import javafx.geometry.Orientation
-import javafx.scene.Node
 import javafx.scene.control.*
 import javafx.scene.input.*
 import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.greenrobot.eventbus.Subscribe
@@ -128,12 +126,14 @@ class MainView : BaseView() {
     }
     cmVersion.selectionModel.selectedItemProperty().addListener { _, _, v ->
       if (v != null) {
+        treeView.root = TreeItem()
+        updater.executeNow()
         context = UserContext(context.repo, cmBundle.selectionModel.selectedItem?.id, v.versionId, context.basePath)
         updater.executeNow()
+        renderFields()
       } else {
         lbTreeState.text = ""
       }
-      btnDownload.isDisable = v == null
       btnVerify.isDisable = v == null
     }
     
@@ -158,6 +158,7 @@ class MainView : BaseView() {
     btnPath.setOnAction {
       DialogUtils.directoryDialog(treeView.scene.window, initialDirectory = tfPath.text).ifPresent {
         tfPath.text = it.toAbsolutePath().toString()
+        btnDownload.isDisable = true
       }
     }
     
@@ -175,7 +176,7 @@ class MainView : BaseView() {
                 "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
                 "Error verifying: ", Alert.AlertType.ERROR, wrapText = false
               )
-            
+            ResultType.SUCCESS -> btnDownload.isDisable = false
           }
         }.start()
       }
@@ -187,28 +188,48 @@ class MainView : BaseView() {
         return@setOnAction
       }
       
-      val directory = verifyAndGetDirectory()
-      if (directory != null) {
-        state.setMessage("Downloading files...")
-        state.progessIndeterminate()
-        context.basePath = directory
-        FileSynchronizer(context, state) { r ->
-          state.stop()
-          when (r.type) {
-            ResultType.ERROR ->
-              DialogUtils.textAreaDialog(
-                "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
-                "Error while downloading", Alert.AlertType.ERROR, wrapText = false
-              )
-            
-            ResultType.SUCCESS -> {
-              state.setMessage("Download completed")
-              if (stage.isFocused) {
-                DialogUtils.dialog("", "Download completed", Alert.AlertType.INFORMATION, ButtonType.OK)
+      val matcher = FileMatcher(context)
+      
+      val toDelete = context.getEntries().flatMap { e ->
+        val file = matcher.getEntryDir(e).resolve(e.name).toFile()
+        e.target.matching.lastMatches.filter { it != file }
+      }
+      
+      var allow = true
+      if (toDelete.isNotEmpty()) {
+        val dialog = DialogUtils.textAreaDialog(
+          "",
+          toDelete.joinToString("\n") { it.absolutePath },
+          "These files will be deleted during process. Do you want to continue?",
+          buttons = arrayOf(ButtonType.CANCEL, ButtonType.YES)
+        )
+        allow = dialog.isPresent && dialog.get() == ButtonType.YES
+      }
+      
+      if (allow) {
+        val directory = verifyAndGetDirectory()
+        if (directory != null) {
+          state.setMessage("Downloading files...")
+          state.progessIndeterminate()
+          context.basePath = directory
+          FileSynchronizer(context, state) { r ->
+            state.setMessage("Download completed")
+            state.stop()
+            when (r.type) {
+              ResultType.ERROR ->
+                DialogUtils.textAreaDialog(
+                  "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
+                  "Error while downloading", Alert.AlertType.ERROR, wrapText = false
+                )
+              
+              ResultType.SUCCESS -> {
+                if (stage.isFocused) {
+                  DialogUtils.dialog("", "Download completed", Alert.AlertType.INFORMATION, ButtonType.OK)
+                }
               }
             }
-          }
-        }.start()
+          }.start()
+        }
       }
     }
   }
@@ -230,6 +251,7 @@ class MainView : BaseView() {
   
   private fun initializeRepo(load: Repository) {
     context = UserContext(load)
+    treeView.root = TreeItem()
     
     cmBundle.items.setAll(load.bundles)
     cmBundle.selectionModel.select(0)
@@ -237,12 +259,11 @@ class MainView : BaseView() {
     cmVersion.selectionModel.select(0)
     
     lbLoadedRepo.text = "Loaded: " + cmRepositoryUrl.selectionModel.selectedItem
-    renderFields()
   }
   
   private fun fillEntries(entries: List<Entry>) {
     val item = ViewUtils.toTreeItems(entries)
-    ViewUtils.forEachTreeItem(item) { if (!it.isLeaf) it.isExpanded = true }
+//    ViewUtils.forEachTreeItem(item) { if (!it.isLeaf) it.isExpanded = true }
     treeView.root = item
   }
   
@@ -431,7 +452,11 @@ class MainView : BaseView() {
     
     val entries = context.getEntries()
     val filter = entries.filter { all.contains(it.state) || it.group }
-    fillEntries(filter)
+    var count = 0
+    ViewUtils.forEachTreeItem(treeView.root) { count++ }
+    if (filter != entries || treeView.root.isLeaf || count != filter.size) {
+      fillEntries(filter)
+    }
     updateStatusBar(entries)
   }
   
@@ -501,17 +526,17 @@ class MainView : BaseView() {
           }
           it.prefWidth = 210.0
         },
-        ViewUtils.createTreeColumn("Path") { it.target.path?.findPath().orEmpty() },
+        ViewUtils.createTreeColumn("Path") { it.target.directory?.findPath().orEmpty() },
         ViewUtils.createTreeColumn("Version") { it.version ?: if (it.group) "" else "-" },
         ViewUtils.createTreeColumn("Date") { if (!it.group) Utils.dateFormat(it.itemDate) else "" },
         ViewUtils.createTreeColumn(
           "Size",
           alignRight = true
         ) { if (!it.group) Utils.fileSizeFormat(it.fileSize) else "" },
-        ViewUtils.createTreeColumn(
-          "Override",
-          alignRight = true
-        ) { if (!it.group) (if (it.target.override) "Yes" else "No") else "" },
+        ViewUtils.createTreeColumn("Override") {
+          " " + (if (!it.group) it.target.override.toEnglishWord() else "") +
+              (it.target.matching.getPattern()?.let { " ($it)" } ?: "")
+        },
         ViewUtils.createTreeColumn("Category") { it.category.orEmpty() },
         ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
         ViewUtils.createTreeColumn("ID") { it.id },
@@ -555,8 +580,9 @@ class MainView : BaseView() {
           addDetailsRow("Name", item.name, grid)
           addDetailsRow("Src", item.getSrcUrl(context?.getBundleOrNull()?.getBaseUrl(context.repo?.baseUrl)), grid)
           addDetailsRow("Parent", item.parent, grid)
-          addDetailsRow("Target Path", item.target.path?.findPath(), grid)
+          addDetailsRow("Target Path", item.target.directory?.findPath(), grid)
           addDetailsRow("Override", item.target.override.toEnglishWord(), grid)
+          addDetailsRow("File matching pattern", item.target.matching.getPattern(), grid)
           addDetailsRow("Size", Utils.fileSizeFormat(item.fileSize), grid)
           addDetailsRow("Target Path is absolute", item.target.absolute.toEnglishWord(), grid)
           addDetailsRow("Description", item.description, grid)

@@ -52,7 +52,7 @@ class UserContext(var repo: Repository? = null,
         ?: throw IllegalArgumentException("Entry not found in context: ${entry.id}, ${entry.name}")
   
     if (found.parent != null) {
-      return Paths.get(basePath!!.absolutePath, *BundleUtils.getParents(found.parent, entries).mapNotNull { it.target.path?.findPath() }.reversed().toTypedArray())
+      return Paths.get(basePath!!.absolutePath, *BundleUtils.getParents(found.parent, entries).mapNotNull { it.target.directory?.findPath() }.reversed().toTypedArray())
     }
     return basePath!!.toPath()
   }

@@ -47,9 +47,9 @@ class RepositoryHashUpdater(private val dir: File, private val repository: Repos
   
   private fun getEntryDir(context: UserContext, entry: Entry): String {
     return if (entry.target.absolute) {
-      entry.target.path!!.findPath()!!
+      entry.target.directory!!.findPath()!!
     } else {
-      context.buildDirPathForEntry(entry).resolve(entry.target.path?.findPath() ?: "").toAbsolutePath().toString()
+      context.buildDirPathForEntry(entry).resolve(entry.target.directory?.findPath() ?: "").toAbsolutePath().toString()
     }
   }
 }

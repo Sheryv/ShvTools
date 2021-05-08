@@ -15,8 +15,11 @@ import java.io.File
 import java.net.URLEncoder
 import java.nio.charset.Charset
 
-class FileSynchronizer(private val context: UserContext, private val state: ViewProgressState, onFinish: ((ProcessResult<Unit, FileSynchronizer>) -> Unit)? = null)
-  : Process<Unit>(onFinish as ((ProcessResult<Unit, out Process<Unit>>) -> Unit)?, true) {
+class FileSynchronizer(
+  private val context: UserContext,
+  private val state: ViewProgressState,
+  onFinish: ((ProcessResult<Unit, FileSynchronizer>) -> Unit)? = null
+) : Process<Unit>(onFinish as ((ProcessResult<Unit, out Process<Unit>>) -> Unit)?, true) {
   
   override fun preValidation(): Boolean {
     if (!context.isFilled()) {
@@ -35,20 +38,24 @@ class FileSynchronizer(private val context: UserContext, private val state: View
       
       matcher.updateEntryState(entry)
       
-      if (entry.selected && !entry.group && entry.type == ItemType.ITEM
-          && (entry.state == ItemState.MODIFIED || entry.state == ItemState.NEEDS_UPDATE || entry.state == ItemState.NOT_EXISTS)) {
-        
-        withContext(Dispatchers.Main) {
-          state.progress.set(processed.toDouble() / all)
-        }
-        
-        entry.state = ItemState.DOWNLOADING
-        val downloadFile = downloadEntry(entry, matcher)
-//        if (downloadFile != null) {
-//
-//        }
-        processed++
-        matcher.updateEntryState(entry)
+      if (entry.selected && !entry.group && entry.type == ItemType.ITEM) {
+        val fileName =
+          if (entry.state == ItemState.MODIFIED || entry.state == ItemState.NEEDS_UPDATE || entry.state == ItemState.NOT_EXISTS) {
+            
+            withContext(Dispatchers.Main) {
+              state.progress.set(processed.toDouble() / all)
+            }
+            
+            entry.state = ItemState.DOWNLOADING
+            val downloadFile = downloadEntry(entry, matcher)
+            
+            processed++
+            matcher.updateEntryState(entry)
+            downloadFile
+          } else {
+            matcher.getEntryDir(entry).resolve(entry.name).toFile()
+          }
+        entry.target.matching.lastMatches.filter { it != fileName }.forEach { it.delete() }
       }
     }
   }

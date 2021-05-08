@@ -2,6 +2,8 @@ apply plugin: 'maven-publish'
 
 
 ext.longName = "Shared project with utility classes"
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 version getVersionName(name)
 

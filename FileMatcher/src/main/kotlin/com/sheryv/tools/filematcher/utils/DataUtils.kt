@@ -1,5 +1,6 @@
 package com.sheryv.tools.filematcher.utils
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.util.StdDateFormat
@@ -99,6 +100,7 @@ object DataUtils {
     map.registerModule(JavaTimeModule())
     map.dateFormat = StdDateFormat()
     map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+    map.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     return map
   }
 }

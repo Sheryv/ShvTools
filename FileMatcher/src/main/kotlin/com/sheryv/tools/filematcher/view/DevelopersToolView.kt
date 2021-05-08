@@ -1,6 +1,7 @@
 package com.sheryv.tools.filematcher.view
 
 import com.sheryv.tools.filematcher.config.Configuration
+import com.sheryv.tools.filematcher.model.BundleVersion
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.Repository
 import com.sheryv.tools.filematcher.model.ResultType
@@ -20,6 +21,7 @@ import javafx.geometry.Insets
 import javafx.scene.control.*
 import java.io.File
 import java.nio.file.Paths
+import java.time.OffsetDateTime
 
 class DevelopersToolView : BaseView() {
   
@@ -29,6 +31,8 @@ class DevelopersToolView : BaseView() {
       field = value
       saveBtnVisibility.set(value == null)
     }
+  
+  private var version: BundleVersion? = null
   
   override fun initialize() {
     super.initialize()
@@ -98,10 +102,31 @@ class DevelopersToolView : BaseView() {
           Configuration.get().devTools.mcCursePath = it.toAbsolutePath().toString()
           Configuration.get().save()
           
-          repository = MinecraftService().fillDataFromCurseForgeJson(repository, it.toFile(), tfOutput.text)
+          MinecraftService().fillDataFromCurseForgeJson(version!!, it.toFile(), tfOutput.text)
           DialogUtils.dialog("", "Completed", Alert.AlertType.INFORMATION, ButtonType.OK)
-          displayRepository()
+          treeView.refresh()
         }
+    }
+    
+    btnTransformUrls.setOnAction {
+      if (repository != null) {
+        MinecraftService().transformUrls(version!!)
+        lbProcessState.text = "URLs fixed"
+        treeView.refresh()
+      }
+    }
+    
+    btnAddMatchingStrategyToMods.setOnAction {
+      if (repository != null) {
+        val errors = MinecraftService().addMinecraftModsMatcher(version!!)
+        displayRepository()
+        DialogUtils.textAreaDialog(
+          "File that were not matched are listed below",
+          errors.joinToString("\n"),
+          "Completed",
+          Alert.AlertType.INFORMATION
+        )
+      }
     }
     
     btnInfo.setOnAction {
@@ -125,7 +150,10 @@ class DevelopersToolView : BaseView() {
         { item, map ->
           if (!item.value.group) {
             listOf(map["setUrl"]!!.apply {
-              setOnAction { DialogUtils.inputDialog("ShvFileMatcher - Set URL", "URL for entry '${item.value.name}'").let { item.value.src = it.get() }; treeView.refresh() }
+              setOnAction {
+                DialogUtils.inputDialog("ShvFileMatcher - Set URL", "URL for entry '${item.value.name}'")
+                  .let { item.value.src = it.get() }; treeView.refresh()
+              }
             })
           } else {
             emptyList()
@@ -139,6 +167,13 @@ class DevelopersToolView : BaseView() {
           MenuItem("Update hashes").apply {
             setOnAction {
               updateHashes()
+            }
+          },
+          MenuItem("Load from file").apply {
+            setOnAction {
+              val output = validateOutputFile() ?: return@setOnAction
+              repository = RepositoryService().loadRepositoryFromFile(output)
+              displayRepository()
             }
           }
         ))
@@ -197,7 +232,9 @@ class DevelopersToolView : BaseView() {
   
   private fun displayRepository() {
     if (repository != null) {
-      treeView.root = ViewUtils.toTreeItems(repository!!.bundles.last().versions.last().entries)
+      val bundle = repository!!.bundles.maxByOrNull { it.updateDate ?: OffsetDateTime.MIN }!!
+      version = bundle.versions.last()
+      treeView.root = ViewUtils.toTreeItems(version!!.entries)
     } else {
       treeView.root = TreeItem()
     }
@@ -223,7 +260,8 @@ class DevelopersToolView : BaseView() {
             Configuration.get().devTools.bundlePreferredPath = tfBundlePath.text
             Configuration.get().save()
             repository = it.data
-            treeView.root = ViewUtils.toTreeItems(it.data!!.bundles.last().versions.last().entries)
+            version = it.data!!.bundles.first().versions.last()
+            treeView.root = ViewUtils.toTreeItems(version!!.entries)
           }
           ResultType.ERROR -> DialogUtils.textAreaDialog(
             "Details",
@@ -336,4 +374,10 @@ class DevelopersToolView : BaseView() {
   
   @FXML
   lateinit var btnSave: Button
+  
+  @FXML
+  lateinit var btnTransformUrls: Button
+  
+  @FXML
+  lateinit var btnAddMatchingStrategyToMods: Button
 }
