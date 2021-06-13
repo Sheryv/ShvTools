@@ -33,7 +33,7 @@ launch4j {
     jar = "${project.buildDir}\\libs\\${project.name}-${project.ext.getShortVersion(project.name)}" + '.jar'
     mainClassName = project.ext["className"]
     icon = "${projectDir}\\src\\main\\resources\\icons\\app.ico"
-    mutexName = 'com.sheryv.tools.lasso.LassoGUIMutex'
+    mutexName = 'com.sheryv.tools.filematcher.FileMatcherGUIMutex'
     outfile = project.ext["file"] + "_" + project.ext.shortVersion + ".exe"
     fileDescription = project.ext["file"] + "startup file"
     copyright = project.ext["site"]
