@@ -125,6 +125,17 @@ subprojects {
 
 }
 
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.5.0"
+    implementation "org.jetbrains.kotlin:kotlin-script-runtime:1.5.0"
+    implementation 'info.picocli:picocli:4.6.1'
+}
+
 
 //compileKotlin {
 //    kotlinOptions.jvmTarget = "1.8"
