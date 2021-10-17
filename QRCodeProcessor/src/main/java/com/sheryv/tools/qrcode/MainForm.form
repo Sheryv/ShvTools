@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.sheryv.tools.qrcode.MainForm">
+  <grid id="27dc6" binding="rootPanel" layout-manager="GridBagLayout">
+    <constraints>
+      <xy x="20" y="20" width="500" height="429"/>
+    </constraints>
+    <properties>
+      <preferredSize width="800" height="400"/>
+    </properties>
+    <border type="none"/>
+    <children>
+      <tabbedpane id="cf4ce" binding="tabbedPane1" default-binding="true">
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <preferred-size width="200" height="200"/>
+          </grid>
+          <gridbag weightx="0.8" weighty="0.5"/>
+        </constraints>
+        <properties>
+          <name value=""/>
+        </properties>
+        <border type="none"/>
+        <children>
+          <scrollpane id="42cf6">
+            <constraints>
+              <tabbedpane title="Input plain text"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="69387" class="javax.swing.JTextArea" binding="inputText">
+                <constraints/>
+                <properties>
+                  <rows value="10"/>
+                </properties>
+              </component>
+            </children>
+          </scrollpane>
+          <scrollpane id="1a8d2">
+            <constraints>
+              <tabbedpane title="Base64"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="ebec7" class="javax.swing.JTextArea" binding="inputBase64">
+                <constraints/>
+                <properties>
+                  <rows value="10"/>
+                </properties>
+              </component>
+            </children>
+          </scrollpane>
+        </children>
+      </tabbedpane>
+      <vspacer id="fc60a">
+        <constraints>
+          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+      </vspacer>
+      <vspacer id="5e21b">
+        <constraints>
+          <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+      </vspacer>
+      <tabbedpane id="f5d22" binding="tabbedPane2" default-binding="true">
+        <constraints>
+          <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
+            <preferred-size width="200" height="200"/>
+          </grid>
+          <gridbag weightx="0.0" weighty="0.5"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <scrollpane id="350ff">
+            <constraints>
+              <tabbedpane title="Decoded plain text"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="376a6" class="javax.swing.JTextArea" binding="outputText">
+                <constraints/>
+                <properties>
+                  <editable value="false"/>
+                  <rows value="10"/>
+                </properties>
+              </component>
+            </children>
+          </scrollpane>
+          <scrollpane id="1ff68">
+            <constraints>
+              <tabbedpane title="Base64"/>
+            </constraints>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="4ea79" class="javax.swing.JTextArea" binding="outputBase64">
+                <constraints/>
+                <properties>
+                  <editable value="false"/>
+                  <rows value="10"/>
+                </properties>
+              </component>
+            </children>
+          </scrollpane>
+        </children>
+      </tabbedpane>
+      <component id="ee597" class="javax.swing.JLabel" binding="image">
+        <constraints>
+          <grid row="0" column="2" row-span="6" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.2" weighty="1.0"/>
+        </constraints>
+        <properties>
+          <text value=""/>
+        </properties>
+      </component>
+      <hspacer id="edbe2">
+        <constraints>
+          <grid row="0" column="3" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+      </hspacer>
+      <grid id="8084d" layout-manager="BorderLayout" hgap="0" vgap="0">
+        <constraints>
+          <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+        <properties/>
+        <border type="none"/>
+        <children>
+          <grid id="c84d9" layout-manager="FlowLayout" hgap="0" vgap="0" flow-align="1">
+            <constraints border-constraint="East"/>
+            <properties/>
+            <border type="none"/>
+            <children>
+              <component id="62003" class="javax.swing.JButton" binding="generateButton" default-binding="true">
+                <constraints/>
+                <properties>
+                  <alignmentX value="1.0"/>
+                  <text value="Generate"/>
+                </properties>
+              </component>
+              <grid id="40c57" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="1">
+                <constraints/>
+                <properties/>
+                <border type="none"/>
+                <children/>
+              </grid>
+              <component id="bca25" class="javax.swing.JButton" binding="saveButton">
+                <constraints/>
+                <properties>
+                  <enabled value="false"/>
+                  <text value="Save to file"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+          <component id="a014b" class="javax.swing.JButton" binding="readFromFileButton" default-binding="true">
+            <constraints border-constraint="West"/>
+            <properties>
+              <contentAreaFilled value="true"/>
+              <horizontalAlignment value="0"/>
+              <inheritsPopupMenu value="false"/>
+              <label value="Read from file"/>
+              <text value="Read from file"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <hspacer id="90ea1">
+        <constraints>
+          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="1" hsize-policy="6" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+          <gridbag weightx="0.0" weighty="0.0"/>
+        </constraints>
+      </hspacer>
+    </children>
+  </grid>
+</form>

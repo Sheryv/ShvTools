@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.jetbrains.kotlin.jvm'
+}
+
+group 'com.sheryv'
+version '0.1.0'
+ext.shortVersion = '0.1'
+mainClassName = "com.sheryv.tools.qrcode.QrCodeProcessor"
+ext.className = mainClassName
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://plugins.gradle.org/m2/"
+    }
+}
+
+java {
+    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_11
+}
+
+compileKotlin {
+    kotlinOptions.jvmTarget = "11"
+}
+compileTestKotlin {
+    kotlinOptions.jvmTarget = "11"
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+    implementation "com.google.zxing:core:3.4.1"
+    implementation "com.google.zxing:javase:3.4.1"
+//    implementation "com.github.weisj:darklaf-core:latest.integration"
+    implementation 'com.formdev:flatlaf:1.6.1'
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
+}
+
+test {
+    useJUnitPlatform()
+}
