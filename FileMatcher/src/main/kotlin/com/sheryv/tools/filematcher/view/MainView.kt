@@ -31,8 +31,10 @@ import java.io.File
 class MainView : BaseView() {
   private var context: UserContext = UserContext()
   private var state: ViewProgressState = ViewProgressState()
-  private lateinit var filterProvider: () -> List<ItemState>
-  val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 400) {
+  private val filters: MutableMap<String, (Entry) -> Boolean> = mutableMapOf()
+  private var hideEmptyGroups: Boolean = false
+  private var expandAll: Boolean = false
+  val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 200) {
     if (context.isFilled()) {
       withContext(Dispatchers.Main) {
         filterItems()
@@ -232,6 +234,19 @@ class MainView : BaseView() {
         }
       }
     }
+    
+    btnClearSearch.tooltip = Tooltip("Clear search value")
+    btnClearSearch.setOnAction {
+      tfSearch.text = ""
+    }
+    tfSearch.textProperty().addListener { obs, prev, new ->
+      if (new.isBlank()) {
+        filters.remove(NAME_FILTER)
+      } else {
+        filters[NAME_FILTER] = { it.name.contains(new, true) || it.group }
+      }
+      updater.markChanged()
+    }
   }
   
   private fun addRepositoryUrlToList(url: String) {
@@ -261,13 +276,6 @@ class MainView : BaseView() {
     lbLoadedRepo.text = "Loaded: " + cmRepositoryUrl.selectionModel.selectedItem
   }
   
-  private fun fillEntries(entries: List<Entry>) {
-    val item = ViewUtils.toTreeItems(entries)
-//    ViewUtils.forEachTreeItem(item) { if (!it.isLeaf) it.isExpanded = true }
-    treeView.root = item
-  }
-  
-  
   private fun renderFields() {
     gridDetails.children.clear()
     val r = context.repo!!
@@ -292,6 +300,7 @@ class MainView : BaseView() {
     addDetailsRow("Description", b.description)
     addDetailsRow("Version", v.versionName)
     addDetailsRow("Version ID", v.versionId.toString())
+    addDetailsRow("Version URL part", v.versionPath)
     addDetailsRow("Release notes", v.changesDescription, withSeparator = false)
     
     
@@ -343,29 +352,35 @@ class MainView : BaseView() {
         accelerator = KeyCodeCombination(keyCode, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN)
       }
     }
-    filterProvider = { states.filter { it.isSelected }.map { it.userData as ItemState } }
     states.forEach { item ->
       item.setOnAction {
-        val userData = item.userData as ItemState
-        filterItems(states.filter { it.isSelected }.map { it.userData as ItemState }, item.isSelected, userData)
+        checkStateFilters(states)
       }
     }
     
-    val filters = mutableListOf(
+    val filtersMenuItems = mutableListOf(
       MenuItem("Only in progress states").apply {
         setOnAction {
           states.forEach {
             it.isSelected = (it.userData as ItemState).toModify
-            filterItems()
           }
+          checkStateFilters(states)
         }
       },
       MenuItem("None").apply {
         setOnAction {
           states.forEach {
             it.isSelected = false
-            filterItems()
           }
+          checkStateFilters(states)
+        }
+      },
+      MenuItem("All").apply {
+        setOnAction {
+          states.forEach {
+            it.isSelected = true
+          }
+          checkStateFilters(states)
         }
       },
       SeparatorMenuItem()
@@ -395,17 +410,39 @@ class MainView : BaseView() {
       },
       Menu("Items").apply {
         items.setAll(
+          MenuItem("Search by name").apply {
+            setOnAction {
+              tfSearch.requestFocus()
+            }
+            accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
+          },
+          SeparatorMenuItem(),
           Menu("Filter").apply {
-            items.setAll(filters)
+            items.setAll(filtersMenuItems)
           },
           MenuItem("Clear filters").apply {
             setOnAction {
+              filters.clear()
+              tfSearch.text = ""
               states.forEach { it.isSelected = true }
-              filterItems(ItemState.values().toList())
+              updater.markChanged()
             }
             accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
           },
-          SeparatorMenuItem()
+          SeparatorMenuItem(),
+          CheckMenuItem("Hide empty groups").apply {
+            setOnAction {
+              hideEmptyGroups = isSelected
+              filterItems(true)
+            }
+          },
+          SeparatorMenuItem(),
+          CheckMenuItem("Keep all entries expanded after change").apply {
+            setOnAction {
+              expandAll = isSelected
+              filterItems(true)
+            }
+          },
         )
       },
       Menu("Predefined repositories").apply {
@@ -441,23 +478,77 @@ class MainView : BaseView() {
     )
   }
   
-  private fun filterItems(
-    all: List<ItemState> = filterProvider(),
-    selected: Boolean? = null,
-    state: ItemState? = null
-  ) {
+  private fun checkStateFilters(checks: List<CheckMenuItem>) {
+    val selection = checks.filter { it.isSelected }.map { it.userData as ItemState }
+    if (selection.size == ItemState.values().size) {
+      filters.remove(STATE_FILTER)
+    } else {
+      filters[STATE_FILTER] = { selection.contains(it.state) || it.group }
+    }
+    updater.markChanged()
+  }
+  
+  private fun filterItems(refresh: Boolean = false) {
     if (!context.isFilled()) {
       return
     }
     
     val entries = context.getEntries()
-    val filter = entries.filter { all.contains(it.state) || it.group }
+    val filtersList = filters.values
+    
+    val filterResult: List<Entry> = if (filtersList.isNotEmpty())
+      entries.filter { e -> filtersList.all { it(e) } }
+    else {
+      entries
+    }
     var count = 0
     ViewUtils.forEachTreeItem(treeView.root) { count++ }
-    if (filter != entries || treeView.root.isLeaf || count != filter.size) {
-      fillEntries(filter)
+    if (refresh || filterResult != entries || treeView.root.isLeaf || count != filterResult.size) {
+      fillEntries(filterResult)
     }
-    updateStatusBar(entries)
+    updateStatusBar(entries, if (filtersList.isEmpty()) null else filterResult)
+  }
+  
+  
+  private fun fillEntries(entries: List<Entry>) {
+    val item = ViewUtils.toTreeItems(entries)
+    if (hideEmptyGroups) {
+      val toRemove = mutableSetOf<TreeItem<Entry>>()
+      ViewUtils.forEachTreeItem(item) {
+        it.isExpanded = getExpansion(it)
+        var current = it
+        var prev: TreeItem<Entry>? = null
+        do {
+          val empty = current.value.group && current.children.all { it.value.group }
+          
+          if ((current.parent == null || !empty) && prev != null) {
+            toRemove.add(prev)
+          } else if (empty) {
+            prev = current
+          }
+          if (current.parent == null) {
+            break
+          }
+          current = current.parent
+        } while (empty)
+        
+      }
+      
+      toRemove.forEach { it.parent.children.remove(it) }
+    } else {
+      ViewUtils.forEachTreeItem(item) { it.isExpanded = getExpansion(it) }
+    }
+
+//    ViewUtils.forEachTreeItem(item) { if (!it.isLeaf) it.isExpanded = true }
+    treeView.root = item
+  }
+  
+  private fun getExpansion(item: TreeItem<Entry>): Boolean {
+    if (expandAll && item.value != null && item.value.group) return true
+    if (item.value != null && item.value.group) {
+      return ViewUtils.findInTree(treeView.root) { it.value.id == item.value.id }?.isExpanded ?: false
+    }
+    return false
   }
   
   private fun createDevToolsWindow() {
@@ -466,15 +557,12 @@ class MainView : BaseView() {
   
   @Subscribe
   fun itemStateChangedEvent(e: ItemStateChangedEvent) {
-    updateStatusBar(context.getEntries())
     updater.markChanged()
   }
   
-  private fun updateStatusBar(list: List<Entry>, filteredStates: List<ItemState> = filterProvider()) {
-    val entries = list.filter { !it.group }
+  private fun updateStatusBar(all: List<Entry>, filtered: List<Entry>? = null) {
+    val entries = all.filter { !it.group }
     val entriesSize = Utils.fileSizeFormat(entries.mapNotNull { it.fileSize }.sum())
-    val filter = entries.filter { filteredStates.contains(it.state) }
-    val filterSize = Utils.fileSizeFormat(filter.mapNotNull { it.fileSize }.sum())
     val synced = entries.count { it.state == ItemState.SYNCED }
     val syncedSize =
       Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SYNCED }.mapNotNull { it.fileSize }
@@ -487,23 +575,28 @@ class MainView : BaseView() {
     val downloadSize =
       Utils.fileSizeFormat(entries.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
     
-    if (filter.size == entries.size) {
+    if (filtered == null || filtered.size == entries.size) {
       lbTreeState.text =
         "Items: ${entries.size} [$entriesSize]; Synced: $synced [$syncedSize], Skipped: $skipped [$skippedSize], To download: $download [$downloadSize]"
     } else {
-      val syncedFiltered = filter.count { it.state == ItemState.SYNCED }
-      val skippedFiltered = filter.count { it.state == ItemState.SKIPPED }
-      val downloadFiltered = filter.count { it.state.toModify }
+      val filtered = filtered.filter { !it.group }
+      val filterSize = Utils.fileSizeFormat(filtered.mapNotNull { it.fileSize }.sum())
+      val syncedFiltered = filtered.count { it.state == ItemState.SYNCED }
+      val skippedFiltered = filtered.count { it.state == ItemState.SKIPPED }
+      val downloadFiltered = filtered.count { it.state.toModify }
       val downloadFilteredSize =
-        Utils.fileSizeFormat(filter.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
+        Utils.fileSizeFormat(filtered.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
       lbTreeState.text =
-        "[Filtered/All] Items: ${filter.size}/${entries.size} [$filterSize/$entriesSize]; Synced: $syncedFiltered/$synced [$syncedSize], Skipped: $skippedFiltered/$skipped [$skippedSize], To download: $downloadFiltered/$download [$downloadFilteredSize/$downloadSize]"
+        "[Filtered/All] Items: ${filtered.size}/${entries.size} [$filterSize/$entriesSize]; Synced: $syncedFiltered/$synced [$syncedSize], Skipped: $skippedFiltered/$skipped [$skippedSize], To download: $downloadFiltered/$download [$downloadFilteredSize/$downloadSize]"
     }
   }
   
   companion object {
     @JvmStatic
     var instance: MainView? = null
+    
+    private const val STATE_FILTER = "STATE_FILTER"
+    private const val NAME_FILTER = "NAME_FILTER"
     
     @JvmStatic
     fun initializeTreeTable(treeView: TreeTableView<Entry>, context: UserContext? = null) {
@@ -541,10 +634,9 @@ class MainView : BaseView() {
         ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
         ViewUtils.createTreeColumn("ID") { it.id },
         ViewUtils.createTreeColumn("URL") {
-          it.getSrcUrl(
-            context?.getBundleOrNull()?.getBaseUrl(context.repo?.baseUrl)
-          )
-        }
+          it.getSrcUrlOrNull(context) ?: it.src
+        },
+        ViewUtils.createTreeColumn("Description") { it.description },
       )
 
 //        treeView.columns.add(TreeTableColumn<Entry, String>("URL").also {
@@ -578,7 +670,7 @@ class MainView : BaseView() {
           addDetailsHeader("Details", grid)
           addDetailsRow("ID", item.id, grid)
           addDetailsRow("Name", item.name, grid)
-          addDetailsRow("Src", item.getSrcUrl(context?.getBundleOrNull()?.getBaseUrl(context.repo?.baseUrl)), grid)
+          addDetailsRow("Src", item.getSrcUrl(context), grid)
           addDetailsRow("Parent", item.parent, grid)
           addDetailsRow("Target Path", item.target.directory?.findPath(), grid)
           addDetailsRow("Override", item.target.override.toEnglishWord(), grid)
@@ -629,11 +721,21 @@ class MainView : BaseView() {
             treeView.contextMenu?.hide()
             if (item.value.state != ItemState.SKIPPED) {
               treeView.contextMenu = ContextMenu(
-                MenuItem("Set state to SKIPPED").apply { setOnAction { item.value.state = ItemState.SKIPPED } },
+                MenuItem("Set state to SKIPPED").apply {
+                  setOnAction {
+                    item.value.state = ItemState.SKIPPED
+                    postEvent(ItemStateChangedEvent(item.value))
+                  }
+                },
               )
             } else {
               treeView.contextMenu = ContextMenu(
-                MenuItem("Set state to UNKNOWN").apply { setOnAction { item.value.state = ItemState.UNKNOWN } },
+                MenuItem("Set state to UNKNOWN").apply {
+                  setOnAction {
+                    item.value.state = ItemState.UNKNOWN
+                    postEvent(ItemStateChangedEvent(item.value))
+                  }
+                },
               )
             }
             treeView.contextMenu.show(item.graphic, event.screenX, event.screenY)
@@ -743,4 +845,10 @@ class MainView : BaseView() {
   
   @FXML
   lateinit var menuBar: MenuBar
+  
+  @FXML
+  lateinit var tfSearch: TextField
+  
+  @FXML
+  lateinit var btnClearSearch: Button
 }

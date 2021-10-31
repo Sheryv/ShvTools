@@ -93,7 +93,7 @@ class Validator {
     val result = ValidationResult()
     entries.forEach { e ->
       
-      val srcUrl = e.getSrcUrl(bundle.getBaseUrl(repo.baseUrl))
+      val srcUrl = e.getSrcUrl(bundle, version, repo.baseUrl)
       result
           .assert(ids.count { it == e.id } == 1, errorForEntry("id", "Value '${e.id}' is duplicated in this bundle.", e, bundle, version))
           .assert(inRange(e.name, 199), errorForEntry("name", "", e, bundle, version, "cannot be longer than 199 chars"))

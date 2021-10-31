@@ -131,3 +131,19 @@
     -fx-border-width: 0 0 1 0;
     -fx-border-color: derive(-fx-control-inner-background, 35%);
 }
+
+.btn-clear {
+    -fx-border-image-insets: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 10px;
+    -fx-background-image: url('icons/clear_white_48dp.png');
+    -fx-background-color: derive(-fx-control-inner-background, -30%);
+    -fx-background-size: 20px 20px;
+    -fx-background-position: center;
+    -fx-background-insets: 2px;
+    -fx-background-repeat: no-repeat;
+}
+
+.btn-clear:hover {
+    -fx-background-color: derive(-fx-control-inner-background, -50%);
+}

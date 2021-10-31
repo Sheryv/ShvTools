@@ -57,7 +57,7 @@ class FileMatcher(
       lg().info("Item state verification '${entry.name}' [id=${entry.id}]")
       val matchingFiles = findMatchingFiles(entry, dir)
       val file = matchingFiles.firstOrNull { it.name == entry.name }
-      if (file != null) {
+      if (file != null && file.exists()) {
         if (entry.hashes != null && entry.hashes!!.hasAny()) {
           lg().debug("Calculating hash '${entry.name}' [id=${entry.id}], file: ${file.absolutePath}")
           val match = entry.hashes!!.getCorrespondingHasherAndCompare().invoke(file)

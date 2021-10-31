@@ -11,7 +11,7 @@ object BundleUtils {
         Strings.generateId(2),
         "",
         "Bundle description \nfirst pack ",
-        listOf(BundleVersion(1, "0.2", "Fixed item #57",
+        listOf(BundleVersion(1, "0.2", "0.2","Fixed item #57",
             listOf(Entry(
                 Strings.generateId(4),
                 "new item 1",
@@ -79,7 +79,7 @@ object BundleUtils {
                 "",
                 "2"
             ))
-        ), BundleVersion(0, "0.1", "Fixed item #5",
+        ), BundleVersion(0, "0.1", "0.1", "Fixed item #5",
             listOf(Entry(
                 "",
                 "item 1",
@@ -96,7 +96,7 @@ object BundleUtils {
         Strings.generateId(2),
         "Test 2",
         "Bundle description \nsecond pack ",
-        listOf(BundleVersion(9, "10.2", "Total item #57",
+        listOf(BundleVersion(9, "10.2", "10.2", "Total item #57",
             listOf(Entry(
                 "",
                 "new ii 1",
@@ -113,7 +113,7 @@ object BundleUtils {
                 "",
                 "2"
             ))
-        ), BundleVersion(9, "9.1", "Total item #5",
+        ), BundleVersion(9, "9.1", "9.1", "Total item #5",
             listOf(Entry(
                 Strings.generateId(4),
                 "ii 1",
@@ -138,7 +138,7 @@ object BundleUtils {
         Strings.generateId(2),
         "Test 1",
         "Bundle description \nfirst pack ",
-        listOf(BundleVersion(2, "0.2", "Fixed item #57",
+        listOf(BundleVersion(2, "0.2", "0.2", "Fixed item #57",
             listOf(Entry(
                 "aaid",
                 "Aroma.jar",
@@ -176,7 +176,7 @@ object BundleUtils {
                 "1",
                 hashes = Hash("69A985FE6640E0EDB47C6C894C579CA2")
             ))
-        ), BundleVersion(1, "0.1", "Fixed item #4",
+        ), BundleVersion(1, "0.1", "0.1", "Fixed item #4",
             listOf(Entry(
                 "wwid",
                 "Waystones.jar",

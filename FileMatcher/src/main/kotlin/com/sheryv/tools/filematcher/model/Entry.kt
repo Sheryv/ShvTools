@@ -3,10 +3,12 @@ package com.sheryv.tools.filematcher.model
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.sheryv.tools.filematcher.utils.DataUtils
+import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.Utils
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.StringProperty
+import java.lang.IllegalStateException
 import java.net.URLEncoder
 import java.time.OffsetDateTime
 
@@ -52,10 +54,43 @@ data class Entry(
   }
   
   @JsonIgnore
-  fun getSrcUrl(bundleBase: String?): String {
+  fun getSrcUrl(context: UserContext?): String {
+    if (!DataUtils.isAbsoluteUrl(src)) {
+      if (context == null) {
+        throw IllegalStateException("Null context while calculating URL for '$name' [$id]")
+      }
+      
+      return getSrcUrl(context.getBundle(), context.getVersion(), context.repo?.baseUrl)
+    }
+    return src.trim('/')
+  }
+  
+  @JsonIgnore
+  fun getSrcUrlOrNull(context: UserContext?): String? {
+    if (!DataUtils.isAbsoluteUrl(src)) {
+      if (context?.repo == null || context.getBundleOrNull() == null) {
+        return null
+      }
+      
+      return getSrcUrl(context.getBundle(), context.getVersion(), context.repo?.baseUrl)
+    }
+    return src.trim('/')
+  }
+  
+  @JsonIgnore
+  fun getSrcUrl(bundle: Bundle, version: BundleVersion, repoBaseUrl: String?): String {
     var res = ""
-    if (!DataUtils.isAbsoluteUrl(src) && !bundleBase.isNullOrBlank()) {
-      res += "$bundleBase/"
+    if (!DataUtils.isAbsoluteUrl(src)) {
+      val baseUrl = bundle.getBaseUrl(repoBaseUrl)
+      if (!baseUrl.isNullOrBlank()) {
+        res += "$baseUrl/"
+        val versionPath = version.versionPath
+        if (!versionPath.isNullOrBlank()) {
+          res += "$versionPath/"
+        }
+      } else {
+        throw IllegalStateException("Cannot calculate URL for '$name' [$id]")
+      }
     }
     res += src.trim('/')
     return res

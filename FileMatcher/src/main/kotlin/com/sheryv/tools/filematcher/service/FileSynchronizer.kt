@@ -64,12 +64,12 @@ class FileSynchronizer(
     val dir = matcher.getEntryDir(entry)
     dir.toFile().mkdirs()
     val file = dir.resolve(entry.name).toFile()
-    val url = entry.getSrcUrl(context.getBundle().getBaseUrl(context.repo?.baseUrl))
+    val url = entry.getSrcUrl(context)
     return try {
       DataUtils.downloadFile(url, file) { !isActive() }
     } catch (e: Exception) {
       matcher.updateEntryState(entry)
-      throw IllegalStateException("Enable to download '${entry.name}' from '$url'", e)
+      throw IllegalStateException("Unable to download '${entry.name}' from '$url'", e)
     }
   }
   

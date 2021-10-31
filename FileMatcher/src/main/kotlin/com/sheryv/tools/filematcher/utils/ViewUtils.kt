@@ -77,6 +77,23 @@ object ViewUtils {
     }
   }
   
+  fun <T> findInTree(root: TreeItem<T>, callback: (TreeItem<T>) -> Boolean): TreeItem<T>? {
+    for (item in root.children) {
+      if (item.value == null) {
+        continue
+      }
+      if (callback.invoke(item)) {
+        return item
+      }
+      
+      val res = findInTree(item, callback)
+      if (res != null) {
+        return res
+      }
+    }
+    return null
+  }
+  
   fun appendStyleSheets(scene: Scene) {
     if (scene.stylesheets.isEmpty()) {
       scene.stylesheets.add(javaClass.classLoader.getResource("style.css")?.toExternalForm())
