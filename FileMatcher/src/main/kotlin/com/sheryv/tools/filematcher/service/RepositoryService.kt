@@ -74,5 +74,6 @@ class RepositoryService {
       comments,
       false
     )
+    Files.deleteIfExists(tempFile)
   }
 }
