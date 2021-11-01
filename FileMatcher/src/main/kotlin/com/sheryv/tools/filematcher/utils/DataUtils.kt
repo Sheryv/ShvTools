@@ -7,12 +7,20 @@ import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.sheryv.util.FileUtils
 import java.io.*
 import java.net.URL
 import java.nio.channels.Channels
+import java.util.*
+import java.util.regex.Pattern
+import kotlin.collections.ArrayList
 
 
 object DataUtils {
+  private val YAML_BLOCK_ENDS = listOf(" |", " >", "\\")
+  private val YAML_IGNORED_LINES = listOf("#", "--")
+  private val YAML_PATTERN_FOR_FIELD_NAME = Pattern.compile("""^((- )|(- \{\s*))?['"]?(?<field>\w+)['"]?:""")
+  val PROPS_CACHE = mutableMapOf<String, Map<String, String>>()
   
   fun downloadFile(urlStr: String, file: File, isCancelled: () -> Boolean = { false }): File? {
     if (file.exists())
@@ -102,5 +110,112 @@ object DataUtils {
     map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     map.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     return map
+  }
+  
+  fun appendCommentsToYamlFile(
+    input: File,
+    output: File,
+    comments: Map<String, String>,
+    allowCommentsRepeating: Boolean = true
+  ) {
+    check(input != output) { "Input and output cannot be the same file" }
+    appendCommentsToYaml(
+      FileUtils.readFileStream(input.toPath()),
+      BufferedWriter(OutputStreamWriter(FileOutputStream(output))),
+      comments,
+      allowCommentsRepeating
+    )
+  }
+  
+  fun appendCommentsToYaml(
+    reader: BufferedReader,
+    writer: BufferedWriter,
+    comments: Map<String, String>,
+    allowCommentsRepeating: Boolean = true
+  ) {
+    val path = ArrayList<String>(10)
+    val comments = comments.toMutableMap()
+    writer.use { out ->
+      var indentSize = 0
+      var lastIndent = 0
+      var inBlock = false
+      reader.use { buff ->
+        buff.lines().forEach { line ->
+          val trimmed = line.trim()
+          if (YAML_IGNORED_LINES.any { trimmed.startsWith(it) }) {
+            out.appendLine(line)
+            return@forEach
+          }
+          
+          val currIndent = line.takeWhile { it == ' ' || it == '-' }.length
+          if (indentSize == 0) {
+            indentSize = currIndent
+          }
+          val indentIndex = if (indentSize == 0) 0 else currIndent / indentSize
+          
+          if (inBlock && indentIndex > lastIndent) {
+            out.appendLine(line)
+            return@forEach
+          }
+          if (inBlock) {
+            inBlock = false
+          }
+          
+          val matcher = YAML_PATTERN_FOR_FIELD_NAME.matcher(trimmed)
+          if (matcher.find()) {
+            val field = matcher.group("field")
+            path.addOrSetWithFill(indentIndex, field, "")
+            
+            if (indentIndex < lastIndent) {
+              do {
+                path.removeLast()
+              } while (path.size > indentIndex + 1)
+            }
+            
+            lastIndent = indentIndex
+            val key = path.joinToString("") { if (it.isEmpty()) "" else "$it." }.trimEnd('.')
+//        println("Match: ${key.padStart(50)} | $line")
+            if (comments.containsKey(key)) {
+              val commentIndent = " ".repeat(indentIndex * indentSize)
+              comments[key]!!.lines().forEach { comment ->
+                out
+                  .append(commentIndent)
+                  .append("# ")
+                  .appendLine(comment)
+                
+                if (!allowCommentsRepeating) {
+                  comments.remove(key)
+                }
+//            println("  Comment: " + comment)
+              }
+            }
+            
+            if (YAML_BLOCK_ENDS.any { trimmed.endsWith(it) }) {
+              inBlock = true
+            }
+          }
+          out.appendLine(line)
+        }
+      }
+    }
+  }
+  
+  fun loadPropsFromResources(relativePath: String): Map<String, String> {
+    val p = Properties()
+    p.load(javaClass.classLoader.getResourceAsStream(relativePath))
+    return p.map { it.key.toString() to it.value.toString() }.toMap()
+  }
+  
+  private fun <E> MutableList<E>.addOrSetWithFill(index: Int, e: E, fill: E) {
+    when {
+      this.size == index -> this.add(e)
+      this.size > index -> this[index] = e
+      else -> {
+        do {
+          this.add(fill)
+        } while (this.size < index)
+        this.add(e)
+      }
+    }
   }
 }

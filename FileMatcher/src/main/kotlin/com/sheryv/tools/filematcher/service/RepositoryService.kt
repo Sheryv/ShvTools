@@ -8,8 +8,7 @@ import com.sheryv.tools.filematcher.utils.Hashing
 import com.sheryv.tools.filematcher.utils.lg
 import javafx.stage.Window
 import java.io.File
-import java.nio.file.Path
-import java.nio.file.Paths
+import java.nio.file.*
 
 class RepositoryService {
   
@@ -63,5 +62,17 @@ class RepositoryService {
     }
     
     mapper.writeValue(file, repo)
+    
+    val comments =
+      DataUtils.PROPS_CACHE.computeIfAbsent("comments.properties") { DataUtils.loadPropsFromResources(it) }
+    
+    val tempFile = Files.createTempFile("ShvFileMatcher_repo_", ".tmp")
+    Files.copy(file.toPath(), tempFile, StandardCopyOption.REPLACE_EXISTING)
+    DataUtils.appendCommentsToYamlFile(
+      tempFile.toFile(),
+      file,
+      comments,
+      false
+    )
   }
 }
