@@ -17,9 +17,15 @@ object SystemUtils {
   private val WIN_CHARS = arrayOf('<', '>', ':', '"', '/', '\\', '|', '?', '*').let {
     val list = (0..31).map { it.toChar() }.toMutableList()
     list.addAll(it)
+    list.remove(' ')
     list.toTypedArray()
   }
   private val UNIX_CHARS = arrayOf('/', 0.toChar())
+  private val PROPS: Map<String, Any> by lazy {
+    val map = System.getProperties().mapKeys { it.key.toString() }.toMutableMap()
+    map.putAll(System.getenv())
+    map.mapKeys { it.key.lowercase() }
+  }
   
   fun userDir(): String {
     return System.getProperty("user.home")
@@ -29,7 +35,7 @@ object SystemUtils {
     return Paths.get(System.getProperty("user.home"), "Downloads").toAbsolutePath().toString()
   }
   
-  fun isWindowsOS(): Boolean = System.getProperty("os.name").toLowerCase().contains("windows")
+  fun isWindowsOS(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
   
   fun currentSystem(): SystemType {
     val s = System.getProperty("os.name").toLowerCase()
@@ -46,6 +52,14 @@ object SystemUtils {
     } else {
       UNIX_CHARS
     }
+  }
+  
+  fun removeForbiddenFileChars(text: String, replaceChar: Char = '_'): String {
+    var name = text
+    for (c in fileNameForbiddenChars()) {
+      name = name.replace(c, replaceChar)
+    }
+    return name
   }
   
   fun encodeNameForWeb(text: String): String {
@@ -84,8 +98,10 @@ object SystemUtils {
       if (isWindowsOS()) {
         Runtime.getRuntime().exec("cmd /k start $webpage")
       } else {
-        val browsers = arrayOf("epiphany", "firefox", "mozilla", "konqueror",
-            "netscape", "opera", "links", "lynx")
+        val browsers = arrayOf(
+          "epiphany", "firefox", "mozilla", "konqueror",
+          "netscape", "opera", "links", "lynx"
+        )
         
         val cmd = StringBuffer()
         for (i in browsers.indices) {
@@ -101,8 +117,7 @@ object SystemUtils {
   }
   
   fun resolveEnvironmentVariables(s: String): String {
-    val map = System.getenv() as Map<String, Any>
-    return Strings.fillTemplate(s, map)
+    return Strings.fillTemplate(s, PROPS)
   }
 }
 

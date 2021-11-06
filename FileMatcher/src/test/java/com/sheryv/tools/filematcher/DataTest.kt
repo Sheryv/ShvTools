@@ -1,6 +1,7 @@
 package com.sheryv.tools.filematcher
 
 import com.sheryv.tools.filematcher.utils.DataUtils
+import org.apache.commons.lang3.StringUtils
 import org.junit.jupiter.api.Test
 import java.io.File
 
@@ -16,7 +17,9 @@ class DataTest {
   }
   
   @Test
-  internal fun urlTransform() {
+  fun urlTransform() {
+    println(StringUtils.replaceEach("abcde", arrayOf("c", "e"), arrayOf("_")))
+    
     val s = "https://www.curseforge.com/minecraft/mc-mods/better-shields/download/3183362/file"
     val t = "https://edge.forgecdn.net/files/"
     val file = "BetterShieldsMC1.16.3-1.1.4.jar"

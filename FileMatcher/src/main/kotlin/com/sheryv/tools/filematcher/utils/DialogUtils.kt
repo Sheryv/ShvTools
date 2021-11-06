@@ -1,5 +1,7 @@
 package com.sheryv.tools.filematcher.utils
 
+import com.sheryv.tools.filematcher.view.CustomDialog
+import javafx.beans.value.ObservableValue
 import javafx.scene.control.*
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
@@ -81,7 +83,8 @@ object DialogUtils {
   fun saveFileDialog(
     owner: Window,
     text: String = "Save file as",
-    initialFile: String? = null
+    initialFile: String? = null,
+    extension: String? = null
   ): Optional<Path> {
     val directoryChooser = FileChooser()
     initialFile?.run {
@@ -94,6 +97,14 @@ object DialogUtils {
       }
     } ?: run {
       directoryChooser.initialDirectory = File(SystemUtils.userDownloadDir())
+    }
+    if (extension != null) {
+      directoryChooser.extensionFilters.add(
+        FileChooser.ExtensionFilter(
+          extension.uppercase() + " files",
+          "*.$extension"
+        )
+      )
     }
     directoryChooser.title = text
     val selectedFile = directoryChooser.showSaveDialog(owner)
@@ -138,6 +149,50 @@ object DialogUtils {
     alert.dialogPane.content = expContent
     ViewUtils.appendStyleSheets(alert.dialogPane.scene)
     return alert.showAndWait()
+  }
+  
+  fun twoComboDialog(
+    title: String, label1: String, label2: String,
+    first: (Pair<String, String>?) -> List<String>,
+    second: (Pair<String, String>?) -> List<String>,
+  ): Optional<Pair<String, String>> {
+    
+    val c1 = ComboBox<String>()
+    c1.items.setAll(first(null))
+    val c2 = ComboBox<String>()
+    c2.items.setAll(second(null))
+    
+    val function: (observable: ObservableValue<out String>?, oldValue: String?, newValue: String?) -> Unit =
+      { o, _, _ ->
+        if (c1.selectionModel.selectedItem != null && c2.selectionModel.selectedItem != null) {
+          val pair = c1.selectionModel.selectedItem to c2.selectionModel.selectedItem
+          val first1 = first(pair)
+          if (!first1.toTypedArray().contentEquals(c1.items.toTypedArray())) {
+            c1.items.setAll(first1)
+            c1.selectionModel.select(0)
+          }
+          val second1 = second(pair)
+          if (!second1.toTypedArray().contentEquals(c2.items.toTypedArray())) {
+            c2.items.setAll(second1)
+            c2.selectionModel.select(0)
+          }
+        }
+      }
+    c1.selectionModel.selectedItemProperty().addListener(function)
+    c2.selectionModel.selectedItemProperty().addListener(function)
+    
+    c1.selectionModel.select(0)
+    c2.selectionModel.select(0)
+    
+    val d = CustomDialog(header = title, controls = listOf(
+      CustomDialog.Row(c1, label1),
+      CustomDialog.Row(c2, label2),
+    ), resultConverter = {
+      if (it == ButtonType.OK) {
+        c1.selectionModel.selectedItem to c2.selectionModel.selectedItem
+      } else null
+    })
+    return d.showAndWait().map { it }
   }
   
 }

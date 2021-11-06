@@ -3,13 +3,8 @@ package com.sheryv.tools.filematcher.model
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.sheryv.tools.filematcher.utils.DataUtils
-import com.sheryv.tools.filematcher.utils.DialogUtils
-import com.sheryv.tools.filematcher.utils.Utils
-import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleObjectProperty
-import javafx.beans.property.StringProperty
 import java.lang.IllegalStateException
-import java.net.URLEncoder
 import java.time.OffsetDateTime
 
 data class Entry(
@@ -84,7 +79,7 @@ data class Entry(
       val baseUrl = bundle.getBaseUrl(repoBaseUrl)
       if (!baseUrl.isNullOrBlank()) {
         res += "$baseUrl/"
-        val versionPath = version.versionPath
+        val versionPath = version.versionUrlPart
         if (!versionPath.isNullOrBlank()) {
           res += "$versionPath/"
         }

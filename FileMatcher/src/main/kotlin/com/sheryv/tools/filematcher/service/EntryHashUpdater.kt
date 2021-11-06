@@ -6,7 +6,7 @@ import com.sheryv.tools.filematcher.utils.lg
 import java.io.File
 import java.nio.file.Paths
 
-class RepositoryHashUpdater(private val dir: File, private val repository: Repository, onFinish: ((ProcessResult<Repository, RepositoryHashUpdater>) -> Unit)? = null)
+class EntryHashUpdater(private val dir: File, private val repository: Repository, onFinish: ((ProcessResult<Repository, EntryHashUpdater>) -> Unit)? = null)
   : Process<Repository>(onFinish as ((ProcessResult<Repository, out Process<Repository>>) -> Unit)?, false) {
   
   

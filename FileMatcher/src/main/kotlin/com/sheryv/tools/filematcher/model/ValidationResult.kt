@@ -28,5 +28,15 @@ class ValidationResult(val errors: MutableList<String> = mutableListOf()) {
     }.joinToString("\n")
   }
   
+  fun throwIfError() {
+    if (!isOk()) {
+      throw ValidationError(this)
+    }
+  }
+  
+  override fun toString(): String {
+    return toLongText()
+  }
+  
   constructor(vararg errors: String) : this(mutableListOf(*errors))
 }

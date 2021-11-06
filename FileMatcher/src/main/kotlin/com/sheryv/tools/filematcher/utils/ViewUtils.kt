@@ -2,11 +2,13 @@ package com.sheryv.tools.filematcher.utils
 
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.TargetPath
+import com.sheryv.tools.filematcher.service.RepositoryService
 import com.sheryv.tools.filematcher.view.BaseView
 import javafx.beans.property.SimpleStringProperty
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
 import javafx.scene.Scene
+import javafx.scene.control.Alert
 import javafx.scene.control.TreeItem
 import javafx.scene.control.TreeTableCell
 import javafx.scene.control.TreeTableColumn
@@ -176,5 +178,20 @@ object ViewUtils {
     appendStyleSheets(stage.scene)
     stage.show()
     return controller
+  }
+  
+  fun <T> withErrorHandler(block: () -> T): T? {
+    try {
+      return block()
+    } catch (e: Exception) {
+      lg().error("Error in action", e)
+      DialogUtils.textAreaDialog(
+        "Details",
+        e.stackTraceToString(),
+        "Cannot process action",
+        Alert.AlertType.ERROR,
+      )
+    }
+    return null
   }
 }

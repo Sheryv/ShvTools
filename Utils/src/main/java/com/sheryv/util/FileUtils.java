@@ -2,10 +2,7 @@ package com.sheryv.util;
 
 import com.sheryv.util.property.PropertyUtils;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
@@ -53,6 +50,10 @@ public class FileUtils {
 
     public static BufferedReader readFileStream(Path path) throws FileNotFoundException {
         return new BufferedReader(new FileReader(path.toFile()));
+    }
+
+    public static BufferedWriter writeFileStream(Path path) throws IOException {
+        return new BufferedWriter(new FileWriter(path.toFile()));
     }
 
     public static boolean saveFile(String text, Path file) {

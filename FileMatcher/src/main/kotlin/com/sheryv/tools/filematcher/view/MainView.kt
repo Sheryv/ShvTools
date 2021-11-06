@@ -7,6 +7,7 @@ import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
 import com.sheryv.tools.filematcher.service.*
 import com.sheryv.tools.filematcher.utils.*
 import com.sheryv.tools.lasso.util.OnChangeScheduledExecutor
+import com.sheryv.util.FileUtils
 import com.sheryv.util.VersionUtils
 import javafx.application.Platform
 import javafx.beans.property.SimpleStringProperty
@@ -49,9 +50,21 @@ class MainView : BaseView() {
   
   override fun initialize() {
     super.initialize()
+    try {
+      init()
+    } catch (e: Exception) {
+      DialogUtils.textAreaDialog(
+        "Details", e.stackTraceToString(),
+        "Error occurred while starting application", Alert.AlertType.ERROR, false, ButtonType.OK
+      )
+      throw e;
+    }
+  }
+  
+  private fun init() {
     createMenu()
     updater.start()
-    initializeTreeTable(treeView, context)
+    initializeTreeTable(treeView)
     
     treeView.selectionModel.selectedItems.addListener { item: ListChangeListener.Change<out TreeItem<Entry>> ->
       if (item.list.size == 0 || item.list.size == 1 && !item.list[0].value.group) {
@@ -83,6 +96,7 @@ class MainView : BaseView() {
     }
     
     btnLoad.isDisable = true
+    btnRemoveRepository.isDisable = true
     btnDownload.isDisable = true
     btnVerify.isDisable = true
     val recentRepositories = Configuration.get().recentRepositories
@@ -96,6 +110,7 @@ class MainView : BaseView() {
           recentRepositories.add(0, v)
           Configuration.get().save()
         }
+        btnRemoveRepository.isDisable = v.isBlank()
       }
     }
     cmRepositoryUrl.selectionModel.select(0)
@@ -115,6 +130,10 @@ class MainView : BaseView() {
         s = "Error"
         h = "Incorrect repository url. Please insert another. Example:\nhttp://google.com/repo.json"
       } while (!ok)
+    }
+    
+    btnRemoveRepository.setOnAction {
+      removeRepositoryUrlFromList()
     }
     
     cmBundle.selectionModel.selectedItemProperty().addListener { _, _, v ->
@@ -264,13 +283,23 @@ class MainView : BaseView() {
     cmRepositoryUrl.selectionModel.select(0)
   }
   
+  private fun removeRepositoryUrlFromList() {
+    val selectedItem = cmRepositoryUrl.selectionModel.selectedItem
+    cmRepositoryUrl.items.remove(selectedItem)
+    
+    val recentRepositories = Configuration.get().recentRepositories
+    recentRepositories.remove(selectedItem)
+    Configuration.get().save()
+    cmRepositoryUrl.selectionModel.select(0)
+  }
+  
   private fun initializeRepo(load: Repository) {
     context = UserContext(load)
     treeView.root = TreeItem()
     
     cmBundle.items.setAll(load.bundles)
     cmBundle.selectionModel.select(0)
-    cmVersion.items.setAll(load.bundles[0].versions)
+    cmVersion.items.setAll(load.bundles[0].versions.sortedByDescending { it.versionId })
     cmVersion.selectionModel.select(0)
     
     lbLoadedRepo.text = "Loaded: " + cmRepositoryUrl.selectionModel.selectedItem
@@ -294,13 +323,16 @@ class MainView : BaseView() {
     addDetailsHeaderLocal("Bundle")
     addDetailsRow("Name", b.name)
     addDetailsRow("ID", b.id)
-    addDetailsRow("Update date", Utils.dateFormat(b.updateDate))
+    addDetailsRow("Bundle update date", Utils.dateFormat(b.updateDate))
     addDetailsRow("Versions: aggregate old", (b.versioningMode == BundleMode.AGGREGATE_OLD).toEnglishWord())
     addDetailsRow("Bundle base url", b.getBaseUrl(r.baseUrl))
     addDetailsRow("Description", b.description)
+    addDetailsRow("Bundle spec source", b.specSource)
     addDetailsRow("Version", v.versionName)
     addDetailsRow("Version ID", v.versionId.toString())
-    addDetailsRow("Version URL part", v.versionPath)
+    addDetailsRow("Version update date", Utils.dateFormat(v.updateDate))
+    addDetailsRow("Version URL part", v.versionUrlPart)
+    addDetailsRow("Version spec source", v.specSource)
     addDetailsRow("Release notes", v.changesDescription, withSeparator = false)
     
     
@@ -398,7 +430,9 @@ class MainView : BaseView() {
           MenuItem("Load repository from file").apply {
             accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
             setOnAction {
-              RepositoryService().loadRepositoryFromFile(treeView.scene.window)?.run { initializeRepo(this) }
+              ViewUtils.withErrorHandler {
+                RepositoryService().loadRepositoryFromFile(treeView.scene.window)?.run { initializeRepo(this) }
+              }
             }
           },
           SeparatorMenuItem(),
@@ -451,6 +485,18 @@ class MainView : BaseView() {
             items.setAll(
               MenuItem("Xenypack - Modpack").apply { setOnAction { addRepositoryUrlToList("https://raw.githubusercontent.com/Detronit/xenypack-modpack/master/repository-xenypack.yaml") } }
             )
+          },
+          MenuItem("Test").apply {
+            setOnAction {
+            
+            }
+//            { c, c2 ->
+//              if (c.selectionModel.selectedItem == "two") {
+//                c2.items.setAll(kotlin.collections.listOf("other", "2.4"))
+//                c2.selectionModel.select(0)
+//              }
+//            }
+            accelerator = KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN)
           }
         )
       },
@@ -593,13 +639,13 @@ class MainView : BaseView() {
   
   companion object {
     @JvmStatic
-    var instance: MainView? = null
+    lateinit var instance: MainView
     
     private const val STATE_FILTER = "STATE_FILTER"
     private const val NAME_FILTER = "NAME_FILTER"
     
     @JvmStatic
-    fun initializeTreeTable(treeView: TreeTableView<Entry>, context: UserContext? = null) {
+    fun initializeTreeTable(treeView: TreeTableView<Entry>) {
       treeView.columns.setAll(
         ViewUtils.createTreeColumn("Name", 300) { it.name },
         TreeTableColumn<Entry, String>("State").also {
@@ -621,9 +667,9 @@ class MainView : BaseView() {
         },
         ViewUtils.createTreeColumn("Path") { it.target.directory?.findPath().orEmpty() },
         ViewUtils.createTreeColumn("Version") { it.version ?: if (it.group) "" else "-" },
-        ViewUtils.createTreeColumn("Date") { if (!it.group) Utils.dateFormat(it.itemDate) else "" },
+        ViewUtils.createTreeColumn("Date", 100) { if (!it.group) Utils.dateFormat(it.itemDate) else "" },
         ViewUtils.createTreeColumn(
-          "Size",
+          "Size", 60,
           alignRight = true
         ) { if (!it.group) Utils.fileSizeFormat(it.fileSize) else "" },
         ViewUtils.createTreeColumn("Override") {
@@ -632,11 +678,11 @@ class MainView : BaseView() {
         },
         ViewUtils.createTreeColumn("Category") { it.category.orEmpty() },
         ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
-        ViewUtils.createTreeColumn("ID") { it.id },
-        ViewUtils.createTreeColumn("URL") {
-          it.getSrcUrlOrNull(context) ?: it.src
+        ViewUtils.createTreeColumn("ID", 100) { it.id },
+        ViewUtils.createTreeColumn("URL", 150) {
+          it.getSrcUrlOrNull(instance.context) ?: it.src
         },
-        ViewUtils.createTreeColumn("Description") { it.description },
+        ViewUtils.createTreeColumn("Description", 150) { it.description },
       )
 
 //        treeView.columns.add(TreeTableColumn<Entry, String>("URL").also {
@@ -670,7 +716,7 @@ class MainView : BaseView() {
           addDetailsHeader("Details", grid)
           addDetailsRow("ID", item.id, grid)
           addDetailsRow("Name", item.name, grid)
-          addDetailsRow("Src", item.getSrcUrl(context), grid)
+          addDetailsRow("Src", item.getSrcUrl(instance.context), grid)
           addDetailsRow("Parent", item.parent, grid)
           addDetailsRow("Target Path", item.target.directory?.findPath(), grid)
           addDetailsRow("Override", item.target.override.toEnglishWord(), grid)
@@ -738,7 +784,58 @@ class MainView : BaseView() {
                 },
               )
             }
+            treeView.contextMenu.items.add(MenuItem("Export to CSV").apply {
+              setOnAction {
+                if (item.value.group) {
+                  exportToCsv(item.children.map { it.value }.filter { !it.group }, item.value.name)
+                } else {
+                  exportToCsv(listOf(item.value), item.value.name)
+                }
+              }
+            })
             treeView.contextMenu.show(item.graphic, event.screenX, event.screenY)
+          }
+        }
+      }
+    }
+    
+    private fun exportToCsv(items: List<Entry>, groupName: String = "") {
+      val lastIndexOf = groupName.lastIndexOf('.')
+      val name = if (lastIndexOf > 0 && groupName.length - lastIndexOf < 6) {
+        groupName.take(lastIndexOf)
+      } else {
+        groupName
+      }.let {
+        var res = it
+        SystemUtils.fileNameForbiddenChars().forEach { res = res.replace(it, '_') }
+        res
+      }
+      
+      DialogUtils.inputDialog("Export to CSV", "Choose CSV column separator. Default is semicolon (;)").ifPresent {
+        val sep = it.ifBlank { ";" }
+        DialogUtils.saveFileDialog(instance!!.stage, "Export to CSV", "export-$name.csv").ifPresent {
+          FileUtils.writeFileStream(it).use { bw ->
+            bw.appendLine(
+              "ID,Name,Override,File matching pattern,Size,Category,Tags,Description,SRC,Date,Version,Website".replace(
+                ",",
+                sep
+              )
+            )
+            items.forEach { i ->
+              bw.append(i.id).append(sep)
+                .append(i.name).append(sep)
+                .append(i.target.override.toString()).append(sep)
+                .append(i.target.matching.getPattern().orEmpty()).append(sep)
+                .append(i.fileSize?.toString().orEmpty()).append(sep)
+                .append(i.category.orEmpty()).append(sep)
+                .append(i.tags?.joinToString(",").orEmpty()).append(sep)
+                .append(i.description).append(sep)
+                .append(i.src).append(sep)
+                .append(i.itemDate?.toString().orEmpty()).append(sep)
+                .append(i.version.orEmpty()).append(sep)
+                .append(i.website.orEmpty())
+                .appendLine()
+            }
           }
         }
       }
@@ -851,4 +948,7 @@ class MainView : BaseView() {
   
   @FXML
   lateinit var btnClearSearch: Button
+  
+  @FXML
+  lateinit var btnRemoveRepository: Button
 }

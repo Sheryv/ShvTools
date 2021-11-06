@@ -6,6 +6,7 @@ import org.apache.commons.text.StringSubstitutor;
 import javax.annotation.Nullable;
 import java.io.*;
 import java.util.Base64;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
@@ -29,7 +30,7 @@ public class Strings {
   }
   
   public static String fillTemplate(String template, Map<String, Object> values) {
-    return getTemplater(values).replace(template);
+    return getTemplater(values).replace(template.toLowerCase());
   }
   
   public static String generateId(int size) {

@@ -10,7 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
 
-abstract class Process<Output>(val onFinish: ((ProcessResult<Output, out Process<Output>>) -> Unit)? = null, private val attachEvents: Boolean = false) {
+abstract class Process<Output>(
+  val onFinish: ((ProcessResult<Output, out Process<Output>>) -> Unit)? = null,
+  private val attachEvents: Boolean = false
+) {
   private var job: Job? = null
   
   fun start() {

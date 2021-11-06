@@ -73,7 +73,8 @@
                         <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" percentWidth="50.0" />
                         <ColumnConstraints hgrow="ALWAYS" minWidth="10.0" />
                         <ColumnConstraints hgrow="SOMETIMES" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="90.0" prefWidth="90.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" />
+                  <ColumnConstraints hgrow="SOMETIMES" minWidth="90.0" prefWidth="100.0" />
                     </columnConstraints>
                     <rowConstraints>
                         <RowConstraints valignment="BOTTOM" vgrow="NEVER" />
@@ -82,19 +83,19 @@
                         <RowConstraints valignment="BOTTOM" vgrow="SOMETIMES" />
                     </rowConstraints>
                     <children>
-                        <Label fx:id="lbLoadedRepo" text="-" GridPane.columnSpan="3" GridPane.rowIndex="1" />
-                        <VBox GridPane.columnSpan="2">
-                            <children>
-                                <Label text="Repository url" />
-                                <ComboBox fx:id="cmRepositoryUrl" maxWidth="1.7976931348623157E308" VBox.vgrow="ALWAYS" />
-                            </children>
-                        </VBox>
-                        <Button fx:id="btnLoad" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Load" GridPane.columnIndex="3" />
                         <Button fx:id="btnAddRepository" mnemonicParsing="false" text="+" GridPane.columnIndex="2">
                             <font>
                                 <Font name="System Bold" size="12.0" />
                             </font>
                         </Button>
+                        <Label fx:id="lbLoadedRepo" text="-" GridPane.columnSpan="3" GridPane.rowIndex="1" />
+                        <VBox GridPane.columnSpan="2">
+                            <children>
+                                <Label text="Repository url" />
+                                <ComboBox fx:id="cmRepositoryUrl" maxWidth="1.7976931348623157E308" prefHeight="25.0" prefWidth="317.0" VBox.vgrow="ALWAYS" />
+                            </children>
+                        </VBox>
+                        <Button fx:id="btnLoad" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Load" GridPane.columnIndex="4" />
                         <VBox GridPane.columnIndex="1" GridPane.rowIndex="2">
                             <children>
                                 <Label text="Version" />
@@ -107,8 +108,8 @@
                                 <ComboBox fx:id="cmBundle" maxWidth="1.7976931348623157E308" />
                             </children>
                         </VBox>
-                        <Button fx:id="btnVerify" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Verify" GridPane.columnIndex="3" GridPane.halignment="RIGHT" GridPane.rowIndex="2" />
-                        <Button fx:id="btnDownload" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Download" GridPane.columnIndex="3" GridPane.rowIndex="3">
+                        <Button fx:id="btnVerify" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Verify" GridPane.columnIndex="3" GridPane.columnSpan="2" GridPane.halignment="RIGHT" GridPane.rowIndex="2" />
+                        <Button fx:id="btnDownload" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Download" GridPane.columnIndex="3" GridPane.columnSpan="2" GridPane.rowIndex="3">
                             <font>
                                 <Font name="System Bold" size="13.0" />
                             </font>
@@ -125,6 +126,11 @@
                             </children>
                         </VBox>
                         <ProgressIndicator fx:id="pbIndicator" maxHeight="30.0" prefHeight="20.0" prefWidth="20.0" GridPane.columnIndex="2" GridPane.hgrow="NEVER" GridPane.rowIndex="3" GridPane.valignment="BOTTOM" GridPane.vgrow="NEVER" />
+                  <Button fx:id="btnRemoveRepository" mnemonicParsing="false" text="-" GridPane.columnIndex="3">
+                     <font>
+                        <Font name="System Bold" size="12.0" />
+                     </font>
+                  </Button>
                     </children>
                 </GridPane>
             <AnchorPane>
