@@ -33,9 +33,9 @@ class EntryGenerator(
     val entries = loadEntriesFromFiles(file!!, file)
     
     if (!replaceCurrentList) {
-      currentEntries = context.version.entries.associate { it.id to context.version.relativePathWithParents(it) }
+      currentEntries = context.version.entries.associate { it.id to context.version.relativePathWithParents(it).resolve(it.name) }
       
-      val newPaths = entries.associateBy { context.version.relativePathWithParents(it, entries) }
+      val newPaths = entries.associateBy { context.version.relativePathWithParents(it, entries).resolve(it.name) }
       
       val copy = context.version.entries.toMutableList()
       

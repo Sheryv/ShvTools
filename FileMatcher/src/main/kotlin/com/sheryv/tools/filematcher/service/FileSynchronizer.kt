@@ -18,6 +18,7 @@ import java.nio.charset.Charset
 class FileSynchronizer(
   private val context: UserContext,
   private val state: ViewProgressState,
+  private val deleteOldFiles: Boolean,
   onFinish: ((ProcessResult<Unit, FileSynchronizer>) -> Unit)? = null
 ) : Process<Unit>(onFinish as ((ProcessResult<Unit, out Process<Unit>>) -> Unit)?, true) {
   
@@ -55,7 +56,10 @@ class FileSynchronizer(
           } else {
             matcher.getEntryDir(entry).resolve(entry.name).toFile()
           }
-        entry.target.matching.lastMatches.filter { it != fileName }.forEach { it.delete() }
+        if (deleteOldFiles) {
+          entry.target.matching.lastMatches.filter { it != fileName }.forEach { it.delete() }
+        }
+        entry.target.matching.lastMatches = emptyList()
       }
     }
   }

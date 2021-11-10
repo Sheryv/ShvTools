@@ -169,8 +169,24 @@ class DevelopersToolView : BaseView() {
     }
     
     btnLoadFromFile.setOnAction {
-      ViewUtils.withErrorHandler {
-        RepositoryService().loadRepositoryFromFile(stage)?.let { displayRepository(it) }
+      DialogUtils.openFileDialog(treeView.scene.window, initialFile = Configuration.get().lastLoadedRepoFile).ifPresent {
+        Configuration.get().lastLoadedRepoFile = it.toAbsolutePath().toString()
+        Configuration.get().save()
+        changeButtonEnable(true)
+  
+        RepositoryFileLoader(it) {
+          changeButtonEnable(false)
+  
+          when (it.type) {
+            ResultType.SUCCESS -> {
+              displayRepository(it.data!!)
+            }
+            ResultType.ERROR -> DialogUtils.textAreaDialog(
+              "Details", it.error?.stackTraceToString().orEmpty(),
+              "Error occurred while loading repository", Alert.AlertType.ERROR, false, ButtonType.OK
+            )
+          }
+        }.start()
       }
     }
     

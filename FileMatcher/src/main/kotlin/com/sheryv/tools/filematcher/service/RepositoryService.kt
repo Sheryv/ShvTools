@@ -19,14 +19,6 @@ class RepositoryService {
     return loadRepositoryFromTemplate(DataUtils.downloadAndParse(url, RepositoryTemplate::class.java))
   }
   
-  fun loadRepositoryFromFile(owner: Window): Repository? {
-    return DialogUtils.openFileDialog(owner, initialFile = Configuration.get().lastLoadedRepoFile).map {
-      Configuration.get().lastLoadedRepoFile = it.toAbsolutePath().toString()
-      Configuration.get().save()
-      return@map loadRepositoryFromFile(it)
-    }.orElse(null)
-  }
-  
   fun loadRepositoryFromFile(file: Path): Repository {
     return loadRepositoryFromFile(file.toFile())
   }

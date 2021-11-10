@@ -67,7 +67,7 @@ class BundleVersion(
       Path.of(parts.first(), *parts.drop(1).toTypedArray())
     } else Path.of("")
     
-    return parents.resolve(entry.target.directory?.findPath() ?: "").resolve(entry.name)
+    return parents.resolve(entry.target.directory?.findPath() ?: "")
   }
   
   @JsonIgnore

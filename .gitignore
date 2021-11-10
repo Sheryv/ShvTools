@@ -16,3 +16,4 @@ release
 # gradle/wrapper/gradle-wrapper.properties
 /jre
 /config.json
+logs

@@ -35,6 +35,7 @@ class MainView : BaseView() {
   private val filters: MutableMap<String, (Entry) -> Boolean> = mutableMapOf()
   private var hideEmptyGroups: Boolean = false
   private var expandAll: Boolean = false
+  private var menusToBlock: MutableList<MenuItem> = mutableListOf()
   val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 200) {
     if (context.isFilled()) {
       withContext(Dispatchers.Main) {
@@ -87,6 +88,9 @@ class MainView : BaseView() {
       btnLoad.isDisable = inProgress
       tfPath.isDisable = inProgress
       pbIndicator.isVisible = inProgress
+      btnRemoveRepository.isDisable = inProgress
+      
+      menusToBlock.forEach { it.isDisable = inProgress }
       
       if (inProgress) {
         btnDownload.text = "Abort"
@@ -141,8 +145,8 @@ class MainView : BaseView() {
         cmVersion.items.setAll(v.versions)
         cmVersion.selectionModel.select(0)
         val path = v.preferredBasePath.findPath()?.let { SystemUtils.parseDirectory(it, null) }
-        context.basePath = path
-        tfPath.text = path?.absolutePath
+        context.basePath = path?.toPath()?.toAbsolutePath()?.toFile()
+        tfPath.text = path?.toPath()?.toAbsolutePath()?.toString()
       }
     }
     cmVersion.selectionModel.selectedItemProperty().addListener { _, _, v ->
@@ -217,14 +221,18 @@ class MainView : BaseView() {
       }
       
       var allow = true
+      var deleteOld = false
       if (toDelete.isNotEmpty()) {
         val dialog = DialogUtils.textAreaDialog(
-          "",
+          "Do you want to delete them? " +
+              "\nChoose 'No' to only download new files and do not delete anything. " +
+              "\nChoose 'Yes' to delete old files specified in the following list and download new ones.",
           toDelete.joinToString("\n") { it.absolutePath },
-          "These files will be deleted during process. Do you want to continue?",
-          buttons = arrayOf(ButtonType.CANCEL, ButtonType.YES)
+          "The old files exist in selected directory",
+          buttons = arrayOf(ButtonType.CANCEL, ButtonType.YES, ButtonType.NO)
         )
-        allow = dialog.isPresent && dialog.get() == ButtonType.YES
+        deleteOld = dialog.isPresent && dialog.get() == ButtonType.YES
+        allow = deleteOld || dialog.isPresent && dialog.get() == ButtonType.NO
       }
       
       if (allow) {
@@ -233,7 +241,7 @@ class MainView : BaseView() {
           state.setMessage("Downloading files...")
           state.progessIndeterminate()
           context.basePath = directory
-          FileSynchronizer(context, state) { r ->
+          FileSynchronizer(context, state, deleteOld) { r ->
             state.setMessage("Download completed")
             state.stop()
             when (r.type) {
@@ -430,10 +438,28 @@ class MainView : BaseView() {
           MenuItem("Load repository from file").apply {
             accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
             setOnAction {
-              ViewUtils.withErrorHandler {
-                RepositoryService().loadRepositoryFromFile(treeView.scene.window)?.run { initializeRepo(this) }
+              
+              state.setMessage("Loading repo...")
+              state.progessIndeterminate()
+              DialogUtils.openFileDialog(treeView.scene.window, initialFile = Configuration.get().lastLoadedRepoFile).ifPresent {
+                Configuration.get().lastLoadedRepoFile = it.toAbsolutePath().toString()
+                Configuration.get().save()
+                
+                RepositoryFileLoader(it) {
+                  state.stop()
+                  when (it.type) {
+                    ResultType.SUCCESS -> {
+                      initializeRepo(it.data!!)
+                    }
+                    ResultType.ERROR -> DialogUtils.textAreaDialog(
+                      "Details", it.error?.stackTraceToString().orEmpty(),
+                      "Error occurred while loading repository", Alert.AlertType.ERROR, false, ButtonType.OK
+                    )
+                  }
+                }.start()
               }
             }
+            menusToBlock.add(this)
           },
           SeparatorMenuItem(),
           MenuItem("Exit").apply {
@@ -478,6 +504,7 @@ class MainView : BaseView() {
             }
           },
         )
+        menusToBlock.add(this)
       },
       Menu("Predefined repositories").apply {
         items.setAll(
@@ -486,19 +513,20 @@ class MainView : BaseView() {
               MenuItem("Xenypack - Modpack").apply { setOnAction { addRepositoryUrlToList("https://raw.githubusercontent.com/Detronit/xenypack-modpack/master/repository-xenypack.yaml") } }
             )
           },
-          MenuItem("Test").apply {
-            setOnAction {
-            
-            }
-//            { c, c2 ->
-//              if (c.selectionModel.selectedItem == "two") {
-//                c2.items.setAll(kotlin.collections.listOf("other", "2.4"))
-//                c2.selectionModel.select(0)
-//              }
+//          MenuItem("Test").apply {
+//            setOnAction {
+//
 //            }
-            accelerator = KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN)
-          }
+////            { c, c2 ->
+////              if (c.selectionModel.selectedItem == "two") {
+////                c2.items.setAll(kotlin.collections.listOf("other", "2.4"))
+////                c2.selectionModel.select(0)
+////              }
+////            }
+//            accelerator = KeyCodeCombination(KeyCode.W, KeyCombination.CONTROL_DOWN)
+//          }
         )
+        menusToBlock.add(this)
       },
       Menu("Info").apply {
         items.setAll(MenuItem("About").apply {
@@ -680,7 +708,7 @@ class MainView : BaseView() {
         ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
         ViewUtils.createTreeColumn("ID", 100) { it.id },
         ViewUtils.createTreeColumn("URL", 150) {
-          it.getSrcUrlOrNull(instance.context) ?: it.src
+          if (it.group) "" else it.getSrcUrlOrNull(instance.context) ?: it.src
         },
         ViewUtils.createTreeColumn("Description", 150) { it.description },
       )

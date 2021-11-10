@@ -27,6 +27,7 @@ class FileMatcher(
   }
   
   override suspend fun process() {
+    context.getEntries().forEach { it.target.matching.lastMatches = emptyList() }
     context.getEntries().filter { !it.group }.forEach {
       updateEntryState(it)
     }
