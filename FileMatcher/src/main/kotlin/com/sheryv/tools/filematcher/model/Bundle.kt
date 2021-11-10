@@ -35,11 +35,7 @@ class Bundle(
   
   @JsonIgnore
   fun getBaseUrl(repoBase: String?): String? {
-    var res = repoBase?.trim('/')?.takeIf { baseItemUrl == null || !DataUtils.isAbsoluteUrl(baseItemUrl) }
-    if (!baseItemUrl.isNullOrBlank()) {
-      res = (res?.plus("/") ?: "") + baseItemUrl.trim('/')
-    }
-    return res
+    return DataUtils.buildUrlFromBase(baseItemUrl, repoBase)
   }
   
   override fun toString(): String {

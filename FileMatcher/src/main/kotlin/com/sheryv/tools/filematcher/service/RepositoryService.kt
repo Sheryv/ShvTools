@@ -9,6 +9,7 @@ import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.Utils
 import javafx.stage.Window
 import java.io.File
+import java.io.FileNotFoundException
 import java.net.SocketException
 import java.nio.file.*
 
@@ -36,12 +37,12 @@ class RepositoryService {
   }
   
   private fun loadRepositoryFromTemplate(template: RepositoryTemplate): Repository {
-    val baseUrl = template.baseUrl
+    val repoBaseUrl = template.baseUrl
     val bundles = template.bundles.map { b ->
       val base = if (b.isLink()) {
         val link = b.toLink()
         try {
-          val url = buildUrl(link.link, baseUrl)
+          val url = buildUrl(link.link, repoBaseUrl)
           DataUtils.downloadAndParse(url, BundleTemplate::class.java).apply {
             id = link.id
             name = link.name.ifBlank { this.name }
@@ -56,12 +57,12 @@ class RepositoryService {
       
       val versions = base.versions?.map { ver ->
         if (ver is BundleVersionLink) {
-          val url = buildUrl(ver.link, baseUrl)
+          val url = buildUrl(ver.link, DataUtils.buildUrlFromBase(base.baseItemUrl, repoBaseUrl))
           val externalVersion = loadExternalVersion(url)
           externalVersion.specSource = url
           externalVersion.copy(
             versionId = ver.versionId,
-            versionName = ver.versionName.takeIf { !it.isNullOrBlank() } ?: externalVersion.versionName!!
+            versionName = ver.versionName.takeIf { !it.isBlank() } ?: externalVersion.versionName
           )
         } else {
           ver as BundleVersion
@@ -83,18 +84,19 @@ class RepositoryService {
   private fun loadExternalVersion(url: String): BundleVersion {
     try {
       return DataUtils.downloadAndParse(url, BundleVersion::class.java)
-    } catch (e: SocketException) {
-      throw ValidationError("Cannot download external version from: $url", e)
     } catch (e: Exception) {
+      when (e) {
+        is SocketException, is FileNotFoundException -> throw ValidationError("Cannot download external version from: $url", e)
+      }
       throw ValidationError("Provided repository->bundle->version specification is incorrect. From: $url", e)
     }
   }
   
   private fun buildUrl(part: String, base: String?): String {
     if (DataUtils.isAbsoluteUrl(part)) {
-      return part;
+      return part
     }
-    return base?.trimEnd('/') + "/" + SystemUtils.encodeNameForWeb(part.trim())
+    return base?.trimEnd('/') + "/" + part.trim().trim('/')
   }
   
   fun saveToFile(context: DevContext, file: File, options: SaveOptions): DevContext {
@@ -215,13 +217,17 @@ class RepositoryService {
       val versions = mutableListOf<BundleVersionLink>()
       
       b.versions?.forEach { v ->
-        var name = SystemUtils.removeForbiddenFileChars(b.name)
+        var name = SystemUtils.removeForbiddenFileChars(b.id)
         
         if (name.isBlank()) {
           name = "Bundle-" + b.id
         }
         name += "_${v.versionName}.${repoFile.extension}"
-        name = SystemUtils.removeForbiddenFileChars(name)
+        name = SystemUtils.removeForbiddenFileChars(name.replace(' ', '_'))
+        name = SystemUtils.encodeNameForWeb(name)
+        if (b.baseItemUrl != null && !DataUtils.isAbsoluteUrl(b.baseItemUrl!!)) {
+          name = b.baseItemUrl!!.trimEnd('/') + name
+        }
         mapper.writeValue(File(repoFile.parent, name), v)
         
         val l = BundleVersionLink(v.versionId, name, v.versionName)

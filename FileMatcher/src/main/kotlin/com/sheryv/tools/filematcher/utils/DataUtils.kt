@@ -92,6 +92,14 @@ object DataUtils {
   
   fun isAbsoluteUrl(url: String) = url.startsWith("http:") || url.startsWith("https:")
   
+  fun buildUrlFromBase(part: String? = null, base: String? = null): String? {
+    var res = base?.trim('/')?.takeIf { part == null || !isAbsoluteUrl(part) }
+    if (!part.isNullOrBlank()) {
+      res = (res?.plus("/") ?: "") + part.trim('/')
+    }
+    return res
+  }
+  
   fun jsonMapper(): ObjectMapper {
     val map = ObjectMapper()
     map.configure(SerializationFeature.INDENT_OUTPUT, true)
