@@ -8,16 +8,18 @@ import com.sheryv.tools.filematcher.utils.Utils
 import com.sheryv.util.Strings
 import java.io.File
 import java.nio.file.Path
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 class EntryGenerator(
   private val dir: File,
   private val context: DevContext,
-  private val replaceCurrentList: Boolean = true,
+  private val mode: Mode = Mode.REPLACE,
   onFinish: ((ProcessResult<List<Entry>, EntryGenerator>) -> Unit)? = null
 ) : Process<List<Entry>>(onFinish as ((ProcessResult<List<Entry>, out Process<List<Entry>>>) -> Unit)?, false) {
   
-  private lateinit var currentEntries: Map<String, Path>
   
   override suspend fun process(): List<Entry> {
     return generateFromLocalDir()
@@ -32,19 +34,28 @@ class EntryGenerator(
     
     val entries = loadEntriesFromFiles(file!!, file)
     
-    if (!replaceCurrentList) {
-      currentEntries = context.version.entries.associate { it.id to context.version.relativePathWithParents(it).resolve(it.name) }
+    if (mode != Mode.REPLACE) {
       
-      val newPaths = entries.associateBy { context.version.relativePathWithParents(it, entries).resolve(it.name) }
       
-      val copy = context.version.entries.toMutableList()
+      val copyVersion = context.repoCopy
+        .bundles.first { context.version.bundle.id == it.id }
+        .versions.first { it.versionId == context.version.versionId }
+      val copy = copyVersion.entries.toMutableList()
       
-      context.version.entries.filter { it.group }.forEach { e ->
-        val newParent = newPaths[currentEntries[e.id]]
+      val currentEntries = copy.associate {
+        it.id to copyVersion.relativePathWithParents(it).run { if (!it.group) resolve(it.name) else this }
+      }
+      val newPaths = entries.associateBy {
+        copyVersion.relativePathWithParents(it, entries).run { if (!it.group) resolve(it.name) else this }
+      }
+      
+      copyVersion.entries.filter { it.group }.forEach { e ->
+        val newParent = newPaths[currentEntries[e.id]!!]
         if (newParent != null) {
-          copy.replaceAll {
-            if (e.id == it.parent) {
-              it.copy(parent = newParent.id)
+          entries[entries.indexOf(newParent)] = newParent.copy(id = e.id)
+          entries.replaceAll {
+            if (newParent.id == it.parent) {
+              it.copy(parent = e.id, updateDate = e.updateDate ?: Utils.now())
             } else
               it
           }
@@ -52,14 +63,29 @@ class EntryGenerator(
       }
       val result = copy.mapNotNull { e ->
         
-        val path = currentEntries[e.id]
+        val path = currentEntries[e.id]!!
         if (newPaths[path] != null) {
-          return@mapNotNull null
+          if (mode == Mode.MERGE_SEMI)
+            return@mapNotNull null
+          
+          val nn = newPaths[path]!!
+          entries.removeAt(entries.indexOfFirst { it.id == e.id || it.id == nn.id })
+          
+          val additional = e.additionalFields.toMutableMap()
+          nn.additionalFields.forEach { additional.putIfAbsent(it.key, it.value) }
+          return@mapNotNull e.copy(
+//            id = nn.id,
+//            parent = nn.parent,
+            fileSize = nn.fileSize,
+            hashes = nn.hashes,
+            updateDate = nn.updateDate,
+            additionalFields = additional
+          )
         }
-        if (e.parent == null) {
-          return@mapNotNull e
-        }
-        
+//        if (e.parent == null) {
+//          return@mapNotNull e
+//        }
+//
         e
       }.toMutableList()
       result.addAll(entries)
@@ -69,7 +95,7 @@ class EntryGenerator(
     return entries
   }
   
-  private fun loadEntriesFromFiles(dir: File, rootDir: File, parent: Entry? = null): List<Entry> {
+  private fun loadEntriesFromFiles(dir: File, rootDir: File, parent: Entry? = null): MutableList<Entry> {
     val list = mutableListOf<Entry>()
     for (child in dir.listFiles()!!) {
       val entry = createEntry(child, rootDir, parent, list)
@@ -92,14 +118,15 @@ class EntryGenerator(
     val src =
       file.relativeTo(rootDir).toPath().joinToString("/") { SystemUtils.encodeNameForWeb(it.fileName.toString()) }
     
-    val map = mapOf("generatedAt" to Utils.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+    val map = mapOf("createdAt" to Utils.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
     var id: String?
     do {
       id = BundleUtils.idForEntry()
     } while (alreadyCreated.any { it.id == id })
     
+    val fileDate = OffsetDateTime.ofInstant(Instant.ofEpochMilli(file.lastModified()), ZoneOffset.UTC).withNano(0)
     return if (file.isDirectory) {
-      BundleUtils.createGroup(id!!, file.name, parent = parent?.id, itemDate = Utils.now(), additionalFields = map)
+      BundleUtils.createGroup(id!!, file.name, parent = parent?.id, updateDate = Utils.now(), itemDate = fileDate, additionalFields = map)
     } else {
       val md5 = Hashing.md5(file.toPath())
       val fileSize = file.length().let { if (it == 0L) null else it }
@@ -109,11 +136,18 @@ class EntryGenerator(
         src,
         null,
         parent = parent?.id,
-        itemDate = Utils.now(),
+        itemDate = fileDate,
+        updateDate = Utils.now(),
         hashes = Hash(md5),
         additionalFields = map,
         fileSize = fileSize
       )
     }
+  }
+  
+  enum class Mode {
+    REPLACE,
+    MERGE_SEMI,
+    MERGE_FULL
   }
 }

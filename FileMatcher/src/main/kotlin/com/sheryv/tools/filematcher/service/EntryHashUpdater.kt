@@ -6,43 +6,33 @@ import com.sheryv.tools.filematcher.utils.lg
 import java.io.File
 import java.nio.file.Paths
 
-class EntryHashUpdater(private val dir: File, private val repository: Repository, onFinish: ((ProcessResult<Repository, EntryHashUpdater>) -> Unit)? = null)
-  : Process<Repository>(onFinish as ((ProcessResult<Repository, out Process<Repository>>) -> Unit)?, false) {
+class EntryHashUpdater(
+  private val context: UserContext,
+  onFinish: ((ProcessResult<List<Entry>, EntryHashUpdater>) -> Unit)? = null
+) : Process<List<Entry>>(onFinish as ((ProcessResult<List<Entry>, out Process<List<Entry>>>) -> Unit)?, false) {
   
   
-  override suspend fun process(): Repository {
-    return updateHashes(dir)
+  override suspend fun process(): List<Entry> {
+    return updateHashes()
   }
   
   
-  private fun updateHashes(dir: File): Repository {
-    val rootDir = if (!dir.isDirectory) {
-      dir.parentFile
-    } else {
-      dir
-    }
+  private fun updateHashes(): List<Entry> {
     
-    repository.bundles.forEach { b ->
-      b.versions.forEach { v ->
-        val userContext = UserContext(repository, b.id, v.versionId, rootDir.absoluteFile)
-        
-        v.entries.forEach { e ->
-          val entryDir = Paths.get(getEntryDir(userContext, e))
-          val file = entryDir.resolve(e.name)
-          if (!e.group) {
-            if (file.toFile().exists()) {
-              val md5 = Hashing.md5(file)
-              e.hashes = e.hashes?.copy(md5 = md5) ?: Hash(md5)
-            } else {
-              lg().info("File does not exist: {}", file.toAbsolutePath())
-            }
-          }
+    val entries = context.getVersion().entries
+    entries.forEach { e ->
+      val entryDir = Paths.get(getEntryDir(context, e))
+      val file = entryDir.resolve(e.name)
+      if (!e.group) {
+        if (file.toFile().exists()) {
+          val md5 = Hashing.md5(file)
+          e.hashes = e.hashes?.copy(md5 = md5) ?: Hash(md5)
+        } else {
+          lg().info("File does not exist: {}", file.toAbsolutePath())
         }
-        
       }
-      
     }
-    return repository
+    return entries
   }
   
   private fun getEntryDir(context: UserContext, entry: Entry): String {

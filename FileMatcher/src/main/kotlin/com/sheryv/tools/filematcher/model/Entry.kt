@@ -2,12 +2,16 @@ package com.sheryv.tools.filematcher.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.sheryv.tools.filematcher.model.event.ItemEnableChangedEvent
 import com.sheryv.tools.filematcher.utils.DataUtils
+import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.tools.filematcher.utils.postEvent
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import java.lang.IllegalStateException
 import java.time.OffsetDateTime
 
-data class Entry(
+class Entry(
   val id: String,
   val name: String,
   var src: String,
@@ -20,18 +24,19 @@ data class Entry(
   val website: String? = null,
   val description: String = "",
   val itemDate: OffsetDateTime? = null,
+  val updateDate: OffsetDateTime? = null,
   var hashes: Hash? = null,
   val category: String? = null,
   val fileSize: Long? = null,
   val tags: List<String>? = null,
   val additionalFields: Map<String, String?> = emptyMap(),
+  var enabled: Boolean = true,
   @JsonIgnore
   val linkedItemBundleId: String? = null,
   @JsonIgnore
   val linkedItemBundleVersionId: Long? = null,
   @JsonIgnore
   val linkedItemId: String? = null,
-  var selected: Boolean = true
 ) {
   
   @JsonIgnore
@@ -41,12 +46,28 @@ data class Entry(
       stateProperty.set(value)
     }
   
+  
   @JsonIgnore
   var stateProperty = SimpleObjectProperty(state)
   
+  @JsonIgnore
+  var enabledProperty = SimpleBooleanProperty(enabled)
+  
   init {
-    state = if (selected) ItemState.UNKNOWN else ItemState.SKIPPED
+    enabledProperty.addListener { o, _, n ->
+      val e = this
+      lg().debug("listener> can change: ${e.enabled != n} | new: $n | $name")
+      if (e.enabled != n) {
+        enabled = n
+        postEvent(ItemEnableChangedEvent(this))
+      }
+    }
   }
+  
+  fun updateBindings() {
+    enabledProperty.set(enabled)
+  }
+  
   
   @JsonIgnore
   fun getSrcUrl(context: UserContext?): String {
@@ -94,6 +115,58 @@ data class Entry(
   @JsonIgnore
   fun isStdItem() = type == ItemType.ITEM
   
+  fun copy(
+    id: String = this.id,
+    name: String = this.name,
+    src: String = this.src,
+    version: String? = this.version,
+    type: ItemType = this.type,
+    target: TargetPath = this.target.copy(matching = this.target.matching.copy()),
+    parent: String? = this.parent,
+    group: Boolean = this.group,
+    website: String? = this.website,
+    description: String = this.description,
+    itemDate: OffsetDateTime? = this.itemDate,
+    updateDate: OffsetDateTime? = this.updateDate,
+    hashes: Hash? = this.hashes,
+    category: String? = this.category,
+    fileSize: Long? = this.fileSize,
+    tags: List<String>? = this.tags,
+    additionalFields: Map<String, String?> = this.additionalFields.toMap(),
+    enabled: Boolean = this.enabled,
+    linkedItemBundleId: String? = this.linkedItemBundleId,
+    linkedItemBundleVersionId: Long? = this.linkedItemBundleVersionId,
+    linkedItemId: String? = this.linkedItemId,
+    state: ItemState = this.state
+  ): Entry {
+    return Entry(
+      id,
+      name,
+      src,
+      version,
+      type,
+      target,
+      parent,
+      group,
+      website,
+      description,
+      itemDate,
+      updateDate,
+      hashes,
+      category,
+      fileSize,
+      tags,
+      additionalFields,
+      enabled,
+      linkedItemBundleId,
+      linkedItemBundleVersionId,
+      linkedItemId,
+    ).apply {
+      this.state = state
+    }
+  }
+  
+  
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -108,4 +181,10 @@ data class Entry(
   override fun hashCode(): Int {
     return id.hashCode()
   }
+  
+  override fun toString(): String {
+    return "Entry(id='$id', name='$name', src='$src', version=$version, parent=$parent, group=$group, state=$state, enabled=$enabled)"
+  }
+  
+  
 }

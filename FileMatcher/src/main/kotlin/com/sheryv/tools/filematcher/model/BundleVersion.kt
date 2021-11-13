@@ -16,6 +16,7 @@ class BundleVersion(
   val additionalFields: Map<String, String?> = emptyMap(),
   val updateDate: OffsetDateTime? = null,
   val experimental: Boolean = false,
+  val includeVersions: List<Long> = emptyList(),
   @JsonIgnore
   var specSource: String? = null
 ) : BundleVersionBase(versionId, versionName) {
@@ -27,17 +28,32 @@ class BundleVersion(
   @JsonIgnore
   fun getAggregatedEntries(): List<Entry> {
     val result = entries.toMutableList()
-    if (bundle.versioningMode == BundleMode.AGGREGATE_OLD) {
-      val previous = bundle.versions.filter { it.versionId < versionId }.sortedByDescending { it.versionId }
-      previous.forEach { v ->
-        v.entries.forEach { e ->
-          if (result.none { it.id == e.id }) {
-            result.add(e)
-          }
+    
+    calculateIncludedVersions().forEach { v ->
+      v.entries.forEach { e ->
+        if (result.none { it.id == e.id }) {
+          result.add(e)
         }
       }
     }
     return result
+  }
+  
+  fun calculateIncludedVersions(): List<BundleVersion> {
+    val included = mutableListOf<BundleVersion>()
+    
+    if (includeVersions.isNotEmpty()) {
+      for (version in includeVersions.distinct()) {
+        val found = bundle.versions.firstOrNull { it.versionId == version }
+        if (found != null) {
+          included.add(found)
+        }
+      }
+    }
+    if (bundle.versioningMode == BundleMode.AGGREGATE_OLD) {
+      included.addAll(bundle.versions.filter { it.versionId < versionId }.sortedByDescending { it.versionId })
+    }
+    return included
   }
   
   @JsonIgnore
@@ -47,10 +63,14 @@ class BundleVersion(
   
   @JsonIgnore
   fun buildDirPathForEntry(entry: Entry, basePath: File? = null): Path {
-    if (entry.parent != null) {
-      return basePath!!.toPath().resolve(relativePathWithParents(entry))
+//    val dir = if (entry.target.absolute) {
+//      Path.of(entry.target.directory!!.findPath()!!)
+//    } else
+    return if (entry.parent != null) {
+      basePath!!.toPath().resolve(relativePathWithParents(entry))
+    } else {
+      basePath!!.toPath()
     }
-    return basePath!!.toPath()
   }
   
   @JsonIgnore
@@ -60,7 +80,7 @@ class BundleVersion(
   }
   
   @JsonIgnore
-  fun relativePathWithParents(entry: Entry, entries: List<Entry> = this.entries): Path {
+  fun relativePathWithParents(entry: Entry, entries: List<Entry> = this.getAggregatedEntries()): Path {
     val parents = if (entry.parent != null) {
       val parts =
         BundleUtils.getParents(entry.parent, entries).mapNotNull { it.target.directory?.findPath() }.reversed()
@@ -95,6 +115,7 @@ class BundleVersion(
     additionalFields: Map<String, String?> = this.additionalFields,
     updateDate: OffsetDateTime? = this.updateDate,
     experimental: Boolean = this.experimental,
+    includeVersions: List<Long> = this.includeVersions,
     specSource: String? = this.specSource,
   ): BundleVersion {
     return BundleVersion(
@@ -106,6 +127,7 @@ class BundleVersion(
       additionalFields,
       updateDate,
       experimental,
+      includeVersions,
       specSource
     )
   }
@@ -119,6 +141,7 @@ class BundleVersion(
     additionalFields: Map<String, String?> = this.additionalFields.toMap(),
     updateDate: OffsetDateTime? = this.updateDate,
     experimental: Boolean = this.experimental,
+    includeVersions: List<Long> = this.includeVersions,
     specSource: String? = this.specSource,
   ): BundleVersion {
     return BundleVersion(
@@ -130,6 +153,7 @@ class BundleVersion(
       additionalFields,
       updateDate,
       experimental,
+      includeVersions,
       specSource
     )
   }

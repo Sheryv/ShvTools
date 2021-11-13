@@ -147,3 +147,7 @@
 .btn-clear:hover {
     -fx-background-color: derive(-fx-control-inner-background, -50%);
 }
+
+.t-dark {
+    -fx-text-fill: derive(-fx-dark-text-color, 90%);
+}

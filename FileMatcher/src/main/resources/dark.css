@@ -210,6 +210,9 @@
     -fx-text-fill: #ff5451;
 }
 
+.t-dark {
+    -fx-text-fill: derive(-fx-light-text-color, -50%);
+}
 
 .i-success {
     -icon-paint: #1d6c14

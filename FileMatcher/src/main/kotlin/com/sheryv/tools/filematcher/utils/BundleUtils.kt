@@ -252,18 +252,18 @@ object BundleUtils {
     name: String,
     parent: String? = null,
     target: TargetPath = TargetPath(BasePath(name)),
-    selected: Boolean = true,
     itemDate: OffsetDateTime? = null,
+    updateDate: OffsetDateTime? = null,
     additionalFields: Map<String, String?> = emptyMap()
   ): Entry {
     return Entry(
       id,
       name,
       "",
-      selected = selected,
       target = target,
       parent = parent,
       itemDate = itemDate,
+      updateDate = updateDate,
       additionalFields = additionalFields,
       group = true
     )

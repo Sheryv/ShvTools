@@ -2,9 +2,10 @@ package com.sheryv.tools.filematcher.utils
 
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.TargetPath
-import com.sheryv.tools.filematcher.service.RepositoryService
 import com.sheryv.tools.filematcher.view.BaseView
 import javafx.beans.property.SimpleStringProperty
+import javafx.beans.value.ObservableValue
+import javafx.beans.value.ObservableValueBase
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
 import javafx.scene.Scene
@@ -24,7 +25,9 @@ object ViewUtils {
     name: String,
     preferredWidth: Int = 0,
     alignRight: Boolean = false,
-    mapper: (Entry) -> String
+    cssClassMapper: ((Entry?) -> Map<String, Boolean>)? = null,
+    onUpdateCell: ((Entry?) -> Unit)? = null,
+    mapper: (Entry) -> String,
   ): TreeTableColumn<Entry, String> {
     return TreeTableColumn<Entry, String>(name).apply {
       setCellValueFactory { SimpleStringProperty(mapper(it.value.value)) }
@@ -32,6 +35,38 @@ object ViewUtils {
         prefWidth = preferredWidth.toDouble()
       if (alignRight) {
         style = "-fx-alignment: CENTER-RIGHT;"
+      }
+      if (onUpdateCell != null || cssClassMapper != null) {
+        setCellFactory {
+          object : TreeTableCell<Entry, String>() {
+            override fun updateItem(item: String?, empty: Boolean) {
+              super.updateItem(item, empty);
+              val entry: Entry?
+              if (empty || item == null) {
+                text = null
+                graphic = null
+                entry = null
+              } else {
+                entry = treeTableRow.treeItem?.value
+                text = item.toString()
+              }
+              if (cssClassMapper != null) {
+                cssClassMapper(entry).forEach { (key, add) ->
+                  val contains = styleClass.contains(key)
+                  if (contains && !add) {
+                    styleClass.remove(key)
+                  }
+                  if (add && !contains) {
+                    styleClass.add(key)
+                  }
+                }
+              }
+              if (onUpdateCell != null) {
+                onUpdateCell(entry)
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -142,9 +177,17 @@ object ViewUtils {
   ): Callback<TreeTableColumn<Item, String>, TreeTableCell<Item, String>> {
     return Callback<TreeTableColumn<Item, String>, TreeTableCell<Item, String>> {
       object : TreeTableCell<Item, String>() {
+        
         override fun updateItem(item: String?, empty: Boolean) {
           super.updateItem(item, empty)
           
+          updateCss(empty)
+//            text = valueMapper.invoke(treeTableRow.treeItem.value)
+          text = item
+          graphic = null
+        }
+        
+        private fun updateCss(empty: Boolean) {
           if (empty || treeTableRow.isEmpty || treeTableRow.treeItem?.value == null) {
             graphic = null
             text = null
@@ -158,9 +201,6 @@ object ViewUtils {
               styleClass.addAll(current)
             }
           }
-//            text = valueMapper.invoke(treeTableRow.treeItem.value)
-          text = item
-          graphic = null
         }
       }
     }
@@ -193,5 +233,15 @@ object ViewUtils {
       )
     }
     return null
+  }
+  
+  fun <T> obs(item: TreeItem<Entry>, value: T): ObservableValue<T> {
+    return object : ObservableValueBase<T>() {
+      val v = value
+      override fun getValue(): T {
+        return v
+//        return mapper(item) // mapper: (TreeItem<Entry>) -> T
+      }
+    }
   }
 }

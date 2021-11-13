@@ -2,22 +2,36 @@ package com.sheryv.tools.filematcher.view
 
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.model.*
+import com.sheryv.tools.filematcher.model.event.ItemEnableChangedEvent
+import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
 import com.sheryv.tools.filematcher.service.*
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.ViewUtils
 import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.tools.lasso.util.OnChangeScheduledExecutor
 import javafx.fxml.FXML
 import javafx.geometry.Insets
 import javafx.scene.control.*
 import javafx.scene.layout.Pane
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.apache.commons.lang3.exception.ExceptionUtils
+import org.greenrobot.eventbus.Subscribe
 import java.io.File
 import java.nio.file.Paths
 import java.util.*
+import java.util.function.Consumer
 import java.util.regex.Pattern
 
 class DevelopersToolView : BaseView() {
-  
+  private val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 300) {
+    if (context != null) {
+      withContext(Dispatchers.Main) {
+        updateView(false)
+      }
+    }
+  }
   private var context: DevContext? = null
     set(value) {
       field = value
@@ -103,7 +117,8 @@ class DevelopersToolView : BaseView() {
     btnAddMatchingStrategyToMods.setOnAction {
       validateContext() ?: return@setOnAction
       val errors = MinecraftService().addMinecraftModsMatcher(context!!.version)
-      updateView()
+      updater.markChanged()
+      
       DialogUtils.textAreaDialog(
         "File that were not matched are listed below",
         errors.joinToString("\n"),
@@ -125,16 +140,35 @@ class DevelopersToolView : BaseView() {
           Alert.AlertType.INFORMATION,
           ButtonType.YES,
           ButtonType.NO
-        )
+        ).map {
+          return@map if (it == ButtonType.NO) {
+            DialogUtils.dialog(
+              "Do you want to use property values from current loaded Repository or from file system for existing items. " +
+                  "Using values from current" +
+                  " loaded Repository is good for adding new files to Repository and updating current one (full merge). " +
+                  "Using values from file system is good for overriding entries that exists in current" +
+                  " loaded Repository and in file system." +
+                  "\n\nChoose Yes to override existing items\nChoose No to update currently loaded items (full merge)",
+              null,
+              Alert.AlertType.INFORMATION,
+              ButtonType.YES,
+              ButtonType.NO
+            ).map {
+              if (it == ButtonType.YES) EntryGenerator.Mode.MERGE_SEMI else EntryGenerator.Mode.MERGE_FULL
+            }.orElse(null)
+          } else {
+            EntryGenerator.Mode.REPLACE
+          }
+        }
       } else {
-        Optional.of(ButtonType.YES)
-      }.ifPresent {
+        Optional.of(EntryGenerator.Mode.REPLACE)
+      }.ifPresent { mode ->
         
         lbProcessState.text = "Listing files..."
         pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
         changeButtonEnable(false)
         
-        EntryGenerator(sourceDir, context, it == ButtonType.YES) {
+        EntryGenerator(sourceDir, context, mode) {
           lbProcessState.text = ""
           pbProcess.progress = 0.0
           changeButtonEnable(true)
@@ -172,11 +206,13 @@ class DevelopersToolView : BaseView() {
       DialogUtils.openFileDialog(treeView.scene.window, initialFile = Configuration.get().lastLoadedRepoFile).ifPresent {
         Configuration.get().lastLoadedRepoFile = it.toAbsolutePath().toString()
         Configuration.get().save()
-        changeButtonEnable(true)
-  
+        pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
+        changeButtonEnable(false)
+        
         RepositoryFileLoader(it) {
-          changeButtonEnable(false)
-  
+          changeButtonEnable(true)
+          pbProcess.progress = 0.0
+          
           when (it.type) {
             ResultType.SUCCESS -> {
               displayRepository(it.data!!)
@@ -190,7 +226,9 @@ class DevelopersToolView : BaseView() {
       }
     }
     
-    MainView.initializeTreeTable(treeView)
+    MainView.initializeTreeTable(treeView) {
+      context!!.toUserContext(File(tfPath.text))
+    }
     treeView.columns.add(TreeTableColumn<Entry, String>("Action").also {
       it.cellFactory = ViewUtils.buttonsInTreeTableCellFactory(
         { mapOf("setUrl" to Button("Set Url").apply { padding = Insets(0.0, 5.0, 0.0, 5.0) }) },
@@ -211,15 +249,68 @@ class DevelopersToolView : BaseView() {
     menuBar.menus.setAll(listOf(
       Menu("Operations").apply {
         items.setAll(listOf(
+          MenuItem("Verify state of 'Source dir'").apply {
+            setOnAction {
+              val c = validateContext() ?: return@setOnAction
+              val source = validateSourceDir() ?: return@setOnAction
+              lbProcessState.text = "Verifying..."
+              pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
+              FileMatcher(UserContext(c.repo, c.version.bundle.id, c.version.versionId, source)) { r ->
+                lbProcessState.text = ""
+                pbProcess.progress = 0.0
+                when (r.type) {
+                  ResultType.ERROR ->
+                    DialogUtils.textAreaDialog(
+                      "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
+                      "Error verifying: ", Alert.AlertType.ERROR, wrapText = false
+                    )
+                }
+              }.start()
+            }
+          },
           MenuItem("Update hashes").apply {
             setOnAction {
               updateHashes()
+            }
+          },
+          SeparatorMenuItem(),
+          MenuItem("Refresh view").apply {
+            setOnAction {
+              updateView()
             }
           },
           MenuItem("Clear view / memory").apply {
             setOnAction {
               context = null
               updateView()
+            }
+          },
+          SeparatorMenuItem(),
+          MenuItem("Remove items duplicated in other included versions of this bundle").apply {
+            setOnAction {
+              val c = validateContext() ?: return@setOnAction
+              val result = c.version.entries.toMutableList()
+              ViewUtils.withErrorHandler {
+                for (includedVersion in c.version.calculateIncludedVersions()) {
+                  for (entry in c.version.entries.filter { !it.group }) {
+                    val found = includedVersion.entries.firstOrNull { it.id == entry.id }
+                    if (found != null) {
+                      if (entry.hashes == null) {
+                        throw ValidationError("Item '${entry.name}' [${entry.id}] does not have calculated hash value")
+                      }
+                      if (entry.hashes!!.hasAnySameHash(found.hashes)) {
+                        result.remove(entry)
+                      } else {
+                        lg().info("Found duplicate for '${entry.name}' [${entry.id}] but hash differs - skipping")
+                      }
+                    }
+                  }
+                }
+                val list: MutableList<Entry> = result.toMutableList()
+                list.removeIf { p -> p.group && result.none { it.parent == p.id } }
+                c.version.entries = list
+                updateView()
+              }
             }
           }
         ))
@@ -244,7 +335,8 @@ class DevelopersToolView : BaseView() {
     chkOverrideItems.isSelected = s.overrideExistingItems
     chkSplitVersions.isSelected = s.splitVersionsToFiles
     context = null
-    updateView()
+    this.updater.start()
+    updater.markChanged()
   }
   
   private fun updateHashes() {
@@ -265,7 +357,7 @@ class DevelopersToolView : BaseView() {
       pbProcess.progress = ProgressBar.INDETERMINATE_PROGRESS
       changeButtonEnable(false)
       
-      EntryHashUpdater(sourceDir, context!!.repo) {
+      EntryHashUpdater(context!!.toUserContext(sourceDir)) {
         lbProcessState.text = ""
         pbProcess.progress = 0.0
         changeButtonEnable(true)
@@ -324,7 +416,7 @@ class DevelopersToolView : BaseView() {
     updateView()
   }
   
-  private fun updateView() {
+  private fun updateView(refresh: Boolean = true) {
     if (context != null) {
       val c = context!!
       tfOBundleId.text = c.bundle.id
@@ -336,7 +428,17 @@ class DevelopersToolView : BaseView() {
       tfORepoName.text = c.repo.codeName
       tfORepoTitle.text = c.repo.title
       tfBundlePath.text = c.bundle.preferredBasePath.systemAwareValue()
-      treeView.root = ViewUtils.toTreeItems(c.version.entries)
+      var count = 0
+      if (treeView.root != null) {
+        ViewUtils.forEachTreeItem(treeView.root) { count++ }
+      }
+      
+      if (refresh || treeView.root?.isLeaf == true || count != c.version.entries.size) {
+        treeView.root = ViewUtils.toTreeItems(c.version.entries)
+      } else {
+        treeView.refresh()
+      }
+      taStats.text = MainView.prepareStatusText(context!!.version.entries)
     } else {
       val o = Configuration.get().devTools.options
       tfOBundleId.text = o.bundleId
@@ -349,6 +451,7 @@ class DevelopersToolView : BaseView() {
       tfORepoTitle.text = o.repoTitle
       tfBundlePath.text = o.bundleBasePath
       treeView.root = TreeItem()
+      treeView.refresh()
     }
   }
   
@@ -445,6 +548,32 @@ class DevelopersToolView : BaseView() {
     menuItemsBaseOnContext.forEach { it.isDisable = !enabled }
   }
   
+  @Subscribe
+  fun itemStateChangedEvent(e: ItemStateChangedEvent) {
+    updater.markChanged()
+  }
+  
+  @Subscribe
+  fun itemEnableChangedEvent(e: ItemEnableChangedEvent) {
+    val enabled = e.e.enabled
+    if (context != null && context!!.version.entries.any { it === e.e }) {
+      val entries = context!!.version.entries
+      if (e.e.group) {
+        entries.filter { it.parent == e.e.id }.forEach { it.enabled = enabled; it.updateBindings() }
+      } else {
+        val siblings = entries.filter { it.parent == e.e.parent }
+        val parent = entries.first { it.id == e.e.parent }
+        if (!enabled && siblings.all { !it.enabled }) {
+          parent.enabled = false
+          parent.updateBindings()
+        } else if (enabled && siblings.all { it.enabled }) {
+          parent.enabled = true
+          parent.updateBindings()
+        }
+      }
+      updater.markChanged()
+    }
+  }
   
   private fun validateSourceDir(): File? {
     var file = tfPath.text?.let { SystemUtils.parseDirectory(it, null) }
@@ -513,6 +642,10 @@ class DevelopersToolView : BaseView() {
         }
       }
     }
+  }
+  
+  override fun onCloseStage() {
+    updater.stop()
   }
   
   @FXML
@@ -616,5 +749,8 @@ class DevelopersToolView : BaseView() {
   
   @FXML
   lateinit var paneOptions: Pane
+  
+  @FXML
+  lateinit var taStats: TextArea
   
 }

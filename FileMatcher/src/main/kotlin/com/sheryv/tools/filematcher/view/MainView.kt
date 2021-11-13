@@ -3,6 +3,7 @@ package com.sheryv.tools.filematcher.view
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.model.*
 import com.sheryv.tools.filematcher.model.event.AbortEvent
+import com.sheryv.tools.filematcher.model.event.ItemEnableChangedEvent
 import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
 import com.sheryv.tools.filematcher.service.*
 import com.sheryv.tools.filematcher.utils.*
@@ -19,6 +20,7 @@ import javafx.geometry.HPos
 import javafx.geometry.Insets
 import javafx.geometry.Orientation
 import javafx.scene.control.*
+import javafx.scene.control.cell.CheckBoxTreeTableCell
 import javafx.scene.input.*
 import javafx.scene.layout.ColumnConstraints
 import javafx.scene.layout.GridPane
@@ -28,6 +30,7 @@ import kotlinx.coroutines.withContext
 import org.apache.commons.lang3.exception.ExceptionUtils
 import org.greenrobot.eventbus.Subscribe
 import java.io.File
+import kotlin.math.log10
 
 class MainView : BaseView() {
   private var context: UserContext = UserContext()
@@ -36,14 +39,13 @@ class MainView : BaseView() {
   private var hideEmptyGroups: Boolean = false
   private var expandAll: Boolean = false
   private var menusToBlock: MutableList<MenuItem> = mutableListOf()
-  val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 200) {
+  val updater = OnChangeScheduledExecutor("ViewUpdate_" + javaClass.simpleName, 300) {
     if (context.isFilled()) {
       withContext(Dispatchers.Main) {
         filterItems()
       }
     }
   }
-  
   
   init {
     instance = this
@@ -65,7 +67,7 @@ class MainView : BaseView() {
   private fun init() {
     createMenu()
     updater.start()
-    initializeTreeTable(treeView)
+    initializeTreeTable(treeView) { context }
     
     treeView.selectionModel.selectedItems.addListener { item: ListChangeListener.Change<out TreeItem<Entry>> ->
       if (item.list.size == 0 || item.list.size == 1 && !item.list[0].value.group) {
@@ -439,11 +441,11 @@ class MainView : BaseView() {
             accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
             setOnAction {
               
-              state.setMessage("Loading repo...")
-              state.progessIndeterminate()
               DialogUtils.openFileDialog(treeView.scene.window, initialFile = Configuration.get().lastLoadedRepoFile).ifPresent {
                 Configuration.get().lastLoadedRepoFile = it.toAbsolutePath().toString()
                 Configuration.get().save()
+                state.setMessage("Loading repo...")
+                state.progessIndeterminate()
                 
                 RepositoryFileLoader(it) {
                   state.stop()
@@ -579,6 +581,8 @@ class MainView : BaseView() {
     ViewUtils.forEachTreeItem(treeView.root) { count++ }
     if (refresh || filterResult != entries || treeView.root.isLeaf || count != filterResult.size) {
       fillEntries(filterResult)
+    } else {
+      treeView.refresh()
     }
     updateStatusBar(entries, if (filtersList.isEmpty()) null else filterResult)
   }
@@ -634,35 +638,31 @@ class MainView : BaseView() {
     updater.markChanged()
   }
   
-  private fun updateStatusBar(all: List<Entry>, filtered: List<Entry>? = null) {
-    val entries = all.filter { !it.group }
-    val entriesSize = Utils.fileSizeFormat(entries.mapNotNull { it.fileSize }.sum())
-    val synced = entries.count { it.state == ItemState.SYNCED }
-    val syncedSize =
-      Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SYNCED }.mapNotNull { it.fileSize }
-        .sum())
-    val skipped = entries.count { it.state == ItemState.SKIPPED }
-    val skippedSize =
-      Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SKIPPED }.mapNotNull { it.fileSize }
-        .sum())
-    val download = entries.count { it.state.toModify }
-    val downloadSize =
-      Utils.fileSizeFormat(entries.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
-    
-    if (filtered == null || filtered.size == entries.size) {
-      lbTreeState.text =
-        "Items: ${entries.size} [$entriesSize]; Synced: $synced [$syncedSize], Skipped: $skipped [$skippedSize], To download: $download [$downloadSize]"
-    } else {
-      val filtered = filtered.filter { !it.group }
-      val filterSize = Utils.fileSizeFormat(filtered.mapNotNull { it.fileSize }.sum())
-      val syncedFiltered = filtered.count { it.state == ItemState.SYNCED }
-      val skippedFiltered = filtered.count { it.state == ItemState.SKIPPED }
-      val downloadFiltered = filtered.count { it.state.toModify }
-      val downloadFilteredSize =
-        Utils.fileSizeFormat(filtered.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
-      lbTreeState.text =
-        "[Filtered/All] Items: ${filtered.size}/${entries.size} [$filterSize/$entriesSize]; Synced: $syncedFiltered/$synced [$syncedSize], Skipped: $skippedFiltered/$skipped [$skippedSize], To download: $downloadFiltered/$download [$downloadFilteredSize/$downloadSize]"
+  @Subscribe
+  fun itemEnableChangedEvent(e: ItemEnableChangedEvent) {
+    val enabled = e.e.enabled
+    if (context.isFilled() && context.getEntries().any { it === e.e }) {
+      val entries = context.getEntries()
+      if (e.e.group) {
+        entries.filter { it.parent == e.e.id }.forEach { it.enabled = enabled; it.updateBindings() }
+      } else {
+        val siblings = entries.filter { it.parent == e.e.parent }
+        val parent = entries.first { it.id == e.e.parent }
+        if (!enabled && siblings.all { !it.enabled }) {
+          parent.enabled = false
+          parent.updateBindings()
+        } else if (enabled && siblings.all { it.enabled }) {
+          parent.enabled = true
+          parent.updateBindings()
+        }
+      }
+      updater.markChanged()
     }
+  }
+  
+  private fun updateStatusBar(all: List<Entry>, filteredAll: List<Entry>? = null) {
+    val text = prepareStatusText(all, filteredAll)
+    lbTreeState.text = text
   }
   
   companion object {
@@ -673,9 +673,18 @@ class MainView : BaseView() {
     private const val NAME_FILTER = "NAME_FILTER"
     
     @JvmStatic
-    fun initializeTreeTable(treeView: TreeTableView<Entry>) {
+    fun initializeTreeTable(treeView: TreeTableView<Entry>, contextProvider: () -> UserContext) {
+      treeView.selectionModel.selectionMode = SelectionMode.MULTIPLE
+      treeView.isEditable = true
       treeView.columns.setAll(
-        ViewUtils.createTreeColumn("Name", 300) { it.name },
+        ViewUtils.createTreeColumn("Name", 300,
+          cssClassMapper = { mapOf("t-dark" to (it?.enabled == false)) }) { it.name },
+        TreeTableColumn<Entry, Boolean>("Enabled").also { col ->
+          col.cellFactory = CheckBoxTreeTableCell.forTreeTableColumn(col)
+          col.setCellValueFactory { it.value.value.enabledProperty }
+          col.prefWidth = 25.0
+        },
+        
         TreeTableColumn<Entry, String>("State").also {
           it.setCellValueFactory { if (it.value.value.group) SimpleStringProperty("") else it.value.value.stateProperty.asString() }
           it.cellFactory = ViewUtils.treeTableCellFactoryWithCustomCss<Entry>(
@@ -695,7 +704,7 @@ class MainView : BaseView() {
         },
         ViewUtils.createTreeColumn("Path") { it.target.directory?.findPath().orEmpty() },
         ViewUtils.createTreeColumn("Version") { it.version ?: if (it.group) "" else "-" },
-        ViewUtils.createTreeColumn("Date", 100) { if (!it.group) Utils.dateFormat(it.itemDate) else "" },
+        ViewUtils.createTreeColumn("Date", 100) { if (!it.group) Utils.dateFormat(it.updateDate) else "" },
         ViewUtils.createTreeColumn(
           "Size", 60,
           alignRight = true
@@ -708,7 +717,7 @@ class MainView : BaseView() {
         ViewUtils.createTreeColumn("Tags") { it.tags?.joinToString { ", " }.orEmpty() },
         ViewUtils.createTreeColumn("ID", 100) { it.id },
         ViewUtils.createTreeColumn("URL", 150) {
-          if (it.group) "" else it.getSrcUrlOrNull(instance.context) ?: it.src
+          if (it.group) "" else it.getSrcUrlOrNull(contextProvider()) ?: it.src
         },
         ViewUtils.createTreeColumn("Description", 150) { it.description },
       )
@@ -729,6 +738,7 @@ class MainView : BaseView() {
       
       treeView.onMousePressed = EventHandler { event ->
         if (event.isPrimaryButtonDown && event.clickCount == 2 && treeView.selectionModel?.selectedItem?.value != null) {
+          println(event.target)
           val item = treeView.selectionModel.selectedItem.value
           val alert = Alert(Alert.AlertType.INFORMATION, "Details", ButtonType.OK)
           alert.headerText = item.name
@@ -744,11 +754,13 @@ class MainView : BaseView() {
           addDetailsHeader("Details", grid)
           addDetailsRow("ID", item.id, grid)
           addDetailsRow("Name", item.name, grid)
-          addDetailsRow("Src", item.getSrcUrl(instance.context), grid)
+          addDetailsRow("Src", item.getSrcUrl(contextProvider()), grid)
           addDetailsRow("Parent", item.parent, grid)
           addDetailsRow("Target Path", item.target.directory?.findPath(), grid)
           addDetailsRow("Override", item.target.override.toEnglishWord(), grid)
           addDetailsRow("File matching pattern", item.target.matching.getPattern(), grid)
+          addDetailsRow("Item date", Utils.dateFormat(item.itemDate), grid)
+          addDetailsRow("Update date", Utils.dateFormat(item.updateDate), grid)
           addDetailsRow("Size", Utils.fileSizeFormat(item.fileSize), grid)
           addDetailsRow("Target Path is absolute", item.target.absolute.toEnglishWord(), grid)
           addDetailsRow("Description", item.description, grid)
@@ -793,38 +805,40 @@ class MainView : BaseView() {
           
           if (item != null) {
             treeView.contextMenu?.hide()
-            if (item.value.state != ItemState.SKIPPED) {
-              treeView.contextMenu = ContextMenu(
-                MenuItem("Set state to SKIPPED").apply {
-                  setOnAction {
-                    item.value.state = ItemState.SKIPPED
-                    postEvent(ItemStateChangedEvent(item.value))
-                  }
-                },
-              )
-            } else {
-              treeView.contextMenu = ContextMenu(
-                MenuItem("Set state to UNKNOWN").apply {
-                  setOnAction {
-                    item.value.state = ItemState.UNKNOWN
-                    postEvent(ItemStateChangedEvent(item.value))
-                  }
-                },
-              )
-            }
-            treeView.contextMenu.items.add(MenuItem("Export to CSV").apply {
-              setOnAction {
-                if (item.value.group) {
-                  exportToCsv(item.children.map { it.value }.filter { !it.group }, item.value.name)
-                } else {
-                  exportToCsv(listOf(item.value), item.value.name)
+            treeView.contextMenu = ContextMenu(
+              MenuItem(if (item.value.enabled) "Disable" else "Enable").apply {
+                setOnAction {
+                  changeEnableItem(item, treeView)
                 }
-              }
-            })
+              },
+              MenuItem("Delete item").apply {
+                setOnAction {
+                  val context = contextProvider()
+                  item.parent?.children?.remove(item)
+                  val list = context.getVersion().entries.toMutableList()
+                  list.removeAll(deleteItem(item))
+                  context.getVersion().entries = list
+                }
+              },
+              MenuItem("Export to CSV").apply {
+                setOnAction {
+                  if (item.value.group) {
+                    exportToCsv(item.children.map { it.value }.filter { !it.group }, item.value.name)
+                  } else {
+                    exportToCsv(listOf(item.value), item.value.name)
+                  }
+                }
+              })
             treeView.contextMenu.show(item.graphic, event.screenX, event.screenY)
           }
         }
       }
+    }
+    
+    private fun changeEnableItem(item: TreeItem<Entry>, treeView: TreeTableView<Entry>) {
+      item.value.enabled = !item.value.enabled
+      item.value.updateBindings()
+      postEvent(ItemEnableChangedEvent(item.value))
     }
     
     private fun exportToCsv(items: List<Entry>, groupName: String = "") {
@@ -869,6 +883,62 @@ class MainView : BaseView() {
       }
     }
     
+    fun prepareStatusText(
+      all: List<Entry>,
+      filteredAll: List<Entry>? = null
+    ): String {
+      val entries = all.filter { !it.group && it.enabled }
+      val log10 = log10(entries.size.toDouble()).toInt() + 1
+      val entriesSize = Utils.fileSizeFormat(entries.mapNotNull { it.fileSize }.sum())
+      val synced = entries.count { it.state == ItemState.SYNCED }.toString().padEnd(log10)
+      val syncedSize = Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SYNCED }.mapNotNull { it.fileSize }.sum())
+      val skipped = entries.count { it.state == ItemState.SKIPPED }.toString().padEnd(log10)
+      val disabled = all.count { !it.enabled && !it.group }.toString().padEnd(log10)
+      val disabledSize = Utils.fileSizeFormat(all.asSequence().filter { !it.enabled && !it.group }.mapNotNull { it.fileSize }.sum())
+      val skippedSize = Utils.fileSizeFormat(entries.asSequence().filter { it.state == ItemState.SKIPPED }.mapNotNull { it.fileSize }
+        .sum())
+      val download = entries.count { it.state.toModify }.toString().padEnd(log10)
+      val downloadSize = Utils.fileSizeFormat(entries.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
+      
+      val modified = entries.count { it.state == ItemState.MODIFIED }.toString().padEnd(log10)
+      val notExists = entries.count { it.state == ItemState.NOT_EXISTS }.toString().padEnd(log10)
+      
+      return if (filteredAll == null || filteredAll.size == entries.size) {
+        "        All: ${entries.size.toString().padEnd(log10)} [$entriesSize]\n" +
+            "     Synced: $synced [$syncedSize]\n" +
+            "    Skipped: $skipped [$skippedSize]\n" +
+            "To download: $download [$downloadSize]\n" +
+            "   Disabled: $disabled [$disabledSize]\n" +
+            "   Modified: $modified\n" +
+            "  Not exist: $notExists\n"
+      } else {
+        val filtered = filteredAll.filter { !it.group && it.enabled }
+        val filterSize = Utils.fileSizeFormat(filtered.mapNotNull { it.fileSize }.sum())
+        val syncedFiltered = filtered.count { it.state == ItemState.SYNCED }
+        val skippedFiltered = filtered.count { it.state == ItemState.SKIPPED }
+        val downloadFiltered = filtered.count { it.state.toModify }
+        val downloadFilteredSize =
+          Utils.fileSizeFormat(filtered.asSequence().filter { it.state.toModify }.mapNotNull { it.fileSize }.sum())
+        val disabledFiltered = filteredAll.count { !it.enabled && !it.group }
+        
+        "All | Filtered: ${entries.size.toString().padEnd(log10)} ${("[$entriesSize]").padEnd(10)} | ${filtered.size} [$filterSize]\n" +
+            "        Synced: $synced ${("[$syncedSize]").padEnd(10)} | $syncedFiltered\n" +
+            "       Skipped: $skipped ${("[$skippedSize]").padEnd(10)} | $skippedFiltered\n" +
+            "   To download: $download ${("[$downloadSize]").padEnd(10)} | $downloadFiltered [$downloadFilteredSize]\n" +
+            "      Disabled: $disabled ${("[$disabledSize]").padEnd(10)} | $disabledFiltered"
+      }
+    }
+    
+    private fun deleteItem(item: TreeItem<Entry>): List<Entry> {
+      val list = mutableListOf<Entry>()
+      list.add(item.value)
+      if (item.children.size > 0) {
+        for (child in item.children) {
+          list.addAll(deleteItem(child))
+        }
+      }
+      return list
+    }
     
     private fun addDetailsHeader(text: String, pane: GridPane) {
       val lk = Label(text)

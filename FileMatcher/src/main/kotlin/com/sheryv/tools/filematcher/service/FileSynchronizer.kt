@@ -33,13 +33,18 @@ class FileSynchronizer(
   override suspend fun process() {
     val matcher = FileMatcher(context)
     val entries = context.getEntries().filter { !it.group }
-    val all = entries.size
+    val filter = { e: Entry ->
+      e.enabled && !e.group && e.type == ItemType.ITEM &&
+          (e.state == ItemState.MODIFIED || e.state == ItemState.NEEDS_UPDATE || e.state == ItemState.NOT_EXISTS)
+    }
+    
+    val all = entries.count(filter)
     var processed = 0
     for (entry in entries) {
       
       matcher.updateEntryState(entry)
       
-      if (entry.selected && !entry.group && entry.type == ItemType.ITEM) {
+      if (entry.enabled && !entry.group && entry.type == ItemType.ITEM) {
         val fileName =
           if (entry.state == ItemState.MODIFIED || entry.state == ItemState.NEEDS_UPDATE || entry.state == ItemState.NOT_EXISTS) {
             

@@ -7,10 +7,10 @@ import java.io.File
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class Hash(
-    val md5: String? = null,
-    val sha256: String? = null,
-    val sha1: String? = null,
-    val crc32: String? = null
+  val md5: String? = null,
+  val sha256: String? = null,
+  val sha1: String? = null,
+  val crc32: String? = null
 ) {
   
   fun hasAny() = md5 != null || sha256 != null || sha1 != null || crc32 != null
@@ -30,5 +30,13 @@ data class Hash(
       return { Hashing.crc32(it.toPath()) == crc32.uppercase() }
     }
     throw IllegalStateException("No hash found")
+  }
+  
+  fun hasAnySameHash(hash: Hash?): Boolean {
+    return hash != null
+        && (md5 != null && md5 == hash.md5
+        || sha256 != null && sha256 == hash.sha256
+        || sha1 != null && sha1 == hash.sha1
+        || crc32 != null && crc32 == hash.crc32)
   }
 }

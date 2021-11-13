@@ -1,6 +1,8 @@
 package com.sheryv.tools.filematcher
 
+import com.sheryv.tools.filematcher.TestUtils.measureLog
 import com.sheryv.tools.filematcher.utils.DataUtils
+import com.sheryv.tools.filematcher.utils.timeLog
 import org.apache.commons.lang3.StringUtils
 import org.junit.jupiter.api.Test
 import java.io.File
@@ -8,12 +10,19 @@ import java.io.File
 class DataTest {
   @Test
   fun name() {
-    val map = DataUtils.downloadAndParse("https://jsonplaceholder.typicode.com/todos/1", Map::class.java)
-    val map2 = DataUtils.downloadAndParse(
-      "https://github.com/eugenp/tutorials/raw/master/spring-boot-modules/spring-boot-properties/src/main/resources/database.yml",
-      Map::class.java
-    )
+    val s = "http://localhost/4/client/xenypack_4_client_-_mc_1.16.5_4.1.0.yaml"
+    DataUtils.downloadAndParse2(s, Map::class.java)
+    var map2 = measureLog { DataUtils.downloadAndParse(s, Map::class.java) }
+    var map = measureLog { DataUtils.downloadAndParse2(s, Map::class.java) }
     println()
+  }
+  
+  @Test
+  fun name2() {
+    DataUtils.downloadAndParse2("https://jsonplaceholder.typicode.com/todos/1", Map::class.java)
+    var map2 = measureLog { DataUtils.downloadAndParse("https://jsonplaceholder.typicode.com/todos/1", Map::class.java) }
+    var map = measureLog { DataUtils.downloadAndParse2("https://jsonplaceholder.typicode.com/todos/1", Map::class.java) }
+    println(map == map2)
   }
   
   @Test

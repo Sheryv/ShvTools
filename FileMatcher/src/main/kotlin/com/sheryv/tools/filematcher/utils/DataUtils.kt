@@ -9,11 +9,15 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.sheryv.util.FileUtils
 import java.io.*
+import java.net.URI
 import java.net.URL
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.nio.channels.Channels
+import java.time.Duration
 import java.util.*
 import java.util.regex.Pattern
-import kotlin.collections.ArrayList
 
 
 object DataUtils {
@@ -67,14 +71,14 @@ object DataUtils {
       var inputLine: String?
       inputLine = read.readLine()
       while (inputLine != null) {
-        response.appendln(inputLine)
+        response.appendLine(inputLine)
         inputLine = read.readLine()
       }
     }
     return response.toString()
   }
   
-  fun <T> downloadAndParse(url: String, output: Class<T>): T {
+  fun <T> downloadAndParseOld(url: String, output: Class<T>): T {
     lg().info("Downloading text from: $url")
     val indexOf = url.lastIndexOf('.')
     val extension = url.substring(indexOf + 1)
@@ -87,7 +91,40 @@ object DataUtils {
       yamlMapper()
     }
     
-    return mapper.readValue(BufferedInputStream(connection.getInputStream()), output)
+    val result = mapper.readValue(BufferedInputStream(connection.getInputStream()), output)
+    lg().debug("Downloaded and mapped text from: $url")
+    return result
+  }
+  
+  fun <T> downloadAndParse(url: String, output: Class<T>): T {
+    lg().info("Downloading text from: $url")
+    val t = System.currentTimeMillis()
+    val indexOf = url.lastIndexOf('.')
+    val extension = url.substring(indexOf + 1)
+    
+    val request: HttpRequest = HttpRequest.newBuilder()
+      .uri(URI(url))
+      .timeout(Duration.ofSeconds(30))
+      .GET()
+      .build()
+    
+    val client = HttpClient.newHttpClient()
+    val response = client.send(request, HttpResponse.BodyHandlers.ofInputStream())
+    
+    val json = response.headers().firstValue("Content-Type")
+      .map { it.contains("application/json") }
+      .orElse(extension == "json")
+    val mapper = if (json) {
+      jsonMapper()
+    } else {
+      yamlMapper()
+    }
+    
+    println("before mapping " + (System.currentTimeMillis() - t))
+    val result = mapper.readValue(response.body(), output)
+    println("after mapping " + (System.currentTimeMillis() - t))
+    lg().debug("Downloaded and mapped text from: $url")
+    return result
   }
   
   fun isAbsoluteUrl(url: String) = url.startsWith("http:") || url.startsWith("https:")

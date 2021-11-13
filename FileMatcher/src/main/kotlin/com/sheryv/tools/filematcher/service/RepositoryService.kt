@@ -64,7 +64,9 @@ class RepositoryService {
           base.link?.let { " from URL: $it" }.orEmpty()
         }"
       )
-      
+      versions.forEach { ver ->
+        ver.entries = ver.entries.map { if (it.updateDate == null) it.copy(updateDate = it.itemDate) else it }
+      }
       base.toBundle(versions)
     }
     
@@ -192,11 +194,13 @@ class RepositoryService {
       versionUrlPart = SystemUtils.encodeNameForWeb(overrides.versionName),
       updateDate = Utils.now()
     ).apply {
-      entries.forEach { e ->
-        if (!e.group) {
-          e.selected = e.state != ItemState.SKIPPED
-        }
-      }
+      val noDisabled = entries.filter { it.group || (!it.group && it.enabled) }
+      
+      entries.asSequence().filter { p -> p.group && !p.enabled && noDisabled.any { it.parent == p.id } }
+        .forEach { it.enabled = true; it.updateBindings() }
+      val list = entries.toMutableList()
+      list.removeIf { p -> p.group && entries.none { it.parent == p.id } }
+      entries = list
     }
   }
   
@@ -217,10 +221,12 @@ class RepositoryService {
         name += "_${v.versionName}.${repoFile.extension}"
         name = SystemUtils.removeForbiddenFileChars(name.replace(' ', '_'))
         name = SystemUtils.encodeNameForWeb(name)
-        if (b.baseItemUrl != null && !DataUtils.isAbsoluteUrl(b.baseItemUrl!!)) {
-          name = b.baseItemUrl!!.trimEnd('/') + name
-        }
-        mapper.writeValue(File(repoFile.parent, name), v)
+//        if (b.baseItemUrl != null && !DataUtils.isAbsoluteUrl(b.baseItemUrl!!)) {
+//          name = Path.of(b.baseItemUrl!!).joinToString("/") + name
+//        }
+        val parent = File(repoFile.parent)
+        parent.mkdirs()
+        mapper.writeValue(File(parent, name), v)
         
         val l = BundleVersionLink(v.versionId, name, v.versionName)
         versions.add(l)

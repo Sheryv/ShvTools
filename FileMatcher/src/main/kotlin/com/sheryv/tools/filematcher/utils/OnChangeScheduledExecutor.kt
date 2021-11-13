@@ -13,12 +13,12 @@ class OnChangeScheduledExecutor(private val name: String, private val delayMilli
     lg(javaClass.name + "#" + name).info("Refresh coroutine [$name] started with rate $delayMillis")
     refreshJob = inBackground {
       while (refreshJob?.isActive == true) {
-        delay(delayMillis)
         if (changed) {
-          lg(javaClass.name + "#" + name).debug("Refresh coroutine [$name] doing refresh")
           changed = false
+          lg(javaClass.name + "#" + name).debug("Refresh coroutine [$name] doing refresh")
           onChange()
         }
+        delay(delayMillis)
       }
     }
     

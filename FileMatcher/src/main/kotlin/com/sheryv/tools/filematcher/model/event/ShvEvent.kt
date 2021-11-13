@@ -6,4 +6,6 @@ interface ShvEvent
 
 class AbortEvent : ShvEvent
 
-class ItemStateChangedEvent(e: Entry) : ShvEvent
+class ItemStateChangedEvent(val e: Entry) : ShvEvent
+
+class ItemEnableChangedEvent(val e: Entry) : ShvEvent
