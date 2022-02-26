@@ -1,0 +1,40 @@
+plugins {
+    id 'org.springframework.boot' version '2.6.1'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id "org.jetbrains.kotlin.plugin.allopen" version "$kotlin_version"
+    id 'java'
+}
+group 'com.sheryv'
+version '0.1.0'
+ext.shortVersion = '0.1'
+ext.className = "com.sheryv.tools.cloudservermanager.ServerManagerApplication.kt"
+ext.longName = "Tool to manage applications running in cloud"
+ext.file = "ShvCloudServerManager"
+
+java {
+    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_11
+}
+
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    implementation("org.springframework.boot:spring-boot-starter-security")
+    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
+    implementation("org.thymeleaf.extras:thymeleaf-extras-springsecurity5")
+    runtimeOnly("org.postgresql:postgresql")
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation("org.springframework.security:spring-security-test")
+    compile project(':util')
+
+}
+
+test {
+    useJUnitPlatform()
+}
