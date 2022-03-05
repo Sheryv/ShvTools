@@ -4,13 +4,15 @@ plugins {
     id 'java'
     id 'application'
     id 'org.jetbrains.kotlin.jvm'
+    id "org.jetbrains.kotlin.kapt"
 }
 
 group 'com.sheryv'
-version '0.1.0'
+version '0.2.0'
 
 mainClassName = "com.sheryv.tools.copywithverifyhandler.ExecuteCopyWithVerifyMainKt"
 ext.className = mainClassName
+ext.shortVersion = "0.2"
 
 repositories {
     mavenCentral()
@@ -39,7 +41,15 @@ task nativeImage(type:Exec) {
 }
 
 dependencies {
-    implementation 'info.picocli:picocli:4.6.1'
+    implementation 'info.picocli:picocli:4.6.3'
+    kapt 'info.picocli:picocli-codegen:4.6.3'
+}
+
+kapt {
+    arguments {
+        arg("project", "${project.group}/${project.name}")
+        arg("other.resource.patterns", "Explorer.*")
+    }
 }
 
 test {

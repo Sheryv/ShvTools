@@ -32,7 +32,7 @@ object CopyHandlerCommandManager {
   }
   
   fun msg(msg: String) {
-    Runtime.getRuntime().exec(arrayOf("cmd", "/k", "msg", "%username%", msg))
+    Runtime.getRuntime().exec(arrayOf("cmd", "/k", "msg", "%username%", '"'+msg+'"'))
   }
 }
 
