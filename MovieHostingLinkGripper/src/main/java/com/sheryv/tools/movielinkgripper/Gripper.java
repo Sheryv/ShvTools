@@ -229,7 +229,7 @@ public class Gripper implements AutoCloseable {
     }
 
     public static String createSeriesDirectoryName(Series series) {
-        return String.format("%s %02d", series.getName(), series.getSeason());
+        return FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", series.getName(), series.getSeason()));
     }
 
     public Object executeScript(String script) {

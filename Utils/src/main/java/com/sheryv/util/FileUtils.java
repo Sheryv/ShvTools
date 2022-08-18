@@ -1,6 +1,7 @@
 package com.sheryv.util;
 
 import com.sheryv.util.property.PropertyUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.*;
 import java.nio.charset.Charset;
@@ -9,9 +10,13 @@ import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 public class FileUtils {
-    private FileUtils() {
+  
+  private static final Pattern FILE_NAME_FORBIDDEN_CHARS_PATTER = Pattern.compile("[\\\\/:*?\"<>|]");
+  
+  private FileUtils() {
     }
 
     private static Charset charset;
@@ -84,5 +89,15 @@ public class FileUtils {
             precision = 2;
         }
         return String.format("%." + precision + "f %s", mb, label);
+    }
+    
+    public static String fixFileName(String fileName) {
+      return FILE_NAME_FORBIDDEN_CHARS_PATTER.matcher(fileName).replaceAll("");
+    }
+    
+    public static String fixFileNameWithCollonSupport(String fileName) {
+      String s = StringUtils.replace(fileName, ": ", " - ");
+      s = StringUtils.replace(s, ":", "-");
+      return fixFileName(s);
     }
 }

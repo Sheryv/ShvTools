@@ -59,11 +59,13 @@ companion object MKVMergeVars {
       | --language 0:und
       | --language 1:en
       | --language 2:en
+      | %s
       | "(" "%s" ")"
-      | --sync 0:%d
-      | --language 0:%s
+      | --sync %d:%d
+      | --language %d:%s
+      | %s
       | "(" "%s" ")"
-      | --track-order 0:0,1:0,0:1,0:2""".trimMargin().replace("\n", "")
+      | --track-order 0:0,1:0,0:1,1:1,0:2""".trimMargin().replace("\n", "")
   
   private val TEMPLATE_WITHOUT_SUBTITLES =
     """$PROGRAM_PATH
@@ -74,11 +76,13 @@ companion object MKVMergeVars {
       | --no-chapters
       | --language 0:und
       | --language 1:en
+      | %s
       | "(" "%s" ")"
-      | --sync 0:%d
-      | --language 0:%s
+      | --sync %d:%d
+      | --language %d:%s
+      | %s
       | "(" "%s" ")"
-      | --track-order 0:0,1:0,0:1""".trimMargin().replace("\n", "")
+      | --track-order 0:0,1:0,0:1,1:1""".trimMargin().replace("\n", "")
   
   fun fillTemplate(
     output: String,
@@ -87,12 +91,20 @@ companion object MKVMergeVars {
     delay: Int,
     priority: String,
     lang: String,
-    hasSubtitles: Boolean
+    hasSubtitles: Boolean,
+    videoFlags: String ,
+    audioFlags: String ,
+    audioTrackId: Int = 0,
   ): String {
+    var audioId = audioTrackId;
+    if (inputAudio.endsWith(".mp4") || inputAudio.endsWith(".ts") || inputAudio.endsWith(".mkv")){
+      audioId = 1;
+    }
+    
     return if (hasSubtitles)
-      String.format(TEMPLATE, priority, escapeQuotes(output), escapeQuotes(inputVideo), delay, lang, escapeQuotes(inputAudio))
+      String.format(TEMPLATE, priority, escapeQuotes(output), videoFlags, escapeQuotes(inputVideo), audioId, delay, audioId, lang, audioFlags, escapeQuotes(inputAudio))
     else
-      String.format(TEMPLATE_WITHOUT_SUBTITLES, priority, escapeQuotes(output), escapeQuotes(inputVideo), delay, lang, escapeQuotes(inputAudio))
+      String.format(TEMPLATE_WITHOUT_SUBTITLES, priority, escapeQuotes(output), videoFlags, escapeQuotes(inputVideo), audioId, delay, audioId, lang, audioFlags, escapeQuotes(inputAudio))
   }
   
 }
@@ -119,7 +131,8 @@ fun convert(params: MKVMergeCommand) {
     outputDir.mkdirs()
     MKVMergeVars.fillTemplate(
       outputDir.resolve(it.key.name).toString(),
-      it.key.absolutePath, it.value.absolutePath, params.delay, params.priority, params.language, params.addSubtitles
+      it.key.absolutePath, it.value.absolutePath, params.delay, params.priority, params.language, params.addSubtitles,
+      params.videoInputOptions, params.audioInputOptions
     )
   }
   
@@ -261,6 +274,18 @@ class MKVMergeCommand {
   )
   var language: String = "pl"
   
+  @CommandLine.Option(
+    names = ["-ao"],
+    description = ["Additional options for video input file.","Default is \"\"."]
+  )
+  var videoInputOptions: String = ""
+  
+  @CommandLine.Option(
+    names = ["-vo"],
+    description = ["Additional options for audio input file.", "Default is \"-D\" what means skip video track from input file"]
+  )
+  var audioInputOptions: String = "-D"
+  
   fun createRegex() = Regex(pattern)
   
   fun getOutput(): File {
@@ -281,6 +306,8 @@ class MKVMergeCommand {
       |priority=$priority,
       |delay=$delay,
       |parallelThreads=$parallelThreads,
+      |videoInputOptions=$videoInputOptions,
+      |audioInputOptions=$audioInputOptions,
       |output=$output)""".trimMargin()
   }
 }

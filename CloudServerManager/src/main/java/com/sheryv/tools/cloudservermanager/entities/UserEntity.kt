@@ -6,14 +6,14 @@ import kotlin.jvm.Transient
 
 @Entity
 @Table(name = "users")
-class User {
+class UserEntity {
   @Id
   @Column(unique = true, nullable = false)
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   var id: Long? = null
   
-  @Column(length = 40)
-  var username: String? = null
+  @Column(name = "username", length = 40)
+  var login: String? = null
   
   @Column(length = 60)
   var password: String? = null
@@ -21,7 +21,7 @@ class User {
   @Column(name = "enabled")
   var isEnabled = true
   
-  @ManyToMany(fetch = FetchType.EAGER)
+  @ManyToMany(fetch = FetchType.LAZY)
   @JoinTable(
     name = "users_authorities",
     joinColumns = [JoinColumn(name = "user_id", referencedColumnName = "id")],

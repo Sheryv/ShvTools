@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.sheryv.tools.movielinkgripper.config.Configuration;
+import com.sheryv.util.FileUtils;
 import com.sheryv.util.Strings;
 import lombok.Getter;
 import lombok.Setter;
@@ -80,7 +81,6 @@ public class Episode {
         values.put("episode_number", String.format("%02d", n));
         values.put("episode_name", name);
         values.put("file_extension", "." + ext);
-        return Strings.fillTemplate(config.getEpisodeCodeFormatter() + nameFormatter, values)
-                .replaceAll("[\\\\/:*?\"<>|]", "");
+        return FileUtils.fixFileNameWithCollonSupport(Strings.fillTemplate(config.getEpisodeCodeFormatter() + nameFormatter, values));
     }
 }

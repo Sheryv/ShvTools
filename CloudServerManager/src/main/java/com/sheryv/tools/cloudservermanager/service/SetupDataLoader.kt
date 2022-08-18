@@ -1,11 +1,10 @@
 package com.sheryv.tools.cloudservermanager.service
 
 import com.sheryv.tools.cloudservermanager.entities.Authority
-import com.sheryv.tools.cloudservermanager.entities.User
+import com.sheryv.tools.cloudservermanager.entities.UserEntity
 import com.sheryv.tools.cloudservermanager.model.Authorities
 import com.sheryv.tools.cloudservermanager.repository.AuthorityRepository
 import com.sheryv.tools.cloudservermanager.repository.UserRepository
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.ApplicationListener
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.event.ContextRefreshedEvent
@@ -59,11 +58,11 @@ open class SetupDataLoader(
     lastName: String?,
     password: String?,
     roles: Collection<Authority>
-  ): User {
-    var user: User? = userRepository.findByUsername(username)
+  ): UserEntity {
+    var user: UserEntity? = userRepository.findByUsername(username)
     if (user == null) {
-      user = User()
-      user.username = username
+      user = UserEntity()
+      user.login = username
       user.password = passwordEncoder.encode(password)
       user.roles = roles
       
