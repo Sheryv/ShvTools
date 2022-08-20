@@ -31,7 +31,7 @@ public class Strings {
   
   public static String fillTemplate(String template, Map<String, Object> values) {
     return getTemplater(values).replace(template.toLowerCase());
-  }
+}
   
   public static String generateId(int size) {
     byte[] bytes = new byte[(int) Math.ceil(size * 0.75)];

@@ -185,6 +185,7 @@ class DevelopersToolView : BaseView() {
               it.error?.message.orEmpty(),
               "Error occurred when listing items form filesystem"
             )
+            else -> {}
           }
           
         }.start()
@@ -221,6 +222,7 @@ class DevelopersToolView : BaseView() {
               "Details", it.error?.stackTraceToString().orEmpty(),
               "Error occurred while loading repository", Alert.AlertType.ERROR, false, ButtonType.OK
             )
+            else -> {}
           }
         }.start()
       }
@@ -264,6 +266,7 @@ class DevelopersToolView : BaseView() {
                       "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
                       "Error verifying: ", Alert.AlertType.ERROR, wrapText = false
                     )
+                  else -> {}
                 }
               }.start()
             }
@@ -374,6 +377,7 @@ class DevelopersToolView : BaseView() {
             it.error?.message.orEmpty(),
             "Error occurred when updating"
           )
+          else -> {}
         }
       }.start()
     }
@@ -471,6 +475,7 @@ class DevelopersToolView : BaseView() {
             it.error?.message.orEmpty(),
             "Error occurred when generating"
           )
+          else -> {}
         }
       }.start()
     } catch (e: Exception) {
@@ -519,6 +524,7 @@ class DevelopersToolView : BaseView() {
           it.error?.message.orEmpty(),
           "Error occurred when saving"
         )
+        else -> {}
       }
     }.start()
   }

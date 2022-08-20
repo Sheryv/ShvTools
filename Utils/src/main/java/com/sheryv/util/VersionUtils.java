@@ -2,24 +2,26 @@ package com.sheryv.util;
 
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.*;
-import java.util.stream.StreamSupport;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 
 public class VersionUtils {
   
-  public static String loadVersionByModuleName(String moduleName) {
+  public static Version loadVersionByModuleName(String moduleName) {
     InputStream resourceAsStream = VersionUtils.class.getClassLoader().getResourceAsStream(moduleName + ".txt");
+    long ms = 0;
     try (BufferedReader reader = new BufferedReader(new InputStreamReader(resourceAsStream))) {
       StringBuilder builder = new StringBuilder();
-      String line = reader.readLine();
-      while (line != null) {
-        builder.append(line).append('\n');
-        line = reader.readLine();
+      String version = reader.readLine();
+      String time = reader.readLine();
+      if (StringUtils.isNotBlank(time)) {
+        ms = Long.parseLong(time);
       }
-      return builder.toString();
+      return new Version(version, ms);
     } catch (Exception e) {
       e.printStackTrace();
     }
-    return "";
+    return new Version("", ms);
   }
 }

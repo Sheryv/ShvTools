@@ -178,6 +178,7 @@ class MainView : BaseView() {
             it.error?.message.orEmpty(),
             "Found problems when validating repository configuration"
           )
+          else -> {}
         }
       }.start()
     }
@@ -204,6 +205,7 @@ class MainView : BaseView() {
                 "Error verifying: ", Alert.AlertType.ERROR, wrapText = false
               )
             ResultType.SUCCESS -> btnDownload.isDisable = false
+            else -> {}
           }
         }.start()
       }
@@ -258,6 +260,7 @@ class MainView : BaseView() {
                   DialogUtils.dialog("", "Download completed", Alert.AlertType.INFORMATION, ButtonType.OK)
                 }
               }
+              else -> {}
             }
           }.start()
         }
@@ -457,6 +460,7 @@ class MainView : BaseView() {
                       "Details", it.error?.stackTraceToString().orEmpty(),
                       "Error occurred while loading repository", Alert.AlertType.ERROR, false, ButtonType.OK
                     )
+                    else -> {}
                   }
                 }.start()
               }

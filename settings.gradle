@@ -2,6 +2,8 @@ rootProject.name = 'shvtools'
 
 include 'Utils'
 findProject(':Utils')?.name = 'util'
+include 'WebUtils'
+findProject(':WebUtils')?.name = 'web-util'
 
 
 include 'MovieHostingLinkGripper'

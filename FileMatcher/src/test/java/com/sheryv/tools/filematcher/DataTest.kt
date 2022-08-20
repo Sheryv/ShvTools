@@ -11,17 +11,17 @@ class DataTest {
   @Test
   fun name() {
     val s = "http://localhost/4/client/xenypack_4_client_-_mc_1.16.5_4.1.0.yaml"
-    DataUtils.downloadAndParse2(s, Map::class.java)
+    DataUtils.downloadAndParse(s, Map::class.java)
     var map2 = measureLog { DataUtils.downloadAndParse(s, Map::class.java) }
-    var map = measureLog { DataUtils.downloadAndParse2(s, Map::class.java) }
+    var map = measureLog { DataUtils.downloadAndParse(s, Map::class.java) }
     println()
   }
   
   @Test
   fun name2() {
-    DataUtils.downloadAndParse2("https://jsonplaceholder.typicode.com/todos/1", Map::class.java)
+    DataUtils.downloadAndParse("https://jsonplaceholder.typicode.com/todos/1", Map::class.java)
     var map2 = measureLog { DataUtils.downloadAndParse("https://jsonplaceholder.typicode.com/todos/1", Map::class.java) }
-    var map = measureLog { DataUtils.downloadAndParse2("https://jsonplaceholder.typicode.com/todos/1", Map::class.java) }
+    var map = measureLog { DataUtils.downloadAndParse("https://jsonplaceholder.typicode.com/todos/1", Map::class.java) }
     println(map == map2)
   }
   

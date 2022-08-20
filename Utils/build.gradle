@@ -2,8 +2,8 @@ apply plugin: 'maven-publish'
 
 
 ext.longName = "Shared project with utility classes"
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 1.11
+targetCompatibility = 1.11
 
 version getVersionName(name)
 
@@ -18,9 +18,5 @@ dependencies {
     compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
     compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.7'
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.7'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.0'
-    compile group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.13.0'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.13.0'
-    compile group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.0'
     compile group: 'org.apache.commons', name: 'commons-text', version: '1.8'
 }

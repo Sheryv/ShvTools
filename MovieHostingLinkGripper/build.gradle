@@ -8,7 +8,7 @@ ext.className = "com.sheryv.tools.movielinkgripper.Bootstrapper"
 mainClassName = ext.className
 
 dependencies {
-    compile project(':util')
+    compile project(':web-util')
 
 //    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 //    compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'

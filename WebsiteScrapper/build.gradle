@@ -1,8 +1,8 @@
 plugins {
     id 'java'
     id 'application'
-    id 'org.jetbrains.kotlin.jvm'
-    id "org.jetbrains.kotlin.plugin.allopen" version "1.6.0"
+    id 'org.jetbrains.kotlin.jvm' version "$kotlin_version"
+    id "org.jetbrains.kotlin.plugin.allopen" version "$kotlin_plugin_version"
     id 'org.openjfx.javafxplugin' version '0.0.10'
     id 'edu.sc.seis.launch4j' version '2.5.1'
 }
@@ -78,7 +78,7 @@ dependencies {
     compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '4.0.0'
     implementation 'org.jsoup:jsoup:1.14.3'
 //    compile group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.141.59'
-    compile project(':util')
+    compile project(':web-util')
 }
 
 test {

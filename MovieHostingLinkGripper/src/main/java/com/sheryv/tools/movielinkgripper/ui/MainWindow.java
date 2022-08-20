@@ -213,7 +213,7 @@ public class MainWindow {
 
         Configuration.setOnPausedChange(aBoolean -> continueBtn.setEnabled(aBoolean));
         continueBtn.addActionListener(e -> Configuration.setPaused(false));
-        statusBar.setText(VersionUtils.loadVersionByModuleName("movie-link-gripper-version"));
+        statusBar.setText(VersionUtils.loadVersionByModuleName("movie-link-gripper-version").getVersion());
         return this;
     }
 

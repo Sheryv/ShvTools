@@ -7,7 +7,7 @@ buildscript {
     }
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-allopen:$kotlin_plugin_version"
         classpath "org.openjfx:javafx-plugin:0.0.8"
         classpath "edu.sc.seis.launch4j:launch4j:2.5.0"
     }
@@ -88,5 +88,5 @@ compileTestKotlin {
 }
 
 dependencies {
-    compile project(':util')
+    compile project(':web-util')
 }

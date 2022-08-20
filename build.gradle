@@ -1,15 +1,23 @@
 import java.util.regex.Pattern
 
-buildscript {
-    repositories {
-        maven {
-            url = uri("https://plugins.gradle.org/m2/")
-        }
-    }
-    dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.6.0")
-    }
+
+
+//buildscript {
+//    repositories {
+//        maven {
+//            url = uri("https://plugins.gradle.org/m2/")
+//        }
+//    }
+//    dependencies {
+//        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${ext.kotlin}")
+//    }
+//}
+plugins {
+    id 'java'
+    id 'maven-publish'
 }
+
+String kotlin = '1.7.10'
 
 allprojects {
     apply plugin: 'java'
@@ -20,7 +28,8 @@ allprojects {
     ext.longName = "ShvTools root"
     ext.className = ""
     ext.site = 'https://github.com/Sheryv/ShvTools'
-    ext.kotlin_version = '1.6.0'
+    ext.kotlin_version = kotlin
+    ext.kotlin_plugin_version = '1.7.0'
     ext.shortVersion = "0.1"
 
     group = 'com.sheryv'
@@ -54,11 +63,12 @@ allprojects {
         def suffix = "-version.txt"
         def nm = projectDir.absolutePath + folder + module + suffix
         def f = new File((String) nm);
+        def time = System.currentTimeMillis()
         if (!f.exists()) {
             f = new File((String) nm)
-            f.write("0.1.0")
+            f.write("0.1.0\n"+time)
         }
-        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
+        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)\\s?.*")
         def version = f.getText()
         def matcherVersionNumber = patternVersionNumber.matcher(version)
         matcherVersionNumber.find()
@@ -70,7 +80,7 @@ allprojects {
         def newVer = begin + "." + (pointVersion + 1)
         println("Version inc: " + version + " > " + newVer)
 
-        f.write(newVer)
+        f.write(newVer+"\n"+time)
         return newVer
     }
     ext.getShortVersion = { module, folder = '\\src\\main\\resources\\' ->

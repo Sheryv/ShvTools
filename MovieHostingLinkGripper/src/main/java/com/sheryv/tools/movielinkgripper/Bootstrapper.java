@@ -7,6 +7,7 @@ import com.sheryv.util.FileUtils;
 import com.sheryv.util.SerialisationUtils;
 import com.sheryv.util.logging.Lg;
 import com.sheryv.util.logging.LoggingUtils;
+import com.sheryv.util.property.PropertyUtils;
 import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
@@ -83,7 +84,7 @@ public class Bootstrapper {
     private static void printDoc() {
         InputStream resourceAsStream = Bootstrapper.class.getClassLoader().getResourceAsStream("desc.txt");
         try {
-            String s = new String(resourceAsStream.readAllBytes(), FileUtils.getCharset());
+            String s = new String(resourceAsStream.readAllBytes(), PropertyUtils.getCharset());
             File file = new File(Configuration.CONFIG_FILE);
             if (file.exists()) {
                 String str = FileUtils.readFileInMemory(Configuration.CONFIG_FILE);
