@@ -65,7 +65,7 @@ companion object MKVMergeVars {
       | --language %d:%s
       | %s
       | "(" "%s" ")"
-      | --track-order 0:0,1:0,0:1,1:1,0:2""".trimMargin().replace("\n", "")
+      | --track-order 0:0,1:1,1:0,0:1,0:2""".trimMargin().replace("\n", "")
   
   private val TEMPLATE_WITHOUT_SUBTITLES =
     """$PROGRAM_PATH
@@ -82,7 +82,7 @@ companion object MKVMergeVars {
       | --language %d:%s
       | %s
       | "(" "%s" ")"
-      | --track-order 0:0,1:0,0:1,1:1""".trimMargin().replace("\n", "")
+      | --track-order 0:0,1:1,1:0,0:1""".trimMargin().replace("\n", "")
   
   fun fillTemplate(
     output: String,
@@ -214,7 +214,12 @@ println()
   name = "<command>",
   mixinStandardHelpOptions = true,
   version = [MKVMergeCommand.VERSION],
-  description = ["", "Adds audio track from separate file to MKV video. Version: " + MKVMergeCommand.VERSION, ""]
+  sortOptions = false,
+  usageHelpWidth = 120,
+  showDefaultValues = true,
+  parameterListHeading = "%nParameters:%n",
+  optionListHeading = "%nOptions:%n",
+  description = ["%nAdds audio track from separate file to MKV video. Version: " + MKVMergeCommand.VERSION]
 )
 class MKVMergeCommand {
   companion object {
@@ -227,64 +232,72 @@ class MKVMergeCommand {
   
   
   @CommandLine.Parameters(
-    paramLabel = "PATTERN",
-    description = [" regex pattern in file name to match, may be double quoted; it also used to match video and audio", "Example: when audio and video names contains \"Exx\" phrase eg. E01 then pattern \"[eE]\\d\\d\" can be used"]
+    paramLabel = "<PATTERN>",
+    description = ["Regex pattern in file name to match, may be double quoted; it also used to match video and audio", "Example: when audio and video names contains \"Exx\" phrase eg. E01 then pattern \"[eE]\\d\\d\" can be used"]
   )
   lateinit var pattern: String
   
-  @CommandLine.Parameters(paramLabel = "VIDEO_DIR", description = ["Path to dir with video files, can be empty \"\"."])
+  @CommandLine.Parameters(paramLabel = "<VIDEO_DIR>", description = ["Path to dir with video files, can be empty \"\"."])
   lateinit var videoDir: File
   
-  @CommandLine.Parameters(paramLabel = "AUDIO_DIR", description = ["Path to dir with audio files."])
+  @CommandLine.Parameters(paramLabel = "<AUDIO_DIR>", description = ["Path to dir with audio files."])
   lateinit var audioDir: File
   
   @CommandLine.Option(
     names = ["-s", "--copy-subtitles"],
+    defaultValue = "false",
     description = ["Whether to copy subtitles to target file. By default they are not copied"]
   )
   var addSubtitles = false
   
   @CommandLine.Option(
     names = ["-p", "--priority"],
-    description = ["Priority of process used by operating system; Valid values are \"lowest\", \"lower\", \"normal\", \"higher\", \"highest\".", "Default is higher"]
+    defaultValue = PRIORITY_HIGH,
+    description = ["Priority of process used by operating system; Valid values are \"lowest\", \"lower\", \"normal\", \"higher\", \"highest\"."]
   )
   var priority: String = PRIORITY_HIGH
   
   @CommandLine.Option(
+    names = ["-o", "--output"],
+    defaultValue = "output",
+    description = ["Directory for output files, relative to VIDEO_DIR path. Absolute paths can be used."]
+  )
+  var output: String = ""
+  
+  @CommandLine.Option(
     names = ["-d", "--delay"],
-    description = ["Delay of audio track in milliseconds, can be negative.", "Default is 0"]
+    defaultValue = "0",
+    description = ["Delay of audio track in milliseconds, can be negative."]
   )
   var delay: Int = 0
   
   @CommandLine.Option(
     names = ["-t", "--threads"],
-    description = ["Number of parallel threads to use.", "Default is 4"]
+    defaultValue = "4",
+    description = ["Number of parallel threads to use."]
   )
-  var parallelThreads: Int = 4
-  
-  @CommandLine.Option(
-    names = ["-o", "--output"],
-    description = ["Directory for output files, relative to VIDEO_DIR path. Absolute paths can be used.", "Default is \"output\"."]
-  )
-  var output: String = "output"
+  var parallelThreads: Int = 0
   
   @CommandLine.Option(
     names = ["--language"],
-    description = ["Language of added audio track. Consists of 2 chars. Ex. \"en\". Default is \"pl\"."]
+    defaultValue = "pl",
+    description = ["Language of added audio track. Consists of 2 chars. Ex. \"en\"."]
   )
-  var language: String = "pl"
+  var language: String = ""
   
   @CommandLine.Option(
-    names = ["-ao"],
-    description = ["Additional options for video input file.","Default is \"\"."]
+    names = ["-vo"],
+    description = ["Additional options for video input file.", "See https://mkvtoolnix.download/doc/mkvmerge.html#d4e1970"]
   )
   var videoInputOptions: String = ""
   
   @CommandLine.Option(
-    names = ["-vo"],
-    description = ["Additional options for audio input file.", "Default is \"-D\" what means skip video track from input file"]
+    names = ["-ao"],
+    defaultValue = "-D",
+    description = ["Additional options for audio input file.", "See https://mkvtoolnix.download/doc/mkvmerge.html#d4e1970",
+      "\"-D\" means skip video track from input file"]
   )
-  var audioInputOptions: String = "-D"
+  var audioInputOptions: String = ""
   
   fun createRegex() = Regex(pattern)
   

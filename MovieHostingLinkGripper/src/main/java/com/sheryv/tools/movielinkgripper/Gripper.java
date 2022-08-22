@@ -115,7 +115,7 @@ public class Gripper implements AutoCloseable {
                 provider.goToEpisodePage(item);
                 List<Hosting> allHostings = provider.loadItemDataFromSummaryPageAndGetVideoLinks(item);
                 if (allHostings.isEmpty())
-                    System.out.printf("No hosting found for: E%02d %s | %s%n", item.getNum(), item.getName(), item.getLink());
+                    log.warn(String.format("No hosting found for: E%02d %s | %s%n", item.getNum(), item.getName(), item.getLink()));
 
                 List<HostingConfig> priorities = getPriorities(i);
                 for (HostingConfig priority : priorities) {
@@ -154,7 +154,7 @@ public class Gripper implements AutoCloseable {
             FileUtils.saveFile(json, Paths.get(configuration.getDefaultFilePathWithEpisodesList()));
             log.info("\n" + ep.toString() + "\n");
         }
-        log.info(json);
+        log.info("Result: "+json);
     }
 
 

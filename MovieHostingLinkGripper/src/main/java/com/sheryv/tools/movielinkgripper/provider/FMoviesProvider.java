@@ -10,7 +10,7 @@ import java.util.List;
 
 public class FMoviesProvider extends VideoProvider {
 
-    public static final String BASE_URL = "https://www7.fmovies.se";
+    public static final String BASE_URL = "https://fmovies.to";
     private static final By SEL_IFRAME = By.cssSelector("#player iframe");
     public static final String EPISODES_CSS_SELECTOR = ".widget-body .items .item span";
     private static final By SEL_EPISODES = By.cssSelector(EPISODES_CSS_SELECTOR);
