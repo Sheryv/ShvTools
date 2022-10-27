@@ -30,7 +30,7 @@ javafx {
 }
 
 launch4j {
-    jar = "${project.buildDir}\\libs\\${project.name}-${project.ext.getShortVersion(project.name)}" + '.jar'
+    jar = "${project.buildDir}\\libs\\${project.name}-${project.ext.getVersionName(project.name)}" + '.jar'
     mainClassName = project.ext["className"]
     icon = "${projectDir}\\src\\main\\resources\\icons\\app.ico"
     mutexName = 'com.sheryv.tools.filematcher.FileMatcherGUIMutex'

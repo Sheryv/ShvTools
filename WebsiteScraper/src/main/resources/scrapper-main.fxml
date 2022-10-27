@@ -1,0 +1,235 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Hyperlink?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.MenuButton?>
+<?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.ProgressIndicator?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.Spinner?>
+<?import javafx.scene.control.SplitPane?>
+<?import javafx.scene.control.Tab?>
+<?import javafx.scene.control.TabPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.TreeView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sheryv.tools.websitescraper.view.MainView">
+   <children>
+      <MenuBar fx:id="menu" />
+      <HBox id="top-tools" alignment="CENTER_LEFT" spacing="10.0" VBox.vgrow="NEVER">
+         <VBox.margin>
+            <Insets bottom="5.0" left="10.0" right="10.0" top="5.0" />
+         </VBox.margin>
+         <children>
+            <MenuButton graphicTextGap="0.0" maxWidth="23.0" minWidth="20.0" mnemonicParsing="false">
+              <items>
+                <MenuItem mnemonicParsing="false" text="Action 1" />
+                <MenuItem mnemonicParsing="false" text="Action 2" />
+              </items>
+            </MenuButton>
+            <Pane HBox.hgrow="ALWAYS" />
+            <Label fx:id="lbSelected" text="Current" />
+            <Pane HBox.hgrow="ALWAYS" />
+            <ProgressIndicator maxHeight="30.0" maxWidth="30.0" HBox.hgrow="NEVER" />
+            <Button fx:id="btnPause" mnemonicParsing="false" styleClass="btn-info" text="Pause" />
+            <Button fx:id="btnStop" mnemonicParsing="false" styleClass="btn-danger" text="Stop" />
+            <Button fx:id="btnStart" mnemonicParsing="false" styleClass="btn-success" text="Start" />
+         </children>
+      </HBox>
+      <SplitPane dividerPositions="0.2745490981963928" maxHeight="1.7976931348623157E308" VBox.vgrow="ALWAYS">
+        <items>
+            <VBox maxHeight="1.7976931348623157E308" spacing="10.0">
+               <children>
+                  <TextField disable="true" promptText="Search..." />
+                  <VBox VBox.vgrow="ALWAYS">
+                     <children>
+                        <Label text="Scrapers" />
+                        <TreeView fx:id="tvScrapers" VBox.vgrow="ALWAYS" />
+                     </children>
+                  </VBox>
+               </children>
+               <padding>
+                  <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+               </padding>
+            </VBox>
+            <VBox>
+               <children>
+                  <TabPane maxWidth="1.7976931348623157E308" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                    <tabs>
+                      <Tab text="General">
+                           <content>
+                              <ScrollPane fitToHeight="true" fitToWidth="true">
+                                 <content>
+                                    <VBox spacing="10.0">
+                                       <children>
+                                          <VBox>
+                                             <children>
+                                                <Label text="Browsers found on this system (select 'Custom configuration' to provide custom paths)" />
+                                                <ComboBox fx:id="cbBrowser" maxWidth="1.7976931348623157E308" />
+                                             </children>
+                                          </VBox>
+                                          <VBox>
+                                             <children>
+                                                <CheckBox fx:id="chkUseUserProfile" mnemonicParsing="false" text="Use current user browser profile/session (if available)." wrapText="true" />
+                                                <Label text="Requires that selected browser is closed (No window is open in system)">
+                                                   <padding>
+                                                      <Insets left="22.0" />
+                                                   </padding>
+                                                </Label>
+                                             </children>
+                                          </VBox>
+                                          <VBox>
+                                             <children>
+                                                <Label text="Browser location (eg. chrome.exe path)" />
+                                                <TextField fx:id="tfBrowserPath" />
+                                             </children>
+                                          </VBox>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <VBox maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+                                                   <children>
+                                                      <Label text="Selenium driver location (eg. chromedriver.exe path)" />
+                                                      <TextField fx:id="tfBrowserDriverPath" maxWidth="1.7976931348623157E308" />
+                                                      <Label fx:id="lbDriverVersion" />
+                                                   </children>
+                                                </VBox>
+                                                <VBox>
+                                                   <children>
+                                                      <Label text="Driver type" />
+                                                      <ComboBox fx:id="cbBrowserDriverType" minWidth="150.0" />
+                                                   </children>
+                                                </VBox>
+                                             </children>
+                                          </HBox>
+                                          <VBox fx:id="vLinks" VBox.vgrow="NEVER">
+                                             <children>
+                                                <Separator prefWidth="200.0" />
+                                                <Label text="The driver must be in the same version as the browser. Download links are provided below." wrapText="true">
+                                                   <VBox.margin>
+                                                      <Insets bottom="5.0" top="10.0" />
+                                                   </VBox.margin>
+                                                </Label>
+                                                <FlowPane>
+                                                   <children>
+                                                      <Label text="Google Chrome drivers download page:" />
+                                                      <Hyperlink text="https://chromedriver.chromium.org/downloads" />
+                                                   </children>
+                                                </FlowPane>
+                                                <FlowPane>
+                                                   <children>
+                                                      <Label text="Firefox drivers download page:" />
+                                                      <Hyperlink text="https://github.com/mozilla/geckodriver/releases" />
+                                                   </children>
+                                                </FlowPane>
+                                                <FlowPane>
+                                                   <children>
+                                                      <Label text="Microsoft Edge drivers download page:" />
+                                                      <Hyperlink text="https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/#downloads" />
+                                                   </children>
+                                                </FlowPane>
+                                             </children>
+                                          </VBox>
+                                       </children>
+                                       <opaqueInsets>
+                                          <Insets />
+                                       </opaqueInsets>
+                                       <padding>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                              </ScrollPane>
+                           </content>
+                        </Tab>
+                        <Tab text="Scraper options">
+                           <content>
+                              <ScrollPane fitToHeight="true" fitToWidth="true" vbarPolicy="ALWAYS">
+                                 <content>
+                                    <VBox fx:id="vbOptions" spacing="15.0">
+                                       <children>
+                                          <AnchorPane styleClass="ValuePreviewSettingsRow" VBox.vgrow="NEVER">
+                                             <children>
+                                                <Label layoutY="6.0" text="Save path" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                                <TextField fx:id="tfSavePath" alignment="TOP_LEFT" editable="false" prefHeight="25.0" prefWidth="406.0" text="sdf s fsd  fsd f234234" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="174.0" AnchorPane.topAnchor="18.0">
+                                                   <opaqueInsets>
+                                                      <Insets />
+                                                   </opaqueInsets></TextField>
+                                                <Button fx:id="btnSavePath" layoutX="413.0" layoutY="17.0" mnemonicParsing="false" text="..." AnchorPane.rightAnchor="143.0" AnchorPane.topAnchor="18.0" />
+                                             </children>
+                                             <VBox.margin>
+                                                <Insets />
+                                             </VBox.margin>
+                                          </AnchorPane>
+                                          <Label text="Label" />
+                                          <VBox />
+                                          <Slider blockIncrement="2.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
+                                          <VBox styleClass="HeaderSettingsRow">
+                                             <children>
+                                                <Label maxWidth="-Infinity" text="General" />
+                                                <Separator prefWidth="200.0" />
+                                             </children>
+                                          </VBox>
+                                          <Label text="Label" />
+                                          <CheckBox mnemonicParsing="false" text="CheckBox">
+                                             <padding>
+                                                <Insets bottom="10.0" top="10.0" />
+                                             </padding>
+                                          </CheckBox>
+                                          <Button mnemonicParsing="false" styleClass="ic-copy">
+                                             <graphic>
+                                                <Region />
+                                             </graphic>
+                                          </Button>
+                                          <Spinner editable="true" />
+                                          <TextArea />
+                                       </children>
+                                       <padding>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </padding>
+                                    </VBox>
+                                 </content>
+                              </ScrollPane>
+                           </content>
+                        </Tab>
+                      <Tab text="Logs">
+                           <content>
+                              <TextArea fx:id="taLogs" editable="false" promptText="Logs...">
+                                 <opaqueInsets>
+                                    <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                                 </opaqueInsets>
+                              </TextArea>
+                           </content>
+                        </Tab>
+                    </tabs>
+                     <VBox.margin>
+                        <Insets />
+                     </VBox.margin>
+                  </TabPane>
+               </children>
+            </VBox>
+        </items>
+      </SplitPane>
+      <HBox>
+         <children>
+            <Label fx:id="lbState" text="Select Scraper from left panel and press Start" />
+         </children>
+         <VBox.margin>
+            <Insets bottom="5.0" left="10.0" right="10.0" />
+         </VBox.margin>
+      </HBox>
+   </children>
+</VBox>

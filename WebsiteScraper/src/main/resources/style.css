@@ -1,0 +1,208 @@
+.root {
+    -fx-light-text-color: -fx-text-inner-color;
+    -icon-paint: -fx-light-text-color;
+}
+
+.tab, #top-tools {
+    -fx-font-size: 14px;
+}
+
+.mono {
+    -fx-font-family: 'Consolas', 'JetBrains Mono', monospace;
+    -fx-font-size: 1.1em;
+}
+
+.btn-large {
+    -fx-font-weight: bold;
+    -fx-font-size: 12pt;
+    -fx-label-padding: 0px 15px;
+}
+
+.btn-info {
+    -fx-color: #008cff;
+}
+
+.btn-info:hover {
+    -fx-color: #008cff;
+}
+
+.btn-danger {
+    -fx-color: #d2343e;
+}
+
+.btn-danger:hover {
+    -fx-color: #d2343e;
+}
+
+.btn-success {
+    -fx-color: #029f0c;
+}
+
+.btn-success:hover {
+    -fx-color: #029f0c;
+}
+
+.t-success {
+    -fx-text-fill: #278d00;
+}
+
+.t-danger {
+    -fx-text-fill: #b7313a;
+}
+
+.btn-icon {
+    -icon-paint: #dedede;
+    -fx-label-padding: 5px 2px;
+}
+
+.btn-icon Region {
+    -fx-background-color: -icon-paint;
+    -size: 20px;
+    -fx-min-height: -size;
+    -fx-min-width: -size;
+    -fx-max-height: -size;
+    -fx-max-width: -size;
+    -fx-shape: -icon-path;
+}
+
+.icon-add {
+    -icon-path: "M357,204H204v153h-51V204H0v-51h153V0h51v153h153V204z";
+}
+
+.icon-remove {
+    -icon-path: "M0,0v10h20v4h-20v10Z";
+}
+
+.important-bg {
+    -fx-background-color: rgba(255, 102, 176, 0.45);
+}
+
+
+.tree-table-row-cell, .table-row-cell {
+    -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background;
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 0.0em;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+.tree-table-row-cell:odd, .table-row-cell:odd {
+    -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background, -2%);
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+.tree-table-row-cell:selected, .table-row-cell:selected {
+    -fx-background-color: derive(-fx-control-inner-background, -20%);
+    -fx-background-insets: 0, 1, 2;
+}
+
+.tree-table-view:focused .tree-table-row-cell:selected,
+.table-view:focused .table-row-cell:selected {
+    -fx-background-color: derive(-fx-accent, -5%), -fx-accent;
+}
+
+.container-border {
+    -fx-border-color: derive(-fx-control-inner-background, -20%);
+    -fx-border-radius: 5px;
+    -fx-border-width: 1px;
+}
+
+.running-step-row {
+    -fx-background-color: derive(#029f0c, 100%);
+    -fx-border-width: 1px;
+}
+
+.running-step-row-parent {
+    -fx-background-color: derive(-fx-control-inner-background, -20%);
+    -fx-border-width: 1px;
+}
+
+.additional-fields-header {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 15 0 0 0;
+    -fx-border-width: 0 0 1 0;
+    -fx-border-color: derive(-fx-control-inner-background, 35%);
+}
+
+.btn-clear {
+    -fx-border-image-insets: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 10px;
+    -fx-background-image: url('icons/clear_white_48dp.png');
+    -fx-background-color: derive(-fx-control-inner-background, -30%);
+    -fx-background-size: 20px 20px;
+    -fx-background-position: center;
+    -fx-background-insets: 2px;
+    -fx-background-repeat: no-repeat;
+}
+
+.btn-clear:hover {
+    -fx-background-color: derive(-fx-control-inner-background, -50%);
+}
+
+.t-dark {
+    -fx-text-fill: derive(-fx-dark-text-color, 90%);
+}
+
+.ic-more-vert {
+    -fx-min-height: 5px;
+    -fx-min-width: 5px;
+    -fx-padding: 4px 1em;
+}
+
+.ic-more-vert Region {
+    -fx-pref-width: 0.25em;
+    -fx-max-height: 1em;
+    -fx-scale-shape: true;
+    -fx-position-shape: true;
+    -fx-background-color: -icon-paint;
+    -fx-shape: 'M24.05 41.7q-1.25 0-2.125-.875t-.875-2.075q0-1.2.875-2.1.875-.9 2.075-.9 1.25 0 2.1.9.85.9.85 2.1 0 1.2-.85 2.075-.85.875-2.05.875Zm0-14.75q-1.25 0-2.125-.875T21.05 24q0-1.25.875-2.1.875-.85 2.075-.85 1.25 0 2.1.85.85.85.85 2.05 0 1.25-.85 2.125t-2.05.875Zm0-14.7q-1.25 0-2.125-.875T21.05 9.25q0-1.25.875-2.125T24 6.25q1.25 0 2.1.875.85.875.85 2.125t-.85 2.125q-.85.875-2.05.875Z';
+}
+
+.ic-copy Region {
+    -fx-pref-width: 1em;
+    -fx-max-height: 1em;
+    -fx-scale-shape: true;
+    -fx-position-shape: true;
+    -fx-background-color: -icon-paint;
+    -fx-shape: 'M16 1H2v16h2V3h12V1zm5 4H6v18h15V5zm-2 16H8V7h11v14z';
+}
+
+.i-success {
+    -icon-paint: #029f0c
+}
+
+.i-info {
+    -icon-paint: #008cff
+}
+
+.i-danger {
+    -icon-paint: #d2343e
+}
+
+.ValuePreviewSettingsRow {
+
+}
+
+.ValuePreviewSettingsRow TextField {
+    -fx-border-insets: 0px;
+    -fx-border-width: 0px;
+    -fx-padding: 0px;
+    -fx-background-insets: 0px ;
+    -fx-font-weight: bold;
+    -fx-background-color: transparent ;
+    -fx-alignment: top-left;
+}
+
+.HeaderSettingsRow {
+    -fx-padding: 12px 0 0 0;
+}
+
+.HeaderSettingsRow Label {
+    -fx-font-size: 1.8em;
+    -fx-font-weight: bold;
+}
+
+.BoolSettingsRow {
+    -fx-padding: 0.8em 0;
+}

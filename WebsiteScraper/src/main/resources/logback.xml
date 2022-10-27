@@ -1,0 +1,35 @@
+<configuration>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <!-- encoders are assigned the type
+             ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
+        <encoder>
+            <pattern>%blue(%d{HH:mm:ss.SSS}) | %-15.15thread{16} | %highlight(%-5level) | %cyan(%45.45logger{41}:%-4line) %yellow(->) %msg%n</pattern>
+        </encoder>
+    </appender>
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>logs/file-matcher.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>logs/file-matcher.%d{yyyy-MM-dd}.gz</fileNamePattern>
+            <maxHistory>7</maxHistory>
+            <totalSizeCap>1GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} | %thread | %level | %logger{36}:%line -> %msg%n</pattern>
+        </encoder>
+    </appender>
+
+<!--    <if condition='Boolean.parseBoolean(property("debug"))'>-->
+<!--        <then>-->
+            <root level="info">
+                <appender-ref ref="STDOUT"/>
+            </root>
+<!--        </then>-->
+<!--        <else>-->
+<!--            <root level="info">-->
+<!--                <appender-ref ref="FILE"/>-->
+<!--            </root>-->
+<!--        </else>-->
+<!--    </if>-->
+</configuration>

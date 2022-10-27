@@ -55,55 +55,71 @@ allprojects {
         }
     }
 
-    ext.getVersionName = { module, folder = '\\src\\main\\resources\\' ->
-//    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
+//    ext.getVersionName = { module, folder = '\\src\\main\\resources\\' ->
+////    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
+////    println "VersionCode is set to $code"
+////    return code
+//
+//        def suffix = "-version.txt"
+//        def nm = projectDir.absolutePath + folder + module + suffix
+//        def f = new File((String) nm);
+//        def time = System.currentTimeMillis()
+//        if (!f.exists()) {
+//            f = new File((String) nm)
+//            f.write("0.1.0\n"+time)
+//        }
+//        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)\\s?.*")
+//        def version = f.getText()
+//        def matcherVersionNumber = patternVersionNumber.matcher(version)
+//        matcherVersionNumber.find()
+//        def majorVersion = Integer.parseInt(matcherVersionNumber.group(1))
+//        def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
+//        def pointVersion = Integer.parseInt(matcherVersionNumber.group(3))
+//        def begin = majorVersion + "." + minorVersion
+//        project.ext.shortVersion = begin
+//        def newVer = begin + "." + (pointVersion + 1)
+//        println("Version inc: " + version + " > " + newVer)
+//
+//        f.write(newVer+"\n"+time)
+//        return newVer
+//    }
+    ext.getVersionName = { module, getShort = false, inc = false ->
+        //    def code = project.hasProperty("versionCode") ? versionCode.toInteger() : -1
 //    println "VersionCode is set to $code"
 //    return code
-
+        def fol = "\\src\\main\\resources\\"
+        def folder = fol
         def suffix = "-version.txt"
-        def nm = projectDir.absolutePath + folder + module + suffix
-        def f = new File((String) nm);
-        def time = System.currentTimeMillis()
+        def nm = "$projectDir.absolutePath$folder$module$suffix"
+        def f = file(nm)
         if (!f.exists()) {
-            f = new File((String) nm)
-            f.write("0.1.0\n"+time)
+            f = file(nm)
+            f.write("$version\n" + System.currentTimeMillis())
         }
-        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)\\s?.*")
-        def version = f.getText()
+        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
+        def lines = f.readLines()
+        def version = lines.get(0)
         def matcherVersionNumber = patternVersionNumber.matcher(version)
         matcherVersionNumber.find()
         def majorVersion = Integer.parseInt(matcherVersionNumber.group(1))
         def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
         def pointVersion = Integer.parseInt(matcherVersionNumber.group(3))
-        def begin = majorVersion + "." + minorVersion
-        project.ext.shortVersion = begin
-        def newVer = begin + "." + (pointVersion + 1)
-        println("Version inc: " + version + " > " + newVer)
-
-        f.write(newVer+"\n"+time)
-        return newVer
-    }
-    ext.getShortVersion = { module, folder = '\\src\\main\\resources\\' ->
-//    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
-//    println "VersionCode is set to $code"
-//    return code
-
-        def suffix = "-version.txt"
-        def nm = projectDir.absolutePath + folder + module + suffix
-        def f = new File((String) nm);
-        if (!f.exists()) {
-            f = new File((String) nm)
-            f.write("0.1.0")
+        def shorter = "$majorVersion.$minorVersion"
+        project.ext["shortVersion"] = shorter
+        def longer
+        if (inc) {
+            longer = "$shorter.${pointVersion + 1}"
+            f.write(longer + "\n" + System.currentTimeMillis())
+            println("Version inc: $version > $longer")
+        } else {
+            longer = "$shorter.${pointVersion}"
         }
-        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
-        def version = f.getText()
-        def matcherVersionNumber = patternVersionNumber.matcher(version)
-        matcherVersionNumber.find()
-        def majorVersion = Integer.parseInt(matcherVersionNumber.group(1))
-        def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
-        def begin = majorVersion + "." + minorVersion
-        project.ext.shortVersion = begin
-        return begin
+        project.ext["fullVersion"] = longer
+        project.version = longer
+        if (getShort) {
+            return shorter
+        }
+        return longer
     }
 
     publishing {
