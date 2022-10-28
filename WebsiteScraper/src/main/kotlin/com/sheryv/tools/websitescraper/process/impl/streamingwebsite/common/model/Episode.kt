@@ -15,10 +15,11 @@ data class Episode(
   val type: EpisodeTypes? = null,
   val format: EpisodeFormat? = null,
   val errors: List<ErrorEntry> = emptyList(),
-  val updated: OffsetDateTime = Utils.now()
+  val created: OffsetDateTime = Utils.now()
 ) {
   @JsonIgnore
-  val lastSize: Long = 0
+  var lastSize: Long = 0
+  val updated: OffsetDateTime = Utils.now()
   
   fun generateFileName(series: Series, fileExtension: String, settings: StreamingWebsiteSettings): String {
     var ext = fileExtension

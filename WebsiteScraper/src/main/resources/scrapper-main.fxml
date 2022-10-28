@@ -44,7 +44,7 @@
             <Pane HBox.hgrow="ALWAYS" />
             <Label fx:id="lbSelected" text="Current" />
             <Pane HBox.hgrow="ALWAYS" />
-            <ProgressIndicator maxHeight="30.0" maxWidth="30.0" HBox.hgrow="NEVER" />
+            <ProgressIndicator fx:id="progressProcess" maxHeight="30.0" maxWidth="30.0" HBox.hgrow="NEVER" />
             <Button fx:id="btnPause" mnemonicParsing="false" styleClass="btn-info" text="Pause" />
             <Button fx:id="btnStop" mnemonicParsing="false" styleClass="btn-danger" text="Stop" />
             <Button fx:id="btnStart" mnemonicParsing="false" styleClass="btn-success" text="Start" />

@@ -95,7 +95,7 @@ class FilmwebScraper(configuration: Configuration, browser: BrowserDef, def: Scr
   }
   
   private fun save(a: Any?): Any {
-    Utils.jsonMapper().writeValue(File(settings.outputPath), result)
+    Utils.jsonMapper.writeValue(File(settings.outputPath), result)
     lg().info("File saved " + settings.outputPath)
     return ""
   }

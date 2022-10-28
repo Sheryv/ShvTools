@@ -3,12 +3,14 @@ package com.sheryv.tools.websitescraper.view
 import com.sheryv.tools.websitescraper.*
 import com.sheryv.tools.websitescraper.browser.*
 import com.sheryv.tools.websitescraper.config.Configuration
+import com.sheryv.tools.websitescraper.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.websitescraper.process.Runner
 import com.sheryv.tools.websitescraper.process.ScraperRegistry
 import com.sheryv.tools.websitescraper.process.base.ScraperDef
 import com.sheryv.tools.websitescraper.process.impl.streamingwebsite.common.model.Series
-import com.sheryv.tools.websitescraper.service.IDMService
+import com.sheryv.tools.websitescraper.service.streamingwebsite.IDMService
 import com.sheryv.tools.websitescraper.utils.*
+import com.sheryv.tools.websitescraper.view.search.SearchWindow
 import com.sheryv.tools.websitescraper.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.websitescraper.view.settings.SettingsPanelReader
 import com.sheryv.util.VersionUtils
@@ -23,6 +25,8 @@ import javafx.scene.layout.Pane
 import javafx.scene.layout.VBox
 import java.io.File
 import java.nio.file.Path
+import javax.swing.JFrame
+import javax.swing.UIManager
 
 
 class MainView : BaseView(), ViewActionsProvider {
@@ -85,33 +89,23 @@ class MainView : BaseView(), ViewActionsProvider {
     } else {
       tvScrapers.selectionModel.select(ViewUtils.findFirstLeafInTree(tvScrapers.root))
     }
-    btnStart.setOnAction {
-      if (selected != null) {
-        val browser: BrowserDef = if (isCustomBrowser()) {
-          BrowserDef(
-            BrowserType.OTHER,
-            tfBrowserPath.text,
-            DriverDef(cbBrowserDriverType.selectionModel.selectedItem, tfBrowserDriverPath.text)
-          )
-        } else {
-          browsers.get(cbBrowser.selectionModel.selectedItem)!!
+    btnStart.setOnAction { startPauseProcess() }
+    btnPause.setOnAction { startPauseProcess() }
+    btnStop.isVisible = false
+    btnPause.isDisable = true
+    progressProcess.isVisible = false
+    GlobalState.processingState.addListener { o, n ->
+      when (n!!) {
+        ProcessingStates.RUNNING -> {
+          progressProcess.isVisible = true
+          btnStart.isDisable = true
+          btnPause.isDisable = false
         }
-        val runner = Runner(config, browser, selected!!)
-        val settings = settingsReader.invoke()
-        inBackground {
-          try {
-            runner.prepare(settings)
-            saveConfig()
-            runner.start()
-          } catch (e: Exception) {
-            lg().error("Running error", e)
-            inViewThread {
-              DialogUtils.textAreaDialog(
-                "Details", e.stackTraceToString(),
-                "Error occurred while scraping", Alert.AlertType.ERROR, false, ButtonType.OK
-              )
-            }
-          }
+        ProcessingStates.PAUSED -> progressProcess.isVisible = false
+        ProcessingStates.IDLE -> {
+          progressProcess.isVisible = false
+          btnStart.isDisable = false
+          btnPause.isDisable = true
         }
       }
     }
@@ -171,7 +165,10 @@ class MainView : BaseView(), ViewActionsProvider {
       },
       Menu("Process").apply {
         items.addAll(
-          MenuItem("Start / Pause").apply { accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN) },
+          MenuItem("Start / Pause").apply {
+            accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)
+            setOnAction { startPauseProcess() }
+          },
           MenuItem("Stop").apply { accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN) },
         )
       },
@@ -200,7 +197,7 @@ class MainView : BaseView(), ViewActionsProvider {
               inBackground {
                 try {
                   val settings = selected!!.findSettings(config)
-                  val (done, all) = IDMService(config).addToIDM(Utils.jsonMapper().readValue(File(settings.outputPath), Series::class.java))
+                  val (done, all) = IDMService(config).addToIDM(Utils.jsonMapper.readValue(File(settings.outputPath), Series::class.java))
                   inViewThread {
                     DialogUtils.dialog("Added to IDM $done out of $all episodes")
                   }
@@ -213,6 +210,11 @@ class MainView : BaseView(), ViewActionsProvider {
                   }
                 }
               }
+            }
+          },
+          MenuItem("Tv Show search tool").apply {
+            setOnAction {
+              openSearchEpisodesWindow()
             }
           },
         )
@@ -238,6 +240,47 @@ class MainView : BaseView(), ViewActionsProvider {
         })
       }
     )
+  }
+  
+  private fun startPauseProcess() {
+    if (selected != null) {
+      when (GlobalState.processingState.value) {
+        ProcessingStates.IDLE -> {
+          GlobalState.processingState.set(ProcessingStates.RUNNING)
+          
+          val browser: BrowserDef = if (isCustomBrowser()) {
+            BrowserDef(
+              BrowserType.OTHER,
+              tfBrowserPath.text,
+              DriverDef(cbBrowserDriverType.selectionModel.selectedItem, tfBrowserDriverPath.text)
+            )
+          } else {
+            browsers.get(cbBrowser.selectionModel.selectedItem)!!
+          }
+          val runner = Runner(config, browser, selected!!)
+          val settings = settingsReader.invoke()
+          inBackground {
+            try {
+              runner.prepare(settings)
+              saveConfig()
+              runner.start()
+            } catch (e: Exception) {
+              lg().error("Running error", e)
+              inViewThread {
+                DialogUtils.textAreaDialog(
+                  "Details", e.stackTraceToString(),
+                  "Error occurred while scraping", Alert.AlertType.ERROR, false, ButtonType.OK
+                )
+              }
+            } finally {
+              GlobalState.processingState.set(ProcessingStates.IDLE)
+            }
+          }
+        }
+        ProcessingStates.RUNNING -> GlobalState.processingState.set(ProcessingStates.PAUSED)
+        ProcessingStates.PAUSED -> GlobalState.processingState.set(ProcessingStates.RUNNING)
+      }
+    }
   }
   
   private fun showSettingsForSelectedScraper() {
@@ -283,6 +326,19 @@ class MainView : BaseView(), ViewActionsProvider {
     DialogUtils.dialog(message, header, owner = stage, buttons = arrayOf(ButtonType.OK))
   }
   
+  private fun openSearchEpisodesWindow() {
+    if (selected!!.findSettings(config) !is StreamingWebsiteSettings) {
+      DialogUtils.dialog("This feature is only available for video streaming scrapers")
+      return
+    }
+    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+    val f = JFrame()
+    f.title = "Search and fill episodes links"
+    f.contentPane.add(SearchWindow().init(config, selected!!.findSettings(config) as StreamingWebsiteSettings).mainPanel)
+    f.setSize(1200, 750)
+    f.isVisible = true
+  }
+  
   @FXML
   private lateinit var tfSavePath: TextField
   
@@ -296,7 +352,10 @@ class MainView : BaseView(), ViewActionsProvider {
   private lateinit var btnStart: Button
   
   @FXML
-  private lateinit var btnSavePath: Button
+  private lateinit var btnPause: Button
+  
+  @FXML
+  private lateinit var btnStop: Button
   
   @FXML
   private lateinit var tvScrapers: TreeView<ScraperListItem>
@@ -330,4 +389,7 @@ class MainView : BaseView(), ViewActionsProvider {
   
   @FXML
   private lateinit var menu: MenuBar
+  
+  @FXML
+  private lateinit var progressProcess: ProgressIndicator
 }

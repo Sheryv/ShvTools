@@ -40,7 +40,7 @@ abstract class StreamingWebsiteBase(
   protected suspend fun start() {
     series = (if (Files.exists(Path.of(settings.outputPath))) {
       try {
-        val current = Utils.jsonMapper().readValue(File(settings.outputPath), Series::class.java)
+        val current = Utils.jsonMapper.readValue(File(settings.outputPath), Series::class.java)
         if (current.season == settings.seasonNumber && settings.seriesName.equals(current.title, true)) {
           current.copy(title = settings.seriesName, seriesUrl = getSeriesLink())
         } else {
@@ -123,7 +123,7 @@ abstract class StreamingWebsiteBase(
       episodes.add(ep)
       episodes.sortBy { it.number }
       series = series.copy(episodes = episodes)
-      Utils.jsonMapper().writeValue(File(settings.outputPath), series)
+      Utils.jsonMapper.writeValue(File(settings.outputPath), series)
       lg().info("\n$ep\n")
       i++
     }

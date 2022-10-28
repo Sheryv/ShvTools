@@ -1,4 +1,4 @@
-package com.sheryv.tools.websitescraper.service
+package com.sheryv.tools.websitescraper.service.streamingwebsite
 
 import com.sheryv.tools.websitescraper.GlobalState
 import com.sheryv.tools.websitescraper.config.Configuration
@@ -27,7 +27,7 @@ class IDMService(val configuration: Configuration) {
     return c to episodes.size
   }
   
-  private fun addSingle(series: Series, episode: Episode, settings: StreamingWebsiteSettings) {
+  fun addSingle(series: Series, episode: Episode, settings: StreamingWebsiteSettings) {
     val idmExePath: String = settings.idmExePath!!
     require(idmExePath.isNotBlank()) { "Path to IDM exe cannot be empty" }
     val ex = String.format(

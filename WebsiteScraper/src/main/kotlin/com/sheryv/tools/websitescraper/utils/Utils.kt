@@ -67,7 +67,9 @@ object Utils {
       .toString() + " " + units[digitGroups]
   }
   
-  fun jsonMapper(types: Map<String, Class<*>> = emptyMap()): ObjectMapper {
+  val jsonMapper by lazy { createJsonMapper() }
+  
+  fun createJsonMapper(types: Map<String, Class<*>> = emptyMap()): ObjectMapper {
     val map = ObjectMapper()
     map.configure(SerializationFeature.INDENT_OUTPUT, true)
     map.registerModule(KotlinModule.Builder().build())
@@ -82,7 +84,7 @@ object Utils {
   inline fun <reified T> deserializeList(list: List<*>?): List<T>? {
     if (list == null) return null
     val type = object : TypeReference<List<T>>() {}
-    return jsonMapper().convertValue(list, type)
+    return jsonMapper.convertValue(list, type)
   }
   
   inline fun <reified T> jacksonTypeRef(): TypeReference<T> = object : TypeReference<T>() {}

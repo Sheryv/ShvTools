@@ -43,7 +43,7 @@ class Configuration(
   companion object {
     @JvmStatic
     private val mapper by lazy {
-      Utils.jsonMapper(ScraperRegistry.DEFAULT.all().associate { it.id to it.settingsClass })
+      Utils.createJsonMapper(ScraperRegistry.DEFAULT.all().associate { it.id to it.settingsClass })
     }
     
     
