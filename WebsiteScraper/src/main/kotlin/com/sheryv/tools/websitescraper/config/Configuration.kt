@@ -24,6 +24,7 @@ class Configuration(
   var browserDriverType: DriverType? = null,
   var scrapper: String? = null,
   var useUserProfile: Boolean? = null,
+  var lastUserScript: String = "",
   @JsonDeserialize(using = SettingsDeserializer::class)
   val settings: MutableMap<String, SettingsBase>
 ) {
@@ -103,9 +104,10 @@ class Configuration(
     browserDriverType: DriverType? = this.browserDriverType,
     scrapper: String? = this.scrapper,
     useUserProfile: Boolean? = this.useUserProfile,
+    lastUserScript: String = this.lastUserScript,
     settings: MutableMap<String, SettingsBase> = this.settings.toMutableMap()
   ): Configuration {
-    return Configuration(browser, browserPath, browserDriverPath, browserDriverType, scrapper, useUserProfile, settings)
+    return Configuration(browser, browserPath, browserDriverPath, browserDriverType, scrapper, useUserProfile, lastUserScript, settings)
   }
 }
 

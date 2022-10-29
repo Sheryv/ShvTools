@@ -56,8 +56,10 @@ abstract class StreamingWebsiteBase(
     driver.get(series.seriesUrl)
     driver.waitForVisibility(By.tagName("body"))
     title = driver.title
+    waitIfPaused()
     
     val items: List<VideoData> = findEpisodeItems()
+    waitIfPaused()
     var i = settings.searchStartIndex
     while (i <= items.size && i <= settings.searchStopIndex) {
       val item: VideoData = items[i - 1]
@@ -72,7 +74,9 @@ abstract class StreamingWebsiteBase(
       val err = mutableListOf<ErrorEntry>()
       try {
         goToEpisodePage(item)
+        waitIfPaused()
         val allServers: List<VideoServer> = loadItemDataFromSummaryPageAndGetServers(item)
+        waitIfPaused()
         if (allServers.isEmpty()) throw IllegalArgumentException(
           String.format(
             "No hosting found for: E%02d %s | %s%n",
@@ -90,7 +94,9 @@ abstract class StreamingWebsiteBase(
           for (server in servers) {
             try {
               item.server = server
+              waitIfPaused()
               goToExternalServerVideoPage(item)
+              waitIfPaused()
               downloadUrl = findLoadedVideoDownloadUrl(item)
               if (!downloadUrl.isNullOrEmpty()) {
                 break
@@ -123,6 +129,7 @@ abstract class StreamingWebsiteBase(
       episodes.add(ep)
       episodes.sortBy { it.number }
       series = series.copy(episodes = episodes)
+      waitIfPaused()
       Utils.jsonMapper.writeValue(File(settings.outputPath), series)
       lg().info("\n$ep\n")
       i++
@@ -161,9 +168,7 @@ abstract class StreamingWebsiteBase(
           runBlocking(Dispatchers.Main) {
             GlobalState.view.showMessageDialog("Captcha detected! Solve it and resume process.")
           }
-          do {
-            delay(500)
-          } while (GlobalState.processingState.value == ProcessingStates.PAUSED)
+          waitIfPaused()
         }
       } catch (e: Exception) {
         lg().error("At searching for captcha: {}", e.message)
@@ -250,4 +255,5 @@ abstract class StreamingWebsiteBase(
       CommonVideoServers.UPSTREAM to object : VideoServerHandler(CommonVideoServers.UPSTREAM, driver, support) {},
     )
   }
+  
 }

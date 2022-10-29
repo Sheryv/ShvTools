@@ -39,11 +39,11 @@ class StreamingWebsiteSettings(
     val seriesNameRow = TextInputSettingsRow("Series name", seriesName)
     val seriesNumberRow = NumberRangeSettingRow("Season number", seasonNumber, 1, 100, showSlider = false)
     val seriesUrlRow = TextInputSettingsRow("Series URL address (can be relative)", seriesUrl)
-    val download = TextInputSettingsRow("Download directory", downloadDir)
+    val download = TextInputSettingsRow("Download directory (parent)", downloadDir)
     val searchStart = NumberRangeSettingRow("Search start index", searchStartIndex, 1, 10000)
     val searchStop = NumberRangeSettingRow("Search stop index (set -1 to disable)", searchStopIndex, -1, 10000)
     val tmdb = TextInputSettingsRow("API key for TMDB database (themoviedb.org)", tmdbKey.orEmpty())
-    val idm = TextInputSettingsRow("Path to IDM exe", idmExePath.orEmpty())
+    val idm = TextInputSettingsRow("Path to IDM exe (Internet Download Manager integration)", idmExePath.orEmpty())
     val triesBeforeSwitch =
       NumberRangeSettingRow("Number of tries before switch for each streaming provider", triesBeforeStreamingProviderChange, 1, 51)
     val parallelProviders =
@@ -51,7 +51,7 @@ class StreamingWebsiteSettings(
     val codeTemplate = TextInputSettingsRow("Episode code template", episodeCodeFormatter)
     val nameTemplate = TextInputSettingsRow("Episode name template", episodeNameFormatter)
     val providers = TableSettingsRow(
-      "Streaming providers order (Drag and drop to change)",
+      "Streaming providers order (Drag and drop to change order)",
       videoServerConfigs.map { TableSettingsRow.RowDefinition(listOf(it.name, it.searchName), it.enabled) },
       listOf("Name", "Search term")
     )

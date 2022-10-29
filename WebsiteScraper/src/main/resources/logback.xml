@@ -8,28 +8,32 @@
         </encoder>
     </appender>
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>logs/file-matcher.log</file>
+        <file>logs/website-scraper.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
-            <fileNamePattern>logs/file-matcher.%d{yyyy-MM-dd}.gz</fileNamePattern>
+            <fileNamePattern>logs/website-scraper.%d{yyyy-MM-dd}.gz</fileNamePattern>
             <maxHistory>7</maxHistory>
             <totalSizeCap>1GB</totalSizeCap>
         </rollingPolicy>
         <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} | %thread | %level | %logger{36}:%line -> %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} | %thread{16} | %level | %logger{41}:%line -> %msg%n</pattern>
         </encoder>
     </appender>
 
+    <logger name="io.netty" level="ERROR"/>
+    <logger name="org.asynchttpclient" level="ERROR"/>
+
 <!--    <if condition='Boolean.parseBoolean(property("debug"))'>-->
 <!--        <then>-->
-            <root level="info">
-                <appender-ref ref="STDOUT"/>
-            </root>
+<!--            <root level="debug">-->
+<!--                <appender-ref ref="STDOUT"/>-->
+<!--            </root>-->
 <!--        </then>-->
 <!--        <else>-->
-<!--            <root level="info">-->
-<!--                <appender-ref ref="FILE"/>-->
-<!--            </root>-->
+            <root level="debug">
+                <appender-ref ref="STDOUT"/>
+                <appender-ref ref="FILE"/>
+            </root>
 <!--        </else>-->
 <!--    </if>-->
 </configuration>

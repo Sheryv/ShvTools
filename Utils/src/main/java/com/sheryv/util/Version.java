@@ -27,6 +27,6 @@ public class Version {
   
   @Override
   public String toString() {
-    return version + " (Built at"+ toTimestamp() + ')';
+    return version + " (Built at "+ toTimestamp() + ')';
   }
 }

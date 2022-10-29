@@ -3,28 +3,33 @@ package com.sheryv.tools.websitescraper.view
 import com.sheryv.tools.websitescraper.*
 import com.sheryv.tools.websitescraper.browser.*
 import com.sheryv.tools.websitescraper.config.Configuration
+import com.sheryv.tools.websitescraper.config.SettingsBase
 import com.sheryv.tools.websitescraper.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.websitescraper.process.Runner
 import com.sheryv.tools.websitescraper.process.ScraperRegistry
 import com.sheryv.tools.websitescraper.process.base.ScraperDef
+import com.sheryv.tools.websitescraper.process.base.SeleniumScraper
 import com.sheryv.tools.websitescraper.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.websitescraper.service.streamingwebsite.IDMService
 import com.sheryv.tools.websitescraper.utils.*
 import com.sheryv.tools.websitescraper.view.search.SearchWindow
 import com.sheryv.tools.websitescraper.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.websitescraper.view.settings.SettingsPanelReader
+import com.sheryv.util.ChangeListener
 import com.sheryv.util.VersionUtils
 import javafx.application.Platform
 import javafx.fxml.FXML
+import javafx.geometry.Pos
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
-import javafx.scene.layout.GridPane
-import javafx.scene.layout.Pane
-import javafx.scene.layout.VBox
+import javafx.scene.layout.*
+import javafx.scene.paint.Color
 import java.io.File
 import java.nio.file.Path
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import javax.swing.JFrame
 import javax.swing.UIManager
 
@@ -48,7 +53,7 @@ class MainView : BaseView(), ViewActionsProvider {
       init()
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
-        "Details", e.stackTraceToString(),
+        "Details", e.stackTraceToString(), title,
         "Error occurred while starting application", Alert.AlertType.ERROR, false, ButtonType.OK
       )
       throw e
@@ -89,23 +94,43 @@ class MainView : BaseView(), ViewActionsProvider {
     } else {
       tvScrapers.selectionModel.select(ViewUtils.findFirstLeafInTree(tvScrapers.root))
     }
-    btnStart.setOnAction { startPauseProcess() }
-    btnPause.setOnAction { startPauseProcess() }
+    btnStart.setOnAction { startOrPauseProcess() }
+    btnPause.setOnAction { startOrPauseProcess() }
+    btnStop.setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
     btnStop.isVisible = false
-    btnPause.isDisable = true
+    btnPause.isVisible = false
     progressProcess.isVisible = false
     GlobalState.processingState.addListener { o, n ->
-      when (n!!) {
-        ProcessingStates.RUNNING -> {
-          progressProcess.isVisible = true
-          btnStart.isDisable = true
-          btnPause.isDisable = false
-        }
-        ProcessingStates.PAUSED -> progressProcess.isVisible = false
-        ProcessingStates.IDLE -> {
-          progressProcess.isVisible = false
-          btnStart.isDisable = false
-          btnPause.isDisable = true
+      inViewThread {
+        
+        when (n!!) {
+          ProcessingStates.RUNNING -> {
+            btnStop.isVisible = true
+            progressProcess.isVisible = true
+            btnStart.text = "Pause"
+            btnStart.styleClass.add("btn-info")
+            btnStart.styleClass.remove("btn-success")
+          }
+          ProcessingStates.PAUSED -> {
+            progressProcess.isVisible = false
+            btnStart.text = "Resume"
+            btnStart.isDisable = false
+          }
+          ProcessingStates.PAUSING -> {
+            btnStart.isDisable = true
+          }
+          ProcessingStates.STOPPING -> {
+            btnStart.isDisable = true
+            btnStop.isVisible = false
+          }
+          ProcessingStates.IDLE -> {
+            btnStop.isVisible = false
+            progressProcess.isVisible = false
+            btnStart.isDisable = false
+            btnStart.text = "Start"
+            btnStart.styleClass.add("btn-success")
+            btnStart.styleClass.remove("btn-info")
+          }
         }
       }
     }
@@ -167,20 +192,28 @@ class MainView : BaseView(), ViewActionsProvider {
         items.addAll(
           MenuItem("Start / Pause").apply {
             accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)
-            setOnAction { startPauseProcess() }
+            setOnAction { startOrPauseProcess() }
           },
-          MenuItem("Stop").apply { accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN) },
+          MenuItem("Stop").apply {
+            accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
+            setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
+          },
         )
       },
       Menu("Tools").apply {
         items.addAll(
+          MenuItem("Run script in opened browser").apply { setOnAction { openRunScriptWindow() } },
+          SeparatorMenuItem(),
           MenuItem("Logs"),
           SeparatorMenuItem(),
-          MenuItem("Show configuration file location").apply {
+          MenuItem("Tv Show search tool").apply {
+            accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
             setOnAction {
-              DialogUtils.inputDialog("Location of Configuration file ", null, Path.of(Configuration.FILE).toAbsolutePath().toString())
+              openSearchEpisodesWindow()
             }
           },
+          SeparatorMenuItem(),
+          CheckMenuItem("Pause processing on next step").apply { setOnAction { GlobalState.pauseOnNextStep = this.isSelected } },
           MenuItem("Copy options from other scraper").apply {
             accelerator = KeyCodeCombination(KeyCode.C, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
             setOnAction {
@@ -192,7 +225,7 @@ class MainView : BaseView(), ViewActionsProvider {
               }
             }
           },
-          MenuItem("Send to IDM").apply {
+          MenuItem("Send links to IDM (Internet Download Manager)").apply {
             setOnAction {
               inBackground {
                 try {
@@ -204,7 +237,7 @@ class MainView : BaseView(), ViewActionsProvider {
                 } catch (e: Exception) {
                   inViewThread {
                     DialogUtils.textAreaDialog(
-                      "Details", e.message + "\n\n" + e.stackTraceToString(),
+                      "Details", e.message + "\n\n" + e.stackTraceToString(), title,
                       "Error while sending to IDM", Alert.AlertType.ERROR, true, ButtonType.OK
                     )
                   }
@@ -212,37 +245,38 @@ class MainView : BaseView(), ViewActionsProvider {
               }
             }
           },
-          MenuItem("Tv Show search tool").apply {
-            setOnAction {
-              openSearchEpisodesWindow()
-            }
-          },
         )
       },
       Menu("Info").apply {
-        items.setAll(MenuItem("About").apply {
-          setOnAction {
-            val msg =
-              "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("website-scraper-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
-            val textArea = TextArea(msg)
-            textArea.isEditable = false
-            textArea.isWrapText = true
-            textArea.prefRowCount = 5
-            val gridPane = GridPane()
-            gridPane.maxWidth = Double.MAX_VALUE
-            gridPane.add(textArea, 0, 0)
-            val alert = Alert(Alert.AlertType.NONE, msg, ButtonType.OK)
-            alert.dialogPane.content = gridPane
-            MainApplication.appendStyleSheets(alert.dialogPane.content.scene)
-            alert.title = "About"
-            alert.showAndWait()
-          }
-        })
+        items.setAll(
+          MenuItem("Show configuration file location").apply {
+            setOnAction {
+              DialogUtils.inputDialog("Location of Configuration file ", null, Path.of(Configuration.FILE).toAbsolutePath().toString())
+            }
+          },
+          MenuItem("About").apply {
+            setOnAction {
+              val msg =
+                "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("website-scraper-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
+              val textArea = TextArea(msg)
+              textArea.isEditable = false
+              textArea.isWrapText = true
+              textArea.prefRowCount = 5
+              val gridPane = GridPane()
+              gridPane.maxWidth = Double.MAX_VALUE
+              gridPane.add(textArea, 0, 0)
+              val alert = Alert(Alert.AlertType.NONE, msg, ButtonType.OK)
+              alert.dialogPane.content = gridPane
+              MainApplication.appendStyleSheets(alert.dialogPane.content.scene)
+              alert.title = "About"
+              alert.showAndWait()
+            }
+          })
       }
     )
   }
   
-  private fun startPauseProcess() {
+  private fun startOrPauseProcess() {
     if (selected != null) {
       when (GlobalState.processingState.value) {
         ProcessingStates.IDLE -> {
@@ -268,7 +302,7 @@ class MainView : BaseView(), ViewActionsProvider {
               lg().error("Running error", e)
               inViewThread {
                 DialogUtils.textAreaDialog(
-                  "Details", e.stackTraceToString(),
+                  "Details", e.stackTraceToString(), title,
                   "Error occurred while scraping", Alert.AlertType.ERROR, false, ButtonType.OK
                 )
               }
@@ -277,8 +311,9 @@ class MainView : BaseView(), ViewActionsProvider {
             }
           }
         }
-        ProcessingStates.RUNNING -> GlobalState.processingState.set(ProcessingStates.PAUSED)
+        ProcessingStates.RUNNING -> GlobalState.processingState.set(ProcessingStates.PAUSING)
         ProcessingStates.PAUSED -> GlobalState.processingState.set(ProcessingStates.RUNNING)
+        else -> {}
       }
     }
   }
@@ -309,7 +344,7 @@ class MainView : BaseView(), ViewActionsProvider {
       }
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
-        "One or more values is incorrect", e.message + "\n\n" + e.stackTraceToString(),
+        "One or more values is incorrect", e.message + "\n\n" + e.stackTraceToString(), title,
         "Error while saving configuration for ${selected!!.findSettings(config)}", Alert.AlertType.ERROR, true, ButtonType.OK
       )
     }
@@ -337,6 +372,116 @@ class MainView : BaseView(), ViewActionsProvider {
     f.contentPane.add(SearchWindow().init(config, selected!!.findSettings(config) as StreamingWebsiteSettings).mainPanel)
     f.setSize(1200, 750)
     f.isVisible = true
+  }
+  
+  private fun openRunScriptWindow() {
+    
+    val alert = Alert(Alert.AlertType.NONE, "", ButtonType.CLOSE)
+    alert.title = "Run JavaScript in currently opened browser - $title"
+    val btn = Button("Execute script")
+    btn.styleClass.add("btn-success")
+    val msg = Label("There is no running process!")
+    msg.maxWidth = Double.MAX_VALUE
+    
+    btn.isDisable = GlobalState.runningProcess.value == null
+    msg.isVisible = GlobalState.runningProcess.value == null
+    
+    val listener: ChangeListener<SeleniumScraper<SettingsBase>> = ChangeListener { _, n ->
+      btn.isDisable = n == null
+      msg.isVisible = n == null
+    }
+    
+    val inputArea = TextArea(config.lastUserScript).apply {
+      isEditable = true
+      isWrapText = false
+      styleClass.add("mono")
+      maxWidth = Double.MAX_VALUE
+      maxHeight = Double.MAX_VALUE
+      minWidth = 100.0
+      promptText = "Your JavaScript goes here..."
+    }
+    val outputArea = TextArea().apply {
+      isEditable = false
+      isWrapText = false
+      styleClass.add("mono")
+      maxWidth = Double.MAX_VALUE
+      maxHeight = Double.MAX_VALUE
+      minWidth = 100.0
+      promptText = "Execution output is shown here"
+    }
+    
+    val split = SplitPane(inputArea, outputArea)
+    
+    val helpBtn = Button("Help")
+    helpBtn.setOnAction {
+      DialogUtils.textAreaDialog(
+        "",
+        """
+      All scripts are executed by browser driver in current driver state.
+      If driver is inside iframe then they will be executed in that iframe.
+      To see values in right panel the script have to return value using 'return' statement and this tool adds 'return' statements automatically to last expression in script.
+      
+      Examples:
+      
+      //statement without return value
+      document.querySelector('.title').setAttribute('style', 'color: green')
+      
+      //return title
+      document.querySelector('.title').textContent
+      
+      //click button
+      document.querySelector('nav a').click()
+      """.trimIndent(), "Help for running scripts - $title"
+      )
+    }
+    val bottomRow = HBox(btn, msg, helpBtn)
+    HBox.setHgrow(msg, Priority.ALWAYS)
+    bottomRow.alignment = Pos.CENTER_LEFT
+    bottomRow.spacing = 10.0
+    val expContent = GridPane()
+    expContent.vgap = 10.0
+    expContent.maxWidth = Double.MAX_VALUE
+    expContent.add(split, 0, 0)
+    expContent.add(bottomRow, 0, 1)
+    expContent.minHeight = 250.0
+    expContent.prefHeight = 450.0
+    expContent.minWidth = 400.0
+    expContent.prefWidth = 1200.0
+    alert.isResizable = true
+    GridPane.setVgrow(split, Priority.ALWAYS)
+    GridPane.setHgrow(split, Priority.ALWAYS)
+    GridPane.setHgrow(bottomRow, Priority.ALWAYS)
+    
+    alert.dialogPane.content = expContent
+    MainApplication.appendStyleSheets(alert.dialogPane.scene)
+    
+    inputArea.textProperty().addListener { _, _, n -> config.lastUserScript = n }
+    
+    btn.setOnAction {
+      GlobalState.runningProcess.value?.takeIf { inputArea.text.isNotBlank() }?.also {
+        val scriptRaw = inputArea.text.trim()
+        val lines = scriptRaw.lines()
+        var last = lines.last()
+        val lastExpression = last.split(';').last().trim()
+        if (!lastExpression.startsWith("return ")) {
+          val semi = last.indexOf(';')
+          last = "\n" + if (semi >= 0) {
+            last.take(semi + 1) + " return " + last.substring(semi + 1)
+          } else {
+            "return $last"
+          }
+        }
+        
+        val script = lines.take(lines.size - 1).joinToString("\n") + last
+        lg().debug("Executing:\n$script")
+        val res = it.driver.executeScript(script)
+        outputArea.appendText("[${LocalDateTime.now().withNano(0).format(DateTimeFormatter.ISO_LOCAL_TIME)}]: ${res.toString()}\n")
+        outputArea.scrollTop = Double.MAX_VALUE
+      }
+    }
+    GlobalState.runningProcess.addListener(listener)
+    alert.showAndWait()
+    GlobalState.runningProcess.removeListener(listener)
   }
   
   @FXML

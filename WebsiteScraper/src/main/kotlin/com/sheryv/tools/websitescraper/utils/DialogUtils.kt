@@ -140,6 +140,7 @@ object DialogUtils {
   fun textAreaDialog(
     label: String,
     content: String,
+    title: String = "",
     header: String? = null,
     type: Alert.AlertType = Alert.AlertType.WARNING,
     wrapText: Boolean = true,
@@ -150,6 +151,7 @@ object DialogUtils {
     if (header != null) {
       alert.headerText = header
     }
+    alert.title = title
     
     val lb = Label(label)
     

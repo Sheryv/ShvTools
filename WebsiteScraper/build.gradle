@@ -36,11 +36,14 @@ launch4j {
     fileDescription = project.ext["file"] + " startup file"
     copyright = project.ext["site"]
     companyName = project.ext["author"]
+    textVersion = project.ext.shortVersion
+    version = project.version
     bundledJrePath = "jre"
+    bundledJre64Bit = true
     jvmOptions = ["-Xms32m", "-Xmx256m"]
 //    jvmOptions = ["-Xms32m", "-Xmx256m", "-Dspring.profiles.active=dev"]
 //    bundledJrePath = '%JAVA_HOME%'
-    headerType = 'console'
+//    headerType = 'console'
 //    splashFileName = '..\\..\\..\\res\\splash.bmp'
 //    splashTimeout = 15
 //    println '>>> Icon >> ' + icon
