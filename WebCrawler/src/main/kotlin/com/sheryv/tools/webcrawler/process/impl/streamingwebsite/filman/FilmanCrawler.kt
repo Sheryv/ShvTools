@@ -3,7 +3,7 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
-import com.sheryv.tools.webcrawler.process.base.ScraperDefinition
+import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
@@ -15,10 +15,10 @@ import org.openqa.selenium.By
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.support.ui.ExpectedConditions
 
-class FilmanScraper(
+class FilmanCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
-  def: ScraperDefinition<SeleniumDriver, StreamingWebsiteSettings>,
+  def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
   driver: SeleniumDriver
 ) : StreamingWebsiteBase(configuration, browser, def, driver) {
   

@@ -4,15 +4,14 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.EpisodeType
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.StreamQuality
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
-import com.sheryv.tools.webcrawler.process.base.ScraperDef
-import com.sheryv.tools.webcrawler.process.base.model.Format
+import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
+import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.view.settings.*
+import java.nio.file.Path
 
 class StreamingWebsiteSettings(
-  name: String,
-  websiteUrl: String,
-  outputPath: String,
-  outputFormat: Format,
+  crawlerId: String,
+  outputPath: Path? = null,
   val downloadDir: String,
   val seriesName: String = "",
   val seasonNumber: Int = 1,
@@ -29,10 +28,10 @@ class StreamingWebsiteSettings(
   val allowedEpisodeTypes: List<EpisodeType> = EpisodeType.all(),
   val allowedQualities: List<StreamQuality> = StreamQuality.all(),
   val videoServerConfigs: List<VideoServerConfig> = VideoServerConfig.all()
-) : SettingsBase(name, websiteUrl, outputPath, outputFormat) {
+) : SettingsBase(crawlerId, outputPath) {
   
   override fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
-    val savePathRow = TextInputSettingsRow("Intermediate file path", outputPath)
+    val savePathRow = TextInputSettingsRow("Intermediate file path", outputPath.toString())
     val seriesNameRow = TextInputSettingsRow("Series name", seriesName)
     val seriesNumberRow = NumberRangeSettingRow("Season number", seasonNumber, 1, 100, showSlider = false)
     val seriesUrlRow = TextInputSettingsRow("Series URL address (can be relative)", seriesUrl)
@@ -103,7 +102,8 @@ class StreamingWebsiteSettings(
       val qualities = qualitiesRow.readValue()
       val provs = providers.readValue()
       StreamingWebsiteSettings(
-        name, websiteUrl, savePathRow.readValue(), outputFormat,
+        crawlerId,
+        Path.of(savePathRow.readValue()),
         download.readValue(),
         seriesNameRow.readValue(),
         seriesNumberRow.readValue(),
@@ -117,22 +117,25 @@ class StreamingWebsiteSettings(
         nameTemplate.readValue(),
         triesBeforeSwitch.readValue(),
         parallelProviders.readValue(),
-        allowedEpisodeTypes.map { e -> e.changeActivation(types.first { it.cells.first() == e.kind.toString().lowercase() }.isEnabled()) as EpisodeType },
-        allowedQualities.map { s -> s.changeActivation(qualities.first { it.cells.first() == s.kind.toString() }.isEnabled()) as StreamQuality },
+        allowedEpisodeTypes.map { e ->
+          e.changeActivation(types.first { it.cells.first() == e.kind.toString().lowercase() }.isEnabled()) as EpisodeType
+        },
+        allowedQualities.map { s ->
+          s.changeActivation(qualities.first { it.cells.first() == s.kind.toString() }.isEnabled()) as StreamQuality
+        },
         videoServerConfigs.map { s -> s.changeActivation(provs.first { it.cells.first() == s.name }.isEnabled()) as VideoServerConfig },
       )
     }
   }
   
   
-  override fun validate(def: ScraperDef) {
+  override fun validate(def: CrawlerDef) {
     require(searchStartIndex > 0) { "Search create index have to be greater than 0 and less than or equal to episodes count!" }
     require(!(searchStopIndex < searchStartIndex && searchStopIndex != -1)) { "Search stop index have to be greater than or equal to create index or equal to -1 for unlimited value" }
     require(episodeCodeFormatter.isNotBlank()) { "EpisodeCodeFormatter cannot be empty" }
     require(downloadDir.isNotBlank()) { "Download directory path cannot be empty" }
     require(seriesUrl.isNotBlank()) { "Series URL cannot be empty" }
     require(seriesName.isNotBlank()) { "Series Name cannot be empty" }
-    require(outputPath.isNotBlank()) { "Output path cannot be empty" }
   }
   
   private fun <T : ApplicableEntry> buildListAndAddNew(userEntries: List<T>, all: List<T>): List<T> {
@@ -141,15 +144,13 @@ class StreamingWebsiteSettings(
     return res
   }
   
-  override fun copy(name: String,
-                     websiteUrl: String,
-                     outputPath: String,
-                     outputFormat: Format): SettingsBase {
+  override fun copy(
+    crawlerId: String,
+    outputPath: Path
+  ): SettingsBase {
     return StreamingWebsiteSettings(
-      name,
-      websiteUrl,
+      crawlerId,
       outputPath,
-      outputFormat,
       downloadDir,
       seriesName,
       seasonNumber,

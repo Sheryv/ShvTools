@@ -5,8 +5,8 @@ import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
-import com.sheryv.tools.webcrawler.process.base.ScraperDefinition
-import com.sheryv.tools.webcrawler.process.base.SeleniumScraper
+import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
+import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.SimpleStep
 import com.sheryv.tools.webcrawler.process.base.model.Step
@@ -27,9 +27,9 @@ import java.util.*
 abstract class StreamingWebsiteBase(
   configuration: Configuration,
   browser: BrowserConfig,
-  def: ScraperDefinition<SeleniumDriver, StreamingWebsiteSettings>,
+  def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
   driver: SeleniumDriver
-) : SeleniumScraper<StreamingWebsiteSettings>(configuration, browser, def, driver) {
+) : SeleniumCrawler<StreamingWebsiteSettings>(configuration, browser, def, driver) {
   lateinit var series: Series
   
   override fun getSteps(): List<Step<out Any, out Any>> {
@@ -43,13 +43,13 @@ abstract class StreamingWebsiteBase(
       || url.startsWith("https:")
       || url.startsWith("www")
     ) return url
-    return if (!url.startsWith("/")) settings.websiteUrl + "/" + url else settings.websiteUrl + url
+    return if (!url.startsWith("/")) def.attributes.websiteUrl + "/" + url else def.attributes.websiteUrl + url
   }
   
   protected suspend fun start() {
-    series = (if (Files.exists(Path.of(settings.outputPath))) {
+    series = (if (Files.exists(settings.outputPath)) {
       try {
-        val current = Utils.jsonMapper.readValue(File(settings.outputPath), Series::class.java)
+        val current = Utils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
         if (current.season == settings.seasonNumber && settings.seriesName.equals(current.title, true)) {
           current.copy(title = settings.seriesName, seriesUrl = getSeriesLink())
         } else {
@@ -161,7 +161,7 @@ abstract class StreamingWebsiteBase(
       episodes.sortBy { it.number }
       series = series.copy(episodes = episodes)
       waitIfPaused()
-      Utils.jsonMapper.writeValue(File(settings.outputPath), series)
+      Utils.jsonMapper.writeValue(settings.outputPath.toFile(), series)
       lg().info("\n$ep\n")
       i++
     }

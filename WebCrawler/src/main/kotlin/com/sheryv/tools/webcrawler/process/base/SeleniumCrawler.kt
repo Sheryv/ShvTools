@@ -20,19 +20,19 @@ import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.WebDriverWait
 import java.time.Duration
 
-abstract class SeleniumScraper<S : SettingsBase>(
+abstract class SeleniumCrawler<S : SettingsBase>(
   configuration: Configuration,
   browser: BrowserConfig,
-  def: ScraperDefinition<SeleniumDriver, S>,
+  def: CrawlerDefinition<SeleniumDriver, S>,
   driver: SeleniumDriver
 ) :
-  Scraper<SeleniumDriver, S>(configuration, browser, def, driver) {
+  Crawler<SeleniumDriver, S>(configuration, browser, def, driver) {
   
   protected val wait: WebDriverWait by lazy { WebDriverWait(driver, Duration.ofSeconds(15)) }
   protected lateinit var title: String
   
   protected fun loadInitPage() {
-    driver.get(settings.websiteUrl)
+    driver.get(def.attributes.websiteUrl)
     driver.waitForVisibility(By.tagName("body"))
     title = driver.title
   }

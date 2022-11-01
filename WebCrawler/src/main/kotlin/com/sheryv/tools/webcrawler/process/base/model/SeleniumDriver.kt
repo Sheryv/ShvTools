@@ -1,7 +1,7 @@
 package com.sheryv.tools.webcrawler.process.base.model
 
 import com.sheryv.tools.webcrawler.config.SettingsBase
-import com.sheryv.tools.webcrawler.process.base.Scraper
+import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.service.BrowserSupport
 import com.sheryv.tools.webcrawler.utils.lg
 import org.jsoup.Jsoup
@@ -21,9 +21,9 @@ open class SeleniumDriver(
   protected val implicitWait: Long = 3,
   protected val executor: JavascriptExecutor = wrappedDriver as JavascriptExecutor
 ) : SDriver, WebDriver {
-  protected lateinit var scraper: Scraper<SeleniumDriver, SettingsBase>
+  protected lateinit var crawler: Crawler<SeleniumDriver, SettingsBase>
   private val cachedScript: String by lazy {
-    val script = BrowserSupport.get.loadScriptFromClassPath(scraper.def.id)
+    val script = BrowserSupport.get.loadScriptFromClassPath(crawler.def.id())
     executor.executeScript(script)
     script
   }
@@ -32,8 +32,8 @@ open class SeleniumDriver(
     wrappedDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(implicitWait))
   }
   
-  override fun initialize(scraper: Scraper<out SDriver, SettingsBase>) {
-    this.scraper = scraper as Scraper<SeleniumDriver, SettingsBase>
+  override fun initialize(crawler: Crawler<out SDriver, SettingsBase>) {
+    this.crawler = crawler as Crawler<SeleniumDriver, SettingsBase>
   }
   
   protected val cachedDocument: Document by lazy { Jsoup.parse(wrappedDriver.pageSource) }
@@ -106,7 +106,7 @@ open class SeleniumDriver(
     if (url.startsWith("http:") || url.startsWith("https:")) {
       wrappedDriver.get(url)
     } else {
-      var merged = scraper.settings.websiteUrl.trimEnd('/') + "/" + url.trimStart('/')
+      var merged = crawler.def.attributes.websiteUrl.trimEnd('/') + "/" + url.trimStart('/')
       wrappedDriver.get(merged)
     }
   }

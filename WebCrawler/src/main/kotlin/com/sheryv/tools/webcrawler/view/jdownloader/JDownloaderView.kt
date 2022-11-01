@@ -4,7 +4,7 @@ import com.sheryv.tools.webcrawler.BaseView
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
-import com.sheryv.tools.webcrawler.process.base.ScraperDef
+import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.jdownloader.JDownloaderCrawlerEntry
@@ -22,12 +22,12 @@ import java.time.format.DateTimeFormatter
 class JDownloaderView : BaseView() {
   private lateinit var config: Configuration
   private lateinit var settings: StreamingWebsiteSettings
-  private lateinit var scraper: ScraperDef
+  private lateinit var scraper: CrawlerDef
   private lateinit var lastSeries: Series
   
   override fun onViewCreated() {
     config = Configuration.get()
-    scraper = GlobalState.currentScrapper
+    scraper = GlobalState.currentCrawler
     settings = scraper.findSettings(config) as StreamingWebsiteSettings
     
     btnOpenSelectDir.tooltip = Tooltip("Open directory selection dialog")
@@ -68,7 +68,7 @@ class JDownloaderView : BaseView() {
   
   private fun loadEpisodes() {
     try {
-      lastSeries = Utils.jsonMapper.readValue(File(settings.outputPath), Series::class.java)
+      lastSeries = Utils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
       val filtered = lastSeries.episodes.asSequence()
         .filter { it.downloadUrl != null }
         .filter { chFilterToStreamingFilesOnly.isSelected && it.downloadUrl!!.isStreaming || !chFilterToStreamingFilesOnly.isSelected }

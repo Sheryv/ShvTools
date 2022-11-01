@@ -10,9 +10,9 @@ import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.Runner
-import com.sheryv.tools.webcrawler.process.ScraperRegistry
-import com.sheryv.tools.webcrawler.process.base.ScraperDef
-import com.sheryv.tools.webcrawler.process.base.SeleniumScraper
+import com.sheryv.tools.webcrawler.process.CrawlerRegistry
+import com.sheryv.tools.webcrawler.process.base.CrawlerDef
+import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
@@ -39,7 +39,6 @@ import javafx.util.Duration
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
-import java.io.File
 import java.nio.file.Path
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -51,8 +50,8 @@ import kotlin.io.path.isRegularFile
 
 
 class MainView : BaseView(), ViewActionsProvider {
-  private var registry: ScraperRegistry = ScraperRegistry.fill(ScraperRegistry.DEFAULT)
-  private var selected: ScraperDef? = null
+  private lateinit var registry: CrawlerRegistry
+  private var selected: CrawlerDef? = null
   private lateinit var config: Configuration
   private lateinit var settingsReader: SettingsPanelReader
   
@@ -63,6 +62,7 @@ class MainView : BaseView(), ViewActionsProvider {
   override fun onViewCreated() {
     try {
       config = Configuration.get()
+      registry = config.usedRegistry
       prepareRegistry()
       init()
     } catch (e: Exception) {
@@ -82,9 +82,9 @@ class MainView : BaseView(), ViewActionsProvider {
   
   private fun init() {
     stage.title = TITLE
-    config.scrapper
+    config.crawler
     tvScrapers.root = TreeItem()
-    tvScrapers.root.children.addAll(ScraperListItem.fromDefs(config, registry.all()).map { it.toTreeItem() })
+    tvScrapers.root.children.addAll(CrawlerListItem.fromDefs(config, registry.all()).map { it.toTreeItem() })
     tvScrapers.root.children.forEach { it.isExpanded = true }
     tvScrapers.isShowRoot = false
     tvScrapers.selectionModel.selectionMode = SelectionMode.SINGLE
@@ -95,7 +95,7 @@ class MainView : BaseView(), ViewActionsProvider {
     tvScrapers.selectionModel.selectedItemProperty().addListener { _, _, n ->
       if (n.isLeaf) {
         selected = registry.get(n.value.id)!!
-        GlobalState.currentScrapper = selected!!
+        GlobalState.currentCrawler = selected!!
         showSettingsForSelectedScraper()
         
         val isVideoScraper = selected!!.findSettings(config) is StreamingWebsiteSettings
@@ -107,9 +107,9 @@ class MainView : BaseView(), ViewActionsProvider {
       }
     }
     
-    val scraper = config.scrapper
-    val configured = tvScrapers.root.children.flatMap { it.children }.firstOrNull { it.value.id == scraper }
-    if (scraper != null && configured != null) {
+    val crawler = config.crawler
+    val configured = tvScrapers.root.children.flatMap { it.children }.firstOrNull { it.value.id == crawler }
+    if (crawler != null && configured != null) {
       tvScrapers.selectionModel.select(configured)
     } else {
       tvScrapers.selectionModel.select(ViewUtils.findFirstLeafInTree(tvScrapers.root))
@@ -157,14 +157,12 @@ class MainView : BaseView(), ViewActionsProvider {
     
     cbBrowserDriverType.selectionModel.selectedItemProperty().addListener { _, _, n ->
       if (n != null) {
-        lg().info("over ${config.browserSettings.currentBrowser()} ${config.browserSettings.currentBrowser().selectedDriver} <- $n")
         config.browserSettings.currentBrowser().selectedDriver = n
         tfBrowserDriverPath.text = config.browserSettings.currentBrowser().currentDriver().path.toAbsolutePath().toString()
       }
     }
     
     cbBrowser.selectionModel.selectedItemProperty().addListener { _, o, n ->
-      lg().info("cb1 ${config.browserSettings.currentBrowser()} <- $n | ${config.browserSettings.currentBrowser().selectedDriver} <- ${config.browserSettings.configs.first { n == it.type }.selectedDriver}")
       val flag = isCustomBrowser()
       val prev = config.browserSettings.currentBrowser()
       tfBrowserPath.isEditable = flag
@@ -179,12 +177,8 @@ class MainView : BaseView(), ViewActionsProvider {
         config.browserSettings.currentBrowser().binaryPath = prev.binaryPath
       }
       val driver = b.selectedDriver
-      lg().info("cb2 ${b} <- $prev | ${b.selectedDriver} <- ${prev.selectedDriver}")
       cbBrowserDriverType.items.setAll(b.drivers.map { it.type })
-      lg().info("cb3 ${b} <- $prev | ${b.selectedDriver} <- ${prev.selectedDriver}")
       cbBrowserDriverType.selectionModel.select(driver)
-      lg().info("cb4 ${b} <- $prev | ${b.selectedDriver} <- ${prev.selectedDriver}")
-      
     }
     val pause = PauseTransition(Duration.seconds(1.0))
     tfBrowserPath.textProperty().addListener { _, _, n ->
@@ -284,7 +278,7 @@ class MainView : BaseView(), ViewActionsProvider {
                       val settings = selected!!.findSettings(config)
                       val (done, all) = IDMService(config).addToIDM(
                         Utils.jsonMapper.readValue(
-                          File(settings.outputPath),
+                          settings.outputPath.toFile(),
                           Series::class.java
                         )
                       )
@@ -314,14 +308,13 @@ class MainView : BaseView(), ViewActionsProvider {
             accelerator = KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN)
             setOnAction { GlobalState.pauseOnNextStep = this.isSelected }
           },
-          MenuItem("Copy options from other scraper").apply {
+          MenuItem("Copy options from other crawler").apply {
             accelerator = KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
             setOnAction {
               val type = selected!!.settingsClass
-              val current = selected!!.findSettings(config)
-              val source = config.settings.filter { it.key != selected!!.id }.filterValues { type.isInstance(it) }.values
+              val source = config.settings.filter { it.crawlerId != selected!!.id() && type.isInstance(it) }
               DialogUtils.choiceDialog("Copy options from other scraper", source, "Choose source scraper")?.also {
-                config.settings[selected!!.id] = it.copy(name = current.name, websiteUrl = current.websiteUrl)
+                config.updateSettings(it.copy())
                 showSettingsForSelectedScraper()
               }
             }
@@ -341,7 +334,7 @@ class MainView : BaseView(), ViewActionsProvider {
           MenuItem("About").apply {
             setOnAction {
               val msg =
-                "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("website-crawler-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
+                "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("web-crawler-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
               DialogUtils.messageCopyableDialog(msg, "About info")
             }
           })
@@ -385,7 +378,7 @@ class MainView : BaseView(), ViewActionsProvider {
   
   private fun showSettingsForSelectedScraper() {
     val settings = selected!!.findSettings(config)
-    lbSelected.text = settings.toString()
+    lbSelected.text = selected.toString()
     val parts = SettingsPanelBuilder(settings).build()
     settingsReader = parts.second
     vbOptions.children.setAll(parts.first)
@@ -396,8 +389,8 @@ class MainView : BaseView(), ViewActionsProvider {
       synchronized(this) {
         val s = settingsReader()
         s.validate(selected!!)
-        config.settings[selected!!.id] = s
-        config.scrapper = selected?.id
+        config.updateSettings(s)
+        config.crawler = selected!!.attributes.id
         config.browserSettings.useUserProfile = chkUseUserProfile.isSelected
         config.save()
       }
@@ -413,7 +406,7 @@ class MainView : BaseView(), ViewActionsProvider {
   
   override fun showMessageDialog(message: String) {
     val header = if (GlobalState.processingState.value == ProcessingStates.RUNNING) {
-      "Scraping ${selected!!.findSettings(config).name} - $TITLE"
+      "Processing crawler ${selected!!.attributes.name} - $TITLE"
     } else {
       TITLE
     }
@@ -477,7 +470,7 @@ class MainView : BaseView(), ViewActionsProvider {
     btn.isDisable = GlobalState.runningProcess.value == null
     msg.isVisible = GlobalState.runningProcess.value == null
     
-    val listener: ChangeListener<SeleniumScraper<SettingsBase>> = ChangeListener { _, n ->
+    val listener: ChangeListener<SeleniumCrawler<SettingsBase>> = ChangeListener { _, n ->
       btn.isDisable = n == null
       msg.isVisible = n == null
     }
@@ -600,7 +593,7 @@ class MainView : BaseView(), ViewActionsProvider {
   private lateinit var btnSelectBrowserExec: Button
   
   @FXML
-  private lateinit var tvScrapers: TreeView<ScraperListItem>
+  private lateinit var tvScrapers: TreeView<CrawlerListItem>
   
   @FXML
   private lateinit var cbBrowser: ComboBox<BrowserTypes>

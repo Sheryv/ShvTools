@@ -2,7 +2,7 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common
 
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.SettingsBase
-import com.sheryv.tools.webcrawler.process.base.SeleniumScraper
+import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.FileFormats
 import com.sheryv.tools.webcrawler.utils.lg
@@ -14,7 +14,7 @@ import org.openqa.selenium.By
 open class VideoServerHandler(
   private val server: VideoServerDefinition,
   private val driver: SeleniumDriver,
-  private val scraper: SeleniumScraper<out SettingsBase>,
+  private val scraper: SeleniumCrawler<out SettingsBase>,
   private val overrideFileFormat: FileFormats? = null
 ) {
   

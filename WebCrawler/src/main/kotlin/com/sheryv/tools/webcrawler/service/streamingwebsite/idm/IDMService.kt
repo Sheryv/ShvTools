@@ -12,7 +12,7 @@ import kotlinx.coroutines.delay
 class IDMService(val configuration: Configuration) {
   
   suspend fun addToIDM(series: Series): Pair<Int, Int> {
-    val settings = GlobalState.currentScrapper.findSettings(configuration) as StreamingWebsiteSettings
+    val settings = GlobalState.currentCrawler.findSettings(configuration) as StreamingWebsiteSettings
     var c = 0
     val episodes = series.episodes.filter { settings.searchStartIndex <= it.number && it.number <= settings.searchStopIndex }
     for (episode in episodes) {

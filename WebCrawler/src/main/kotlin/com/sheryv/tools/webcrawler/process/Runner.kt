@@ -4,8 +4,8 @@ import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
-import com.sheryv.tools.webcrawler.process.base.ScraperDef
-import com.sheryv.tools.webcrawler.process.base.SeleniumScraper
+import com.sheryv.tools.webcrawler.process.base.CrawlerDef
+import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
@@ -13,21 +13,19 @@ import com.sheryv.tools.webcrawler.process.base.model.TerminationException
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.lg
 import org.openqa.selenium.SessionNotCreatedException
-import java.io.File
 import kotlin.io.path.exists
 import kotlin.io.path.isExecutable
-import kotlin.io.path.isRegularFile
 
 
 class Runner(
   private val configuration: Configuration,
   private val browser: BrowserConfig,
-  private val scraperDef: ScraperDef
+  private val crawlerDef: CrawlerDef
 ) {
   
   suspend fun prepare(settings: SettingsBase) {
-    settings.validate(scraperDef)
-    configuration.settings[scraperDef.id] = settings
+    settings.validate(crawlerDef)
+    configuration.updateSettings(settings)
   }
   
   suspend fun start() {
@@ -43,24 +41,24 @@ class Runner(
     var driver: SDriver? = null
     try {
       driver = browser.selectedDriver.webDriverBuilder.build(config, browser)
-      val scrapper = scraperDef.build(config, browser, driver)
+      val crawler = crawlerDef.build(config, browser, driver)
       
-      driver.initialize(scrapper)
-      if (scrapper is SeleniumScraper<SettingsBase>) {
-        GlobalState.runningProcess.set(scrapper)
+      driver.initialize(crawler)
+      if (crawler is SeleniumCrawler<SettingsBase>) {
+        GlobalState.runningProcess.set(crawler)
       }
-      lg().info("Scrapper '${scrapper.settings.name}' [${scrapper.def.id}] built")
+      lg().info("Crawler '${crawler.def}' built")
       
-      val steps = scrapper.getSteps() as List<Step<Any, Any>>
+      val steps = crawler.getSteps() as List<Step<Any, Any>>
       var any: Any? = null
       for (step in steps) {
-        scrapper.waitIfPaused()
-        lg().info("Running step '${step.name}' by '${scrapper.settings.name}' [${scrapper.def.id}]")
+        crawler.waitIfPaused()
+        lg().info("Running step '${step.name}' by '${crawler.def}'")
         any = step.run(any)
       }
       
       
-      lg().info("Scrapper '${scrapper.settings.name}' [${scrapper.def.id}] finished successfully")
+      lg().info("Crawler '${crawler.def}' finished successfully")
     } catch (e: SessionNotCreatedException) {
       throw AppError("Cannot start browser: " + e.message, e)
     } catch (e: TerminationException) {

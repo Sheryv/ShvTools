@@ -3,8 +3,8 @@ package com.sheryv.tools.webcrawler.process.impl.filmweb
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.FilmwebSettings
-import com.sheryv.tools.webcrawler.process.base.ScraperDefinition
-import com.sheryv.tools.webcrawler.process.base.SeleniumScraper
+import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
+import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
 import com.sheryv.tools.webcrawler.utils.Utils
@@ -13,8 +13,8 @@ import com.sheryv.tools.webcrawler.utils.lg
 import org.openqa.selenium.By
 import java.io.File
 
-class FilmwebScraper(configuration: Configuration, browser: BrowserConfig, def: ScraperDefinition<SeleniumDriver, FilmwebSettings>, driver: SeleniumDriver) :
-  SeleniumScraper<FilmwebSettings>(configuration, browser, def, driver) {
+class FilmwebCrawler(configuration: Configuration, browser: BrowserConfig, def: CrawlerDefinition<SeleniumDriver, FilmwebSettings>, driver: SeleniumDriver) :
+  SeleniumCrawler<FilmwebSettings>(configuration, browser, def, driver) {
   
   private val result = FilmwebResult()
   private lateinit var user: String
@@ -95,7 +95,7 @@ class FilmwebScraper(configuration: Configuration, browser: BrowserConfig, def: 
   }
   
   private fun save(a: Any?): Any {
-    Utils.jsonMapper.writeValue(File(settings.outputPath), result)
+    Utils.jsonMapper.writeValue(settings.outputPath.toFile(), result)
     lg().info("File saved " + settings.outputPath)
     return ""
   }

@@ -92,7 +92,7 @@ class SearchWindow {
         doInBackground(
           null,
           {
-            Utils.jsonMapper.writeValue(File(settings.outputPath), lastSeries)
+            Utils.jsonMapper.writeValue(settings.outputPath.toFile(), lastSeries)
           },
           null,
           { setProgress(100) }
@@ -136,7 +136,7 @@ class SearchWindow {
     setProgress(-1)
     doInBackground<Any?, Series>(
       null,
-      { Utils.jsonMapper.readValue(File(settings.outputPath), Series::class.java) },
+      { Utils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java) },
       {
         seasonNumber.value = it.season
         searchText.text = it.title
