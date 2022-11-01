@@ -1,6 +1,6 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman
 
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.ScraperDefinition
@@ -17,7 +17,7 @@ import org.openqa.selenium.support.ui.ExpectedConditions
 
 class FilmanScraper(
   configuration: Configuration,
-  browser: BrowserDef,
+  browser: BrowserConfig,
   def: ScraperDefinition<SeleniumDriver, StreamingWebsiteSettings>,
   driver: SeleniumDriver
 ) : StreamingWebsiteBase(configuration, browser, def, driver) {

@@ -1,17 +1,21 @@
 package com.sheryv.tools.webcrawler.utils
 
 //import kotlinx.coroutines.*
+
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.databind.jsontype.NamedType
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.sheryv.util.logging.LoggingUtils
 import kotlinx.coroutines.*
 import org.slf4j.Logger
+import java.nio.file.Path
 import java.text.DecimalFormat
 import java.time.*
 import java.time.format.DateTimeFormatter
@@ -20,6 +24,7 @@ import java.time.format.SignStyle
 import java.time.temporal.ChronoField
 import kotlin.math.log10
 import kotlin.math.pow
+
 
 object Utils {
   private var DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
@@ -78,6 +83,9 @@ object Utils {
     map.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     map.registerSubtypes(*types.map { NamedType(it.value, it.key) }.toTypedArray())
+    val mod = SimpleModule()
+    mod.addSerializer(Path::class.java, ToStringSerializer())
+    map.registerModule(mod)
     return map
   }
   

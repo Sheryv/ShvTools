@@ -1,7 +1,7 @@
 package com.sheryv.tools.webcrawler.process
 
 import com.sheryv.tools.webcrawler.GlobalState
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.ScraperDef
@@ -14,11 +14,14 @@ import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.lg
 import org.openqa.selenium.SessionNotCreatedException
 import java.io.File
+import kotlin.io.path.exists
+import kotlin.io.path.isExecutable
+import kotlin.io.path.isRegularFile
 
 
 class Runner(
   private val configuration: Configuration,
-  private val browser: BrowserDef,
+  private val browser: BrowserConfig,
   private val scraperDef: ScraperDef
 ) {
   
@@ -29,17 +32,17 @@ class Runner(
   
   suspend fun start() {
     val config = configuration.copy()
-    val file = File(browser.driverDef.path)
-    if (!file.exists() || !file.isFile) {
-      lg().info("Browser configuration '${browser.type.name}' was rejected because driver was not found at '${browser.driverDef.path}'")
-      throw AppError("Cannot start browser because driver was not found at '${browser.driverDef.path}'")
+    val driverPath = browser.currentDriver().path
+    if (!driverPath.exists() || !driverPath.isExecutable()) {
+      lg().info("Browser configuration '${browser.type.name}' was rejected because driver was not found at '${driverPath}' or it is not correct executable")
+      throw AppError("Cannot start browser because driver was not found at '${driverPath}' or it is not correct executable file")
     }
     
-    System.setProperty(browser.driverDef.type.propertyNameForPath, browser.driverDef.path)
+    System.setProperty(browser.selectedDriver.propertyNameForSeleniumDriver, driverPath.toAbsolutePath().toString())
     
     var driver: SDriver? = null
     try {
-      driver = browser.driverDef.type.webDriverBuilder.build(config, browser)
+      driver = browser.selectedDriver.webDriverBuilder.build(config, browser)
       val scrapper = scraperDef.build(config, browser, driver)
       
       driver.initialize(scrapper)

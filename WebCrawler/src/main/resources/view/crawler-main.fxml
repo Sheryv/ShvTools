@@ -26,6 +26,7 @@
 <?import javafx.scene.layout.Pane?>
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
 <VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="600.0" prefWidth="1000.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.sheryv.tools.webcrawler.view.MainView">
    <children>
@@ -57,7 +58,7 @@
                   <TextField disable="true" promptText="Search..." />
                   <VBox VBox.vgrow="ALWAYS">
                      <children>
-                        <Label text="Scrapers" />
+                        <Label text="Crawlers / Automated Bots" />
                         <TreeView fx:id="tvScrapers" VBox.vgrow="ALWAYS" />
                      </children>
                   </VBox>
@@ -74,7 +75,7 @@
                            <content>
                               <ScrollPane fitToHeight="true" fitToWidth="true">
                                  <content>
-                                    <VBox spacing="10.0">
+                                    <VBox spacing="15.0">
                                        <children>
                                           <VBox>
                                              <children>
@@ -92,25 +93,50 @@
                                                 </Label>
                                              </children>
                                           </VBox>
-                                          <VBox>
-                                             <children>
-                                                <Label text="Browser location (eg. chrome.exe path)" />
-                                                <TextField fx:id="tfBrowserPath" />
-                                             </children>
-                                          </VBox>
                                           <HBox spacing="10.0">
                                              <children>
-                                                <VBox maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+                                                <VBox HBox.hgrow="ALWAYS">
                                                    <children>
-                                                      <Label text="Selenium driver location (eg. chromedriver.exe path)" />
-                                                      <TextField fx:id="tfBrowserDriverPath" maxWidth="1.7976931348623157E308" />
-                                                      <Label fx:id="lbDriverVersion" />
+                                                      <Label text="Browser main executable path" />
+                                                      <TextField fx:id="tfBrowserPath" />
+                                                      <Label fx:id="lbStatusOfSelectedBrowser">
+                                                         <font>
+                                                            <Font name="System Italic" size="12.0" />
+                                                         </font>
+                                                      </Label>
                                                    </children>
                                                 </VBox>
                                                 <VBox>
                                                    <children>
+                                                      <Label />
+                                                      <Button fx:id="btnSelectBrowserExec" mnemonicParsing="false" text="..." />
+                                                   </children>
+                                                </VBox>
+                                             </children>
+                                          </HBox>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <VBox>
+                                                   <children>
                                                       <Label text="Driver type" />
                                                       <ComboBox fx:id="cbBrowserDriverType" minWidth="150.0" />
+                                                   </children>
+                                                </VBox>
+                                                <VBox maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+                                                   <children>
+                                                      <Label text="Browser driver path (eg. chromedriver.exe path)" />
+                                                      <TextField fx:id="tfBrowserDriverPath" maxWidth="1.7976931348623157E308" />
+                                                       <Label fx:id="lbDriverVersion">
+                                                           <font>
+                                                               <Font name="System Italic" size="12.0" />
+                                                           </font>
+                                                       </Label>
+                                                   </children>
+                                                </VBox>
+                                                <VBox>
+                                                   <children>
+                                                      <Label />
+                                                      <Button fx:id="btnSelectDriver" mnemonicParsing="false" text="..." />
                                                    </children>
                                                 </VBox>
                                              </children>
@@ -118,7 +144,7 @@
                                           <VBox fx:id="vLinks" VBox.vgrow="NEVER">
                                              <children>
                                                 <Separator prefWidth="200.0" />
-                                                <Label text="The driver must be in the same version as the browser. Download links are provided below." wrapText="true">
+                                                <Label text="The driver must be in the compatible version with the browser. Download links are provided below." wrapText="true">
                                                    <VBox.margin>
                                                       <Insets bottom="5.0" top="10.0" />
                                                    </VBox.margin>
@@ -155,7 +181,7 @@
                               </ScrollPane>
                            </content>
                         </Tab>
-                        <Tab text="Scraper options">
+                        <Tab text="Crawler options">
                            <content>
                               <ScrollPane fitToHeight="true" fitToWidth="true" vbarPolicy="ALWAYS">
                                  <content>
@@ -225,7 +251,7 @@
       </SplitPane>
       <HBox>
          <children>
-            <Label fx:id="lbState" text="Select Scraper from left panel and press Start" />
+            <Label fx:id="lbState" text="Select Crawler from left panel and press Start" />
          </children>
          <VBox.margin>
             <Insets bottom="5.0" left="10.0" right="10.0" />

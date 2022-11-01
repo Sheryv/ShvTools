@@ -1,8 +1,8 @@
 package com.sheryv.tools.webcrawler.service.videosearch
 
 import com.sheryv.tools.webcrawler.GlobalState
-import com.sheryv.tools.webcrawler.SystemUtils
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
+import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.HttpSupport
@@ -11,7 +11,7 @@ class TmdbApi {
   
   fun searchTv(search: String): List<SearchItem> {
     val support = HttpSupport()
-    val query = SystemUtils.encodeNameForWeb(search)
+    val query = SystemSupport.get.encodeNameForWeb(search)
     val settings = GlobalState.settingsForCurrentScraper() as StreamingWebsiteSettings
     require(!settings.tmdbKey.isNullOrBlank()) { "TMDB API key is required to use this feature" }
     val json = support.sendGet("https://api.themoviedb.org/3/search/tv?api_key=${settings.tmdbKey}&language=en-US&query=$query&page=1")

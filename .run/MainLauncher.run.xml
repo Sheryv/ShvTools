@@ -1,9 +1,9 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Scrapper" type="JetRunConfigurationType">
+  <configuration default="false" name="WebCrawler" type="JetRunConfigurationType">
     <option name="MAIN_CLASS_NAME" value="com.sheryv.tools.webcrawler.MainLauncher" />
-    <module name="shvtools.website-scraper.main" />
+    <module name="shvtools.web-crawler.main" />
     <shortenClasspath name="NONE" />
-    <option name="WORKING_DIRECTORY" value="websitescraper" />
+    <option name="WORKING_DIRECTORY" value="webcrawler" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>

@@ -1,11 +1,11 @@
 package com.sheryv.tools.webcrawler.process.base
 
-import com.sheryv.tools.webcrawler.SystemUtils
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.Format
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
+import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.utils.Utils
 import java.nio.file.Path
 import java.time.format.DateTimeFormatter
@@ -24,14 +24,14 @@ abstract class ScraperDefinition<T : SDriver, S : SettingsBase>(
   
   abstract fun build(
     configuration: Configuration,
-    browser: BrowserDef,
+    browser: BrowserConfig,
     driver: T
   ): Scraper<T, S>
   
   protected fun defaultOutputPath(): Path {
-    return Path.of(
-      SystemUtils.userDownloadDir(),
-      "${SystemUtils.removeForbiddenFileChars(id)}-${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${defaultOutputFormat().extension}"
+    return SystemSupport.get.userDownloadDir.resolve(
+      "${SystemSupport.get.removeForbiddenFileChars(id)}-" +
+          "${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${defaultOutputFormat().extension}"
     ).toAbsolutePath()
   }
   

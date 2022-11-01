@@ -18,11 +18,11 @@ import java.io.File
 import java.util.logging.Level
 
 abstract class DriverBuilder {
-  abstract fun build(config: Configuration, browser: BrowserDef): SDriver
+  abstract fun build(config: Configuration, browser: BrowserConfig): SDriver
   
-  protected fun setDefaults(options: MutableCapabilities, config: Configuration, browser: BrowserDef) {
-    if (config.useUserProfile == true) {
-      val userDataPath = browser.type.defaultUserProfilePathProvider(browser.type)
+  protected fun setDefaults(options: MutableCapabilities, config: Configuration, browser: BrowserConfig) {
+    if (config.browserSettings.useUserProfile == true) {
+      val userDataPath = browser.type.getPathForUserProfileInBrowser()
       if (userDataPath != null) {
         when (options) {
           is ChromeOptions -> {
@@ -35,7 +35,7 @@ abstract class DriverBuilder {
             )
           }
           is FirefoxOptions -> {
-            options.profile = FirefoxProfile(File(userDataPath))
+            options.profile = FirefoxProfile(userDataPath.toFile())
             lg().info(
               "Using user profile from '{}'. Driver options class: {}, browser: {}",
               userDataPath,
@@ -65,17 +65,17 @@ abstract class DriverBuilder {
 }
 
 class FirefoxDriverBuilder : DriverBuilder() {
-  override fun build(config: Configuration, browser: BrowserDef): SDriver {
+  override fun build(config: Configuration, browser: BrowserConfig): SDriver {
     val options = FirefoxOptions()
     setDefaults(options, config, browser)
-    options.setBinary(browser.binaryPath)
+    options.setBinary(browser.binaryPath!!)
     return SeleniumDriver(FirefoxDriver(options))
   }
   
 }
 
 class ChromeDriverBuilder : DriverBuilder() {
-  override fun build(config: Configuration, browser: BrowserDef): SDriver {
+  override fun build(config: Configuration, browser: BrowserConfig): SDriver {
     val options = ChromeOptions()
   
     val logPrefs = LoggingPreferences()
@@ -83,14 +83,14 @@ class ChromeDriverBuilder : DriverBuilder() {
     options.setCapability(ChromeOptions.LOGGING_PREFS, logPrefs)
     
     setDefaults(options, config, browser)
-    options.setBinary(browser.binaryPath)
+    options.setBinary(browser.binaryPath!!.toAbsolutePath().toString())
     return SeleniumDriver(ChromeDriver(options))
   }
   
 }
 
 class EdgeDriverBuilder : DriverBuilder() {
-  override fun build(config: Configuration, browser: BrowserDef): SDriver {
+  override fun build(config: Configuration, browser: BrowserConfig): SDriver {
     val options = EdgeOptions()
   
     val logPrefs = LoggingPreferences()
@@ -98,7 +98,7 @@ class EdgeDriverBuilder : DriverBuilder() {
     options.setCapability(EdgeOptions.LOGGING_PREFS, logPrefs)
     
     setDefaults(options, config, browser)
-    options.setBinary(browser.binaryPath)
+    options.setBinary(browser.binaryPath!!.toAbsolutePath().toString())
     return SeleniumDriver(EdgeDriver(options))
   }
   

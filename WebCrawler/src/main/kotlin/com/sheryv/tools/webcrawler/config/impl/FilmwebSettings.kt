@@ -23,20 +23,6 @@ class FilmwebSettings(
     return Pair(
       listOf(
         savePathRow,
-        TextInputSettingsRow("asdasd", ""),
-        TextInputSettingsRow(
-          "asdasd", "The driver must be in the same version as the browser. Download links are provided " +
-              "below. The driver must be in the same version as the browser. Download links are provided below.", 6
-        ),
-        BoolSettingsRow("asdasd", false),
-        ChoiceSettingsRow("asdasd", "vb", listOf("1", "bcvnvsdf", "vb")),
-        NumberRangeSettingRow("asdasd", 20, 0, 100),
-        HeaderSettingsRow("asdasd"),
-        
-        ValuePreviewSettingsRow(
-          "Streaming providers order (Drag and drop to change)",
-          "The driver must be in the same version as the browser. Download links are provided below."
-        ),
       )
     ) {
       FilmwebSettings(name, websiteUrl, savePathRow.readValue(), outputFormat)

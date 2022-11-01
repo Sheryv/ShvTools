@@ -2,11 +2,11 @@ package com.sheryv.tools.webcrawler.view.jdownloader
 
 import com.sheryv.tools.webcrawler.BaseView
 import com.sheryv.tools.webcrawler.GlobalState
-import com.sheryv.tools.webcrawler.SystemUtils
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.ScraperDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
+import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.jdownloader.JDownloaderCrawlerEntry
 import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.Utils
@@ -33,7 +33,7 @@ class JDownloaderView : BaseView() {
     btnOpenSelectDir.tooltip = Tooltip("Open directory selection dialog")
     chFilterToStreamingFilesOnly.isSelected = true
     chOverwritePackagizerRules.isSelected = true
-    linkHelp.setOnMouseClicked { SystemUtils.openLink(linkHelp.text) }
+    linkHelp.setOnMouseClicked { SystemSupport.get.openLink(linkHelp.text) }
     
     tfWatchedDir.text = settings.jDownloaderWatchedDir.orEmpty()
     

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
-import com.sheryv.tools.webcrawler.browser.BrowserType
-import com.sheryv.tools.webcrawler.browser.DriverType
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.BrowserTypes
 import com.sheryv.tools.webcrawler.process.ScraperRegistry
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.Utils
@@ -18,12 +18,8 @@ import java.time.OffsetDateTime
 import java.util.*
 
 class Configuration(
-  var browser: BrowserType? = null,
-  var browserPath: String? = null,
-  var browserDriverPath: String? = null,
-  var browserDriverType: DriverType? = null,
+  val browserSettings: BrowserSettings = BrowserSettings(),
   var scrapper: String? = null,
-  var useUserProfile: Boolean? = null,
   var lastUserScript: String = "",
   @JsonDeserialize(using = SettingsDeserializer::class)
   val settings: MutableMap<String, SettingsBase>
@@ -98,19 +94,23 @@ class Configuration(
   
   
   fun copy(
-    browser: BrowserType? = this.browser,
-    browserPath: String? = this.browserPath,
-    browserDriverPath: String? = this.browserDriverPath,
-    browserDriverType: DriverType? = this.browserDriverType,
+    browserSettings: BrowserSettings = this.browserSettings.copy(),
     scrapper: String? = this.scrapper,
-    useUserProfile: Boolean? = this.useUserProfile,
     lastUserScript: String = this.lastUserScript,
     settings: MutableMap<String, SettingsBase> = this.settings.toMutableMap()
   ): Configuration {
-    return Configuration(browser, browserPath, browserDriverPath, browserDriverType, scrapper, useUserProfile, lastUserScript, settings)
+    return Configuration(browserSettings, scrapper, lastUserScript, settings)
   }
 }
 
+data class BrowserSettings(
+  @JsonDeserialize(`as` = LinkedHashSet::class)
+  val configs: Set<BrowserConfig> = BrowserConfig.all(),
+  var selected: BrowserTypes = configs.first().type,
+  var useUserProfile: Boolean = true,
+) {
+  fun currentBrowser() = configs.first { it.type == selected }
+}
 
 private class SettingsDeserializer : StdDeserializer<Map<String, SettingsBase>>(Map::class.java) {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Map<String, SettingsBase> {

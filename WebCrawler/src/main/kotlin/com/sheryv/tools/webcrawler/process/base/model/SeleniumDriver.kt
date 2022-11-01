@@ -2,7 +2,7 @@ package com.sheryv.tools.webcrawler.process.base.model
 
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.Scraper
-import com.sheryv.tools.webcrawler.utils.DriverUtils
+import com.sheryv.tools.webcrawler.service.BrowserSupport
 import com.sheryv.tools.webcrawler.utils.lg
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -23,7 +23,7 @@ open class SeleniumDriver(
 ) : SDriver, WebDriver {
   protected lateinit var scraper: Scraper<SeleniumDriver, SettingsBase>
   private val cachedScript: String by lazy {
-    val script = DriverUtils.loadScriptFromClassPath(scraper.def.id)
+    val script = BrowserSupport.get.loadScriptFromClassPath(scraper.def.id)
     executor.executeScript(script)
     script
   }

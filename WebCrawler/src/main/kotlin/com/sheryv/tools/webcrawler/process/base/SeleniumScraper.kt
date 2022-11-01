@@ -2,7 +2,7 @@ package com.sheryv.tools.webcrawler.process.base
 
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.ProcessingStates
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
@@ -22,7 +22,7 @@ import java.time.Duration
 
 abstract class SeleniumScraper<S : SettingsBase>(
   configuration: Configuration,
-  browser: BrowserDef,
+  browser: BrowserConfig,
   def: ScraperDefinition<SeleniumDriver, S>,
   driver: SeleniumDriver
 ) :

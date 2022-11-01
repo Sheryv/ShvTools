@@ -1,7 +1,11 @@
 package com.sheryv.tools.webcrawler.view
 
-import com.sheryv.tools.webcrawler.*
-import com.sheryv.tools.webcrawler.browser.*
+import com.sheryv.tools.webcrawler.BaseView
+import com.sheryv.tools.webcrawler.GlobalState
+import com.sheryv.tools.webcrawler.MainApplication
+import com.sheryv.tools.webcrawler.ProcessingStates
+import com.sheryv.tools.webcrawler.browser.BrowserTypes
+import com.sheryv.tools.webcrawler.browser.DriverTypes
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
@@ -10,6 +14,7 @@ import com.sheryv.tools.webcrawler.process.ScraperRegistry
 import com.sheryv.tools.webcrawler.process.base.ScraperDef
 import com.sheryv.tools.webcrawler.process.base.SeleniumScraper
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
+import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
 import com.sheryv.tools.webcrawler.utils.*
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
@@ -19,7 +24,9 @@ import com.sheryv.tools.webcrawler.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.util.ChangeListener
 import com.sheryv.util.VersionUtils
+import javafx.animation.PauseTransition
 import javafx.application.Platform
+import javafx.event.EventHandler
 import javafx.fxml.FXML
 import javafx.geometry.Pos
 import javafx.scene.control.*
@@ -28,6 +35,7 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.layout.*
 import javafx.stage.Modality
+import javafx.util.Duration
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -37,11 +45,13 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.swing.JFrame
 import javax.swing.UIManager
+import kotlin.io.path.exists
+import kotlin.io.path.isExecutable
+import kotlin.io.path.isRegularFile
 
 
 class MainView : BaseView(), ViewActionsProvider {
   private var registry: ScraperRegistry = ScraperRegistry.fill(ScraperRegistry.DEFAULT)
-  private var browsers: BrowserRegistry = BrowserRegistry.fill(BrowserRegistry.DEFAULT)
   private var selected: ScraperDef? = null
   private lateinit var config: Configuration
   private lateinit var settingsReader: SettingsPanelReader
@@ -145,41 +155,78 @@ class MainView : BaseView(), ViewActionsProvider {
       }
     }
     
-    cbBrowser.selectionModel.selectedItemProperty().addListener { _, o, n ->
-      val flag = isCustomBrowser()
-      tfBrowserPath.isEditable = flag
-      tfBrowserDriverPath.isEditable = flag
-      cbBrowserDriverType.isDisable = !flag
-      if (o == BrowserType.OTHER && n != BrowserType.OTHER) {
-        saveConfig()
+    cbBrowserDriverType.selectionModel.selectedItemProperty().addListener { _, _, n ->
+      if (n != null) {
+        lg().info("over ${config.browserSettings.currentBrowser()} ${config.browserSettings.currentBrowser().selectedDriver} <- $n")
+        config.browserSettings.currentBrowser().selectedDriver = n
+        tfBrowserDriverPath.text = config.browserSettings.currentBrowser().currentDriver().path.toAbsolutePath().toString()
       }
-      val b = browsers.get(cbBrowser.selectionModel.selectedItem)
-      tfBrowserPath.text = b?.binaryPath ?: config.browserPath
-      tfBrowserDriverPath.text = b?.driverDef?.path ?: config.browserDriverPath
-      cbBrowserDriverType.selectionModel.select(b?.driverDef?.type ?: config.browserDriverType)
-      
-      lbDriverVersion.text = if (!flag) {
-        b?.type?.defaultDriverDef?.type?.propertyNameForVersion?.let { "Driver version is " + Configuration.property(it) } ?: ""
-      } else ""
-      
     }
     
-    chkUseUserProfile.isSelected = config.useUserProfile ?: false
-    tfBrowserPath.text = config.browserPath.orEmpty()
-    tfBrowserDriverPath.text = config.browserDriverPath.orEmpty()
-    cbBrowserDriverType.items.addAll(DriverType.values())
-    cbBrowserDriverType.selectionModel.select(config.browserDriverType ?: DriverType.CHROME)
-    cbBrowser.items.addAll(browsers.names())
-    cbBrowser.items.add(BrowserType.OTHER)
-    val browser = config.browser
-    if (browser != null && cbBrowser.items.contains(browser)) {
-      cbBrowser.selectionModel.select(browser)
-    } else {
-      cbBrowser.selectionModel.selectFirst()
+    cbBrowser.selectionModel.selectedItemProperty().addListener { _, o, n ->
+      lg().info("cb1 ${config.browserSettings.currentBrowser()} <- $n | ${config.browserSettings.currentBrowser().selectedDriver} <- ${config.browserSettings.configs.first { n == it.type }.selectedDriver}")
+      val flag = isCustomBrowser()
+      val prev = config.browserSettings.currentBrowser()
+      tfBrowserPath.isEditable = flag
+      btnSelectBrowserExec.isDisable = !flag
+//      tfBrowserDriverPath.isEditable = flag
+//      cbBrowserDriverType.isDisable = !flag
+      config.browserSettings.selected = n
+      val b = config.browserSettings.currentBrowser()
+      if (b.binaryPath != null) {
+        tfBrowserPath.text = b.binaryPath!!.toAbsolutePath().toString()
+      } else {
+        config.browserSettings.currentBrowser().binaryPath = prev.binaryPath
+      }
+      val driver = b.selectedDriver
+      lg().info("cb2 ${b} <- $prev | ${b.selectedDriver} <- ${prev.selectedDriver}")
+      cbBrowserDriverType.items.setAll(b.drivers.map { it.type })
+      lg().info("cb3 ${b} <- $prev | ${b.selectedDriver} <- ${prev.selectedDriver}")
+      cbBrowserDriverType.selectionModel.select(driver)
+      lg().info("cb4 ${b} <- $prev | ${b.selectedDriver} <- ${prev.selectedDriver}")
+      
+    }
+    val pause = PauseTransition(Duration.seconds(1.0))
+    tfBrowserPath.textProperty().addListener { _, _, n ->
+      config.browserSettings.currentBrowser().binaryPath = Path.of(n)
+      lbStatusOfSelectedBrowser.text = ""
+      pause.onFinished = EventHandler {
+        findBrowserVersion(n)
+      }
+      pause.playFromStart()
     }
     
-    vLinks.children.filter { it is Pane }.flatMap { (it as Pane).children }.filter { it is Hyperlink }.map {
-      (it as Hyperlink).setOnMouseClicked { e -> SystemUtils.openLink(it.text) }
+    val pause2 = PauseTransition(Duration.seconds(1.0))
+    tfBrowserDriverPath.textProperty().addListener { _, _, n ->
+      config.browserSettings.currentBrowser().currentDriver().path = Path.of(n)
+      lbDriverVersion.text = ""
+      pause2.onFinished = EventHandler {
+        lbDriverVersion.text = if (config.browserSettings.currentBrowser().currentDriver().path.isExecutable())
+          "File exists"
+        else
+          "Path is incorrect"
+      }
+      pause2.playFromStart()
+    }
+    
+    chkUseUserProfile.isSelected = config.browserSettings.useUserProfile
+    cbBrowser.items.addAll(config.browserSettings.configs.map { it.type })
+    cbBrowser.selectionModel.select(config.browserSettings.selected)
+    
+    btnSelectDriver.setOnAction {
+      DialogUtils.openFileDialog(stage, initialFile = tfBrowserDriverPath.text.takeIf { it.isNotBlank() })?.also {
+        tfBrowserDriverPath.text = it.toAbsolutePath().toString()
+      }
+    }
+    
+    btnSelectBrowserExec.setOnAction {
+      DialogUtils.openFileDialog(stage, initialFile = tfBrowserPath.text.takeIf { it.isNotBlank() })?.also {
+        tfBrowserPath.text = it.toAbsolutePath().toString()
+      }
+    }
+    
+    vLinks.children.filterIsInstance<Pane>().flatMap { it.children }.filterIsInstance<Hyperlink>().map {
+      it.setOnMouseClicked { e -> SystemSupport.get.openLink(it.text) }
     }
     
     
@@ -294,7 +341,7 @@ class MainView : BaseView(), ViewActionsProvider {
           MenuItem("About").apply {
             setOnAction {
               val msg =
-                "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("website-scraper-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
+                "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("website-crawler-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
               DialogUtils.messageCopyableDialog(msg, "About info")
             }
           })
@@ -308,15 +355,7 @@ class MainView : BaseView(), ViewActionsProvider {
         ProcessingStates.IDLE -> {
           GlobalState.processingState.set(ProcessingStates.RUNNING)
           
-          val browser: BrowserDef = if (isCustomBrowser()) {
-            BrowserDef(
-              BrowserType.OTHER,
-              tfBrowserPath.text,
-              DriverDef(cbBrowserDriverType.selectionModel.selectedItem, tfBrowserDriverPath.text)
-            )
-          } else {
-            browsers.get(cbBrowser.selectionModel.selectedItem)!!
-          }
+          val browser = config.browserSettings.currentBrowser()
           val runner = Runner(config, browser, selected!!)
           val settings = settingsReader.invoke()
           inBackground {
@@ -358,14 +397,8 @@ class MainView : BaseView(), ViewActionsProvider {
         val s = settingsReader()
         s.validate(selected!!)
         config.settings[selected!!.id] = s
-        config.browser = cbBrowser.selectionModel.selectedItem
-        if (isCustomBrowser()) {
-          config.browserPath = tfBrowserPath.text?.takeIf { it.isNotBlank() }
-          config.browserDriverPath = tfBrowserDriverPath.text?.takeIf { it.isNotBlank() }
-          config.browserDriverType = cbBrowserDriverType.selectionModel.selectedItem
-        }
         config.scrapper = selected?.id
-        config.useUserProfile = chkUseUserProfile.isSelected
+        config.browserSettings.useUserProfile = chkUseUserProfile.isSelected
         config.save()
       }
     } catch (e: Exception) {
@@ -376,7 +409,7 @@ class MainView : BaseView(), ViewActionsProvider {
     }
   }
   
-  private fun isCustomBrowser() = cbBrowser.selectionModel.selectedItem == BrowserType.OTHER
+  private fun isCustomBrowser() = cbBrowser.selectionModel.selectedItem == BrowserTypes.OTHER
   
   override fun showMessageDialog(message: String) {
     val header = if (GlobalState.processingState.value == ProcessingStates.RUNNING) {
@@ -409,13 +442,25 @@ class MainView : BaseView(), ViewActionsProvider {
   
   private fun openJDownloaderGeneratorView() {
     try {
-      MainApplication.createWindow<JDownloaderView>("jdownloader-generate.fxml", "Generate file for JDownloader 2 import - $TITLE")
+      MainApplication.createWindow<JDownloaderView>("view/jdownloader-generate.fxml", "Generate file for JDownloader 2 import - $TITLE")
     } catch (e: Exception) {
       lg().error("Error while opening dialog JDownloader 2 import", e)
       DialogUtils.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
         "Error while opening dialog JDownloader 2 import", Alert.AlertType.ERROR, true, ButtonType.OK
       )
+    }
+  }
+  
+  private fun findBrowserVersion(path: String) {
+    inBackground {
+      val p = Path.of(path)
+      val ver = if (p.exists() && p.isRegularFile()) {
+        SystemSupport.get.getFileVersion(p).takeIf { it.isNotEmpty() }?.let { "Recognized version is: ${it.first()}" }
+      } else null
+      inViewThread {
+        lbStatusOfSelectedBrowser.text = ver ?: "Provided path is incorrect"
+      }
     }
   }
   
@@ -549,19 +594,28 @@ class MainView : BaseView(), ViewActionsProvider {
   private lateinit var btnStop: Button
   
   @FXML
+  private lateinit var btnSelectDriver: Button
+  
+  @FXML
+  private lateinit var btnSelectBrowserExec: Button
+  
+  @FXML
   private lateinit var tvScrapers: TreeView<ScraperListItem>
   
   @FXML
-  private lateinit var cbBrowser: ComboBox<BrowserType>
+  private lateinit var cbBrowser: ComboBox<BrowserTypes>
   
   @FXML
-  private lateinit var cbBrowserDriverType: ComboBox<DriverType>
+  private lateinit var cbBrowserDriverType: ComboBox<DriverTypes>
   
   @FXML
   private lateinit var taLogs: TextArea
   
   @FXML
   private lateinit var lbState: Label
+  
+  @FXML
+  private lateinit var lbStatusOfSelectedBrowser: Label
   
   @FXML
   private lateinit var lbSelected: Label

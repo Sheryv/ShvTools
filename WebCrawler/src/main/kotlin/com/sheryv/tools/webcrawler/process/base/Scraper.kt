@@ -2,7 +2,7 @@ package com.sheryv.tools.webcrawler.process.base
 
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.ProcessingStates
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
@@ -13,7 +13,7 @@ import kotlinx.coroutines.delay
 
 abstract class Scraper<T : SDriver, S : SettingsBase>(
   protected val configuration: Configuration,
-  val browser: BrowserDef,
+  val browser: BrowserConfig,
   val def: ScraperDefinition<T, S>,
   val driver: T
 ) {

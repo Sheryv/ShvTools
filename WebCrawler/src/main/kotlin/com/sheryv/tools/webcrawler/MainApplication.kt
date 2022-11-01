@@ -11,7 +11,7 @@ import javafx.stage.Stage
 
 class MainApplication : Application() {
   override fun start(primaryStage: Stage?) {
-    createWindow<MainView>("crawler-main.fxml", ViewUtils.TITLE)
+    createWindow<MainView>("view/crawler-main.fxml", ViewUtils.TITLE)
   }
   
   companion object {

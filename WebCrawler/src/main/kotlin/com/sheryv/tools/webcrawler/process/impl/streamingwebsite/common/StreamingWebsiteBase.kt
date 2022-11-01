@@ -1,7 +1,7 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common
 
 import com.sheryv.tools.webcrawler.GlobalState
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
@@ -26,7 +26,7 @@ import java.util.*
 
 abstract class StreamingWebsiteBase(
   configuration: Configuration,
-  browser: BrowserDef,
+  browser: BrowserConfig,
   def: ScraperDefinition<SeleniumDriver, StreamingWebsiteSettings>,
   driver: SeleniumDriver
 ) : SeleniumScraper<StreamingWebsiteSettings>(configuration, browser, def, driver) {

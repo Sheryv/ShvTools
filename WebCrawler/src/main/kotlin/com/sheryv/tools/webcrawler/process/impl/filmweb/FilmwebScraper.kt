@@ -1,6 +1,6 @@
 package com.sheryv.tools.webcrawler.process.impl.filmweb
 
-import com.sheryv.tools.webcrawler.browser.BrowserDef
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.FilmwebSettings
 import com.sheryv.tools.webcrawler.process.base.ScraperDefinition
@@ -13,7 +13,7 @@ import com.sheryv.tools.webcrawler.utils.lg
 import org.openqa.selenium.By
 import java.io.File
 
-class FilmwebScraper(configuration: Configuration, browser: BrowserDef, def: ScraperDefinition<SeleniumDriver, FilmwebSettings>, driver: SeleniumDriver) :
+class FilmwebScraper(configuration: Configuration, browser: BrowserConfig, def: ScraperDefinition<SeleniumDriver, FilmwebSettings>, driver: SeleniumDriver) :
   SeleniumScraper<FilmwebSettings>(configuration, browser, def, driver) {
   
   private val result = FilmwebResult()
