@@ -4,7 +4,6 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.EpisodeType
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.StreamQuality
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
-import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.view.settings.*
 import java.nio.file.Path
@@ -50,11 +49,11 @@ class StreamingWebsiteSettings(
       "Streaming providers order (Drag and drop to change order)",
       buildListAndAddNew(videoServerConfigs, VideoServerConfig.all()).map {
         TableSettingsRow.RowDefinition(
-          listOf(it.name, it.searchTerm),
+          listOf(it.definition.label(), it.definition.domain(), it.id),
           it.enabled
         )
       },
-      listOf("Name", "Search term")
+      listOf("Name", "Domain", "ID")
     )
     val episodeAudioTypes = TableSettingsRow(
       "Allowed audio type (Drag and drop to change order)",
@@ -117,13 +116,15 @@ class StreamingWebsiteSettings(
         nameTemplate.readValue(),
         triesBeforeSwitch.readValue(),
         parallelProviders.readValue(),
-        allowedEpisodeTypes.map { e ->
+        buildListAndAddNew(allowedEpisodeTypes, EpisodeType.all()).map { e ->
           e.changeActivation(types.first { it.cells.first() == e.kind.toString().lowercase() }.isEnabled()) as EpisodeType
         },
-        allowedQualities.map { s ->
+        buildListAndAddNew(allowedQualities, StreamQuality.all()).map { s ->
           s.changeActivation(qualities.first { it.cells.first() == s.kind.toString() }.isEnabled()) as StreamQuality
         },
-        videoServerConfigs.map { s -> s.changeActivation(provs.first { it.cells.first() == s.name }.isEnabled()) as VideoServerConfig },
+        buildListAndAddNew(videoServerConfigs, VideoServerConfig.all()).map { s ->
+          s.changeActivation(provs.first { it.cells[2] == s.id }.isEnabled()) as VideoServerConfig
+        },
       )
     }
   }

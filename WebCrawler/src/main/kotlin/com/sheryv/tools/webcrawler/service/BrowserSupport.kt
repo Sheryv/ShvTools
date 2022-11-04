@@ -37,13 +37,14 @@ abstract class BrowserSupport {
   }
   
   fun loadScriptFromClassPath(scriptName: String): String {
-    val common = javaClass::class.java.classLoader.getResourceAsStream(DEFAULT_SCRIPT_NAME)?.use {
-      it.readAllBytes()
-    }?.let { String(it) }
-    val script = String(javaClass::class.java.classLoader.getResourceAsStream("scripts/$scriptName.js")?.use {
+//    val common = javaClass::class.java.classLoader.getResourceAsStream(DEFAULT_SCRIPT_NAME)?.use {
+//      it.readAllBytes()
+//    }?.let { String(it) } ?: ""
+    val script = String(javaClass.getResourceAsStream("/scripts/$scriptName.js")?.use {
       it.readAllBytes()
     } ?: throw IllegalArgumentException("Script '$scriptName.js' could not be found in classpath"))
-    return "$common;\n$script"
+//    return "$common;\n$script"
+    return script
   }
   
   abstract fun getPathForUserProfileInBrowser(type: BrowserTypes): Path?

@@ -1,4 +1,4 @@
-package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.zerion
+package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.fmovies
 
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
@@ -7,10 +7,10 @@ import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 
-class ZerionCrawlerDef : StreamingCrawlerBase(
-  "zerion",
-  "Zerion",
-  "https://zerion.cc",
+class FMoviesCrawlerDef : StreamingCrawlerBase(
+  "fmovies",
+  "FMovies",
+  "https://fmovies.to",
 ) {
   
   override fun build(
@@ -18,6 +18,6 @@ class ZerionCrawlerDef : StreamingCrawlerBase(
     browser: BrowserConfig,
     driver: SeleniumDriver
   ): Crawler<SeleniumDriver, StreamingWebsiteSettings> {
-    return ZerionCrawler(configuration, browser, this, driver)
+    return FMoviesCrawler(configuration, browser, this, driver)
   }
 }

@@ -1,9 +1,9 @@
 package com.sheryv.tools.webcrawler.config
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.sheryv.tools.webcrawler.process.CrawlerRegistry
 import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
+import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
@@ -16,7 +16,7 @@ abstract class SettingsBase(
   val crawlerId: String,
   outputPath: Path? = null,
 ) {
-  protected val crawlerAttr: CrawlerAttributes = CrawlerRegistry.DEFAULT.get(crawlerId)!!.attributes
+  protected val crawlerAttr: CrawlerAttributes = Registry.get().crawlers().first { it.id() == crawlerId }.attributes
   
   open val outputPath: Path = outputPath ?: defaultOutputPath()
   

@@ -81,6 +81,9 @@ class ChromeDriverBuilder : DriverBuilder() {
     val logPrefs = LoggingPreferences()
     logPrefs.enable(LogType.PERFORMANCE, Level.ALL)
     options.setCapability(ChromeOptions.LOGGING_PREFS, logPrefs)
+  
+    options.addArguments("--disable-blink-features")
+    options.addArguments("--disable-blink-features=AutomationControlled")
     
     setDefaults(options, config, browser)
     options.setBinary(browser.binaryPath!!.toAbsolutePath().toString())

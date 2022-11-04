@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
-import com.sheryv.tools.webcrawler.process.CrawlerRegistry
+import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.Utils
 import java.io.File
@@ -17,8 +17,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.*
-
-private val REGISTRY = CrawlerRegistry.DEFAULT
 
 class Configuration(
   val browserSettings: BrowserSettings = BrowserSettings(),
@@ -47,9 +45,6 @@ class Configuration(
     mapper.writeValue(File(FILE), this)
     return this
   }
-  
-  @JsonIgnore
-  val usedRegistry = REGISTRY
   
   companion object {
     const val FILE = "config.json"
@@ -92,7 +87,7 @@ class Configuration(
         if (Files.exists(path)) {
           mapper.readValue(path.toFile(), Configuration::class.java).save()
         } else {
-          Configuration(settings = REGISTRY.all().map { it.createDefaultSettings() }.toMutableSet()).save()
+          Configuration(settings = Registry.get().crawlers().map { it.createDefaultSettings() }.toMutableSet()).save()
         }
       } catch (e: Exception) {
         throw AppError("Cannot load configuration file from '${path.toAbsolutePath()}'. Incorrect format", e)
@@ -122,7 +117,7 @@ data class BrowserSettings(
 
 private class SettingsSetDeserializer : StdDeserializer<Set<SettingsBase>>(Set::class.java) {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Set<SettingsBase> {
-    val registry = REGISTRY.all()
+    val registry = Registry.get().crawlers()
     val mapping = registry.associate { it.id() to it.settingsClass }
     
     val settings =

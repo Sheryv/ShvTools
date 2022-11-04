@@ -6,6 +6,7 @@ interface VideoServerDefinition {
   fun id(): String
   fun label(): String
   fun searchTerm(): String
+  fun domain(): String
   fun innerIframeCssSelector(): By?
   fun scriptToActivatePlayer(): String?
 }

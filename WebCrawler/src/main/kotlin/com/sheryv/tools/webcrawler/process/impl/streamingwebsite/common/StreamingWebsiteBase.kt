@@ -19,9 +19,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
 import org.openqa.selenium.InvalidArgumentException
-import java.io.File
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.*
 
 abstract class StreamingWebsiteBase(
@@ -62,6 +60,7 @@ abstract class StreamingWebsiteBase(
     } else null) ?: Series(settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
     
     driver.get(series.seriesUrl)
+//    driver.get("https://bot.sannysoft.com/")
     driver.waitForVisibility(By.tagName("body"))
     title = driver.title
     waitIfPaused()
@@ -69,15 +68,9 @@ abstract class StreamingWebsiteBase(
     val items: List<VideoData> = findEpisodeItems()
     waitIfPaused()
     var i = settings.searchStartIndex
-    while (i <= items.size && i <= settings.searchStopIndex) {
+    while (i <= items.size && (i <= settings.searchStopIndex || settings.searchStopIndex < 0)) {
       val item: VideoData = items[i - 1]
-//      if (options.getRequiredIndexes() != null) {
-//        if (!options.getRequiredIndexes().contains(item.getNum())) {
-//          Gripper.log.info("Skipped " + item.toString())
-//          i++
-//          continue
-//        }
-//      }
+
       var downloadUrl: VideoUrl? = null
       val err = mutableListOf<ErrorEntry>()
       val serverHandlers = streamingServersHandlers()
@@ -105,18 +98,17 @@ abstract class StreamingWebsiteBase(
             item.episodePageUrl
           )
         )
-        lg().debug("Servers found for E${item.number.toString().padStart(2, '0')} \n"
-            + allServers.joinToString("\n") { "${it.serverName} - ${it.type} - ${it.format}" })
-        val priorities: List<VideoServerConfig> = getPriorities(i)
-        for (priority in priorities) {
-          val servers = allServers
-            .filter {
-              it.serverName.lowercase().contains(priority.searchTerm.lowercase())
-            }
-            .onEach { it.matchedServerDef = serverHandlers.keys.first { it.searchTerm() == priority.searchTerm } }
-            .take(settings.triesBeforeStreamingProviderChange)
-          
-          for (server in servers) {
+        lg().info("Servers found for E${item.number.toString().padStart(2, '0')}: "
+            + allServers.joinToString(" | ") { "(${it.index}) ${it.serverName} - ${it.type} - ${it.format}" })
+        
+        val priorities = getPriorities(i, allServers, serverHandlers)
+        lg().info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
+          val indexes = v.joinToString(",") { it.index.toString() }
+          "${k.definition.label()}=($indexes)"
+        })
+        
+        for (pair in priorities) {
+          for (server in pair.second) {
             try {
               item.server = server
               waitIfPaused()
@@ -208,23 +200,39 @@ abstract class StreamingWebsiteBase(
   }
   
   
-  protected open fun getPriorities(indexOffset: Int): List<VideoServerConfig> {
-    var offset = indexOffset
-    val base: MutableList<VideoServerConfig> = settings.videoServerConfigs.filter { obj -> obj.enabled }.toMutableList()
+  protected open fun getPriorities(
+    episodeNumber: Int,
+    allFoundServers: List<VideoServer>,
+    handlers: Map<VideoServerDefinition, VideoServerHandler>
+  ): List<Pair<VideoServerConfig, List<VideoServer>>> {
     
-    if (settings.numOfTopStreamingProvidersUsedSimultaneously <= 0) {
-      return base
-    }
-    val top: List<VideoServerConfig> = base.take(settings.numOfTopStreamingProvidersUsedSimultaneously)
-    base.removeAll(top)
-    offset %= top.size
-    val deque = ArrayDeque(top)
-    for (i in 0 until offset) {
-      val poll = deque.poll()
-      deque.add(poll)
-    }
-    val result = deque.toMutableList()
-    result.addAll(base)
+    val base = settings.videoServerConfigs.filter { obj -> obj.enabled }.map { priority ->
+      priority to allFoundServers
+        .filter { it.serverName.lowercase().contains(priority.definition.searchTerm().lowercase()) }
+        .onEach { it.matchedServerDef = priority.definition }
+        .take(settings.triesBeforeStreamingProviderChange)
+    }.filter { (_, v) -> v.isNotEmpty() }
+    val offset = episodeNumber - 1 % settings.numOfTopStreamingProvidersUsedSimultaneously
+    val result = base.take(settings.numOfTopStreamingProvidersUsedSimultaneously).toMutableList()
+    Collections.rotate(result, -offset)
+    result.addAll(base.drop(settings.numOfTopStreamingProvidersUsedSimultaneously))
+
+//    var offset = indexOffset
+//    val base: MutableList<VideoServerConfig> = settings.videoServerConfigs.filter { obj -> obj.enabled }.toMutableList()
+//
+//    if (settings.numOfTopStreamingProvidersUsedSimultaneously <= 0) {
+//      return base
+//    }
+//    val top: List<VideoServerConfig> = base.take(settings.numOfTopStreamingProvidersUsedSimultaneously)
+//    base.removeAll(top)
+//    offset %= top.size
+//    val deque = ArrayDeque(top)
+//    for (i in 0 until offset) {
+//      val poll = deque.poll()
+//      deque.add(poll)
+//    }
+//    val result = deque.toMutableList()
+//    result.addAll(base)
     return result
   }
   
@@ -233,11 +241,12 @@ abstract class StreamingWebsiteBase(
     val url = try {
       val events = getNetworkResponseEventsFromBrowserTools().filter { it.response.mimeType == "application/vnd.apple.mpegurl" }
       val m3u8events = events.filter { it.response.url.contains(".m3u8") }
-      val index = m3u8events.indexOfFirst { handler.checkIfM3U8UrlCorrect(it.response.url) }
-      lg().debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
-        (if (i == index) "[#] " else "[ ] ") + e.response.url
-      }.joinToString("\n"))
-      
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response.url) }
+      if (events.isNotEmpty()) {
+        lg().debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
+          (if (i == index) "[#] " else "[ ] ") + e.response.url
+        }.joinToString("\n"))
+      }
       m3u8events.getOrNull(index)?.response?.url
     } catch (e: InvalidArgumentException) {
       null
@@ -245,10 +254,12 @@ abstract class StreamingWebsiteBase(
     if (url == null) {
       val events = getNetworkResponseEventsFromJS()
       val m3u8events = events.filter { it.name.contains(".m3u8") }
-      val index = m3u8events.indexOfFirst { handler.checkIfM3U8UrlCorrect(it.name) }
-      lg().debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
-        (if (i == index) "[#] " else "[ ] ") + e.name
-      }.joinToString("\n"))
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.name) }
+      if (events.isNotEmpty()) {
+        lg().debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
+          (if (i == index) "[#] " else "[ ] ") + e.name
+        }.joinToString("\n"))
+      }
       return m3u8events.getOrNull(index)?.name
     }
     return url
@@ -258,24 +269,31 @@ abstract class StreamingWebsiteBase(
   
   }
   
+  private fun createHandlerWithCustomRegexCheck(
+    handler: CommonVideoServers,
+    regex: Regex,
+    map: MutableMap<VideoServerDefinition, VideoServerHandler>? = null
+  ): VideoServerHandler {
+    val overwritten = object : VideoServerHandler(handler, driver, this) {
+      private val streamRegex = regex
+      
+      override fun checkIfM3U8UrlCorrect(url: String): Boolean {
+        return url.matches(streamRegex)
+      }
+    }
+    if (map != null) {
+      map[handler] = overwritten
+    }
+    return overwritten
+  }
+  
   protected open fun streamingServersHandlers(): Map<VideoServerDefinition, VideoServerHandler> {
     val map: MutableMap<VideoServerDefinition, VideoServerHandler> =
       CommonVideoServers.values().associateWith { object : VideoServerHandler(it, driver, this) {} }.toMutableMap()
     
-    map[CommonVideoServers.UPSTREAM] = object : VideoServerHandler(CommonVideoServers.UPSTREAM, driver, this) {
-      private val streamRegex = Regex(""".*index.*.m3u8.*""")
-      
-      override fun checkIfM3U8UrlCorrect(url: String): Boolean {
-        return url.matches(streamRegex)
-      }
-    }
-    map[CommonVideoServers.VOE] = object : VideoServerHandler(CommonVideoServers.VOE, driver, this) {
-      private val streamRegex = Regex(""".*index.*.m3u8.*""")
-      
-      override fun checkIfM3U8UrlCorrect(url: String): Boolean {
-        return url.matches(streamRegex)
-      }
-    }
+    createHandlerWithCustomRegexCheck(CommonVideoServers.VOE, Regex(""".*index.*.m3u8.*"""), map)
+    createHandlerWithCustomRegexCheck(CommonVideoServers.UPSTREAM, Regex(""".*index.*.m3u8.*"""), map)
+    createHandlerWithCustomRegexCheck(CommonVideoServers.VIDSTREAM, Regex(""".*v.m3u8.*"""), map)
     return map
   }
   

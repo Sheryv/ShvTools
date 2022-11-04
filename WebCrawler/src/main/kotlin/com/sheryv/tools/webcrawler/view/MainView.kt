@@ -10,10 +10,12 @@ import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.Runner
-import com.sheryv.tools.webcrawler.process.CrawlerRegistry
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
+import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
+import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
+import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
 import com.sheryv.tools.webcrawler.utils.*
@@ -50,7 +52,7 @@ import kotlin.io.path.isRegularFile
 
 
 class MainView : BaseView(), ViewActionsProvider {
-  private lateinit var registry: CrawlerRegistry
+  private lateinit var registry: Map<String, CrawlerDef>
   private var selected: CrawlerDef? = null
   private lateinit var config: Configuration
   private lateinit var settingsReader: SettingsPanelReader
@@ -62,7 +64,7 @@ class MainView : BaseView(), ViewActionsProvider {
   override fun onViewCreated() {
     try {
       config = Configuration.get()
-      registry = config.usedRegistry
+      registry = Registry.get().crawlers().associate { it.id() to it as CrawlerDef }
       prepareRegistry()
       init()
     } catch (e: Exception) {
@@ -84,7 +86,7 @@ class MainView : BaseView(), ViewActionsProvider {
     stage.title = TITLE
     config.crawler
     tvScrapers.root = TreeItem()
-    tvScrapers.root.children.addAll(CrawlerListItem.fromDefs(config, registry.all()).map { it.toTreeItem() })
+    tvScrapers.root.children.addAll(CrawlerListItem.fromDefs(config, registry.values).map { it.toTreeItem() })
     tvScrapers.root.children.forEach { it.isExpanded = true }
     tvScrapers.isShowRoot = false
     tvScrapers.selectionModel.selectionMode = SelectionMode.SINGLE

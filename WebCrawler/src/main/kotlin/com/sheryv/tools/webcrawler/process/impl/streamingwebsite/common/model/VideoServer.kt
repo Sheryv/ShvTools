@@ -10,4 +10,8 @@ data class VideoServer(
   val videoPageExternalUrl: String? = null,
   var matchedServerDef: VideoServerDefinition? = null
 ) {
+  
+  override fun toString(): String {
+    return "$serverName($index, $type, [$format])"
+  }
 }

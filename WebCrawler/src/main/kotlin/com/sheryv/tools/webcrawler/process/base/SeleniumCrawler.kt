@@ -45,18 +45,21 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     return waitForAttributeCheckBy(selector, attribute, timeoutSeconds) { !it?.getAttribute(attribute).isNullOrEmpty() }
   }
   
-  internal fun wait(selector: By, timeoutSeconds: Int = 3): WebElement? {
+  internal fun wait(selector: By, timeoutSeconds: Int = 3, throwEx: Boolean = false): WebElement? {
     var element: WebElement? = null
     try {
       element = wait.withTimeout(Duration.ofSeconds(timeoutSeconds.toLong())).until(ExpectedConditions.presenceOfElementLocated(selector))
       
     } catch (e: TimeoutException) {
       lg().warn("ERROR: Selector '{}' not found during {} seconds | {}", selector.toString(), timeoutSeconds, e.message)
+      if (throwEx) {
+        throw e
+      }
     }
     return element
   }
   
-  private suspend fun waitForAttributeCheckBy(
+  internal suspend fun waitForAttributeCheckBy(
     selector: By,
     attribute: String,
     timeoutSeconds: Int,
@@ -109,7 +112,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   }
   
   fun getNetworkResponseEventsFromJS(): List<JSNetworkEvent> {
-   return driver.executeScriptFetchList(
+    return driver.executeScriptFetchList(
       "return window.performance.getEntries().filter(r => r.entryType == 'resource' && r.initiatorType == 'xmlhttprequest')"
     )?.let {
       Utils.jsonMapper.convertValue(it, Utils.jacksonTypeRef<List<JSNetworkEvent>>())

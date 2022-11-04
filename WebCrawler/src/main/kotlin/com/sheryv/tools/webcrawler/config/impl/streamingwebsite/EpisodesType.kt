@@ -25,7 +25,6 @@ data class EpisodeType(val kind: EpisodeAudioTypes, override val enabled: Boolea
   
   companion object {
     @JvmStatic
-    
     fun all() = EpisodeAudioTypes.values().sortedBy { it.priority }.map { EpisodeType(it) }
   }
 }

@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.process.base.model
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.service.BrowserSupport
+import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.lg
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
@@ -12,9 +13,12 @@ import org.openqa.selenium.By
 import org.openqa.selenium.JavascriptExecutor
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.WebElement
+import org.openqa.selenium.chromium.ChromiumDriver
+import org.openqa.selenium.edge.EdgeDriver
 import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.WebDriverWait
 import java.time.Duration
+
 
 open class SeleniumDriver(
   protected val wrappedDriver: WebDriver,
@@ -24,12 +28,44 @@ open class SeleniumDriver(
   protected lateinit var crawler: Crawler<SeleniumDriver, SettingsBase>
   private val cachedScript: String by lazy {
     val script = BrowserSupport.get.loadScriptFromClassPath(crawler.def.id())
-    executor.executeScript(script)
     script
   }
   
   init {
     wrappedDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(implicitWait))
+    
+    val searchPrefix = """^\\""" + "\$?cdc_a.*"
+    val cmd = mapOf(
+      "source" to """
+      Object.defineProperty(Navigator.prototype, 'webdriver', {
+          set: undefined,
+          enumerable: true,
+          configurable: true,
+          get: new Proxy(
+              Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver').get,
+              { apply: (target, thisArg, args) => {
+                  // emulate getter call validation
+                  Reflect.apply(target, thisArg, args);
+                  return undefined;
+              }}
+          )
+      });
+      Object.defineProperty(navigator, 'webdriver', {
+        configurable: true,
+        get: () => undefined
+      });
+      Object.keys(window).filter(k=>k.match('$searchPrefix')).forEach(k=>{ delete window[k]})
+      Object.keys(document).filter(k=>k.match('$searchPrefix')).forEach(k=>{ delete document[k]})
+      delete Navigator.prototype.webdriver;
+      delete navigator.webdriver;
+      delete navigator.webdriver;
+      console.log('${ViewUtils.TITLE} initialised');
+    """
+    )
+    when (wrappedDriver) {
+      is ChromiumDriver -> wrappedDriver.executeCdpCommand("Page.addScriptToEvaluateOnNewDocument", cmd)
+      is EdgeDriver -> wrappedDriver.executeCdpCommand("Page.addScriptToEvaluateOnNewDocument", cmd)
+    }
   }
   
   override fun initialize(crawler: Crawler<out SDriver, SettingsBase>) {
