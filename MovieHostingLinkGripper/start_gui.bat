@@ -1,1 +1,0 @@
-java11 -jar build\libs\movie-link-gripper-all-java11-0.2.jar i
