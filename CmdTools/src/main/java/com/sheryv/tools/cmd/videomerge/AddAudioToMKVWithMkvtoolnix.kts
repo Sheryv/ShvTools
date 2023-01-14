@@ -1,4 +1,4 @@
-package com.sheryv.tools
+package com.sheryv.tools.cmd.videomerge
 
 import picocli.CommandLine
 import java.io.File
@@ -92,19 +92,43 @@ companion object MKVMergeVars {
     priority: String,
     lang: String,
     hasSubtitles: Boolean,
-    videoFlags: String ,
-    audioFlags: String ,
+    videoFlags: String,
+    audioFlags: String,
     audioTrackId: Int = 0,
   ): String {
     var audioId = audioTrackId;
-    if (inputAudio.endsWith(".mp4") || inputAudio.endsWith(".ts") || inputAudio.endsWith(".mkv")){
+    if (inputAudio.endsWith(".mp4") || inputAudio.endsWith(".ts") || inputAudio.endsWith(".mkv")) {
       audioId = 1;
     }
     
     return if (hasSubtitles)
-      String.format(TEMPLATE, priority, escapeQuotes(output), videoFlags, escapeQuotes(inputVideo), audioId, delay, audioId, lang, audioFlags, escapeQuotes(inputAudio))
+      String.format(
+        TEMPLATE,
+        priority,
+        escapeQuotes(output),
+        videoFlags,
+        escapeQuotes(inputVideo),
+        audioId,
+        delay,
+        audioId,
+        lang,
+        audioFlags,
+        escapeQuotes(inputAudio)
+      )
     else
-      String.format(TEMPLATE_WITHOUT_SUBTITLES, priority, escapeQuotes(output), videoFlags, escapeQuotes(inputVideo), audioId, delay, audioId, lang, audioFlags, escapeQuotes(inputAudio))
+      String.format(
+        TEMPLATE_WITHOUT_SUBTITLES,
+        priority,
+        escapeQuotes(output),
+        videoFlags,
+        escapeQuotes(inputVideo),
+        audioId,
+        delay,
+        audioId,
+        lang,
+        audioFlags,
+        escapeQuotes(inputAudio)
+      )
   }
   
 }
@@ -112,6 +136,7 @@ companion object MKVMergeVars {
 fun time(): String {
   return LocalTime.now().format(DateTimeFormatter.ISO_LOCAL_TIME).take(12)
 }
+
 fun convert(params: MKVMergeCommand) {
   println("Starting conversion. Params: ${args.toList()}")
   println(params)
@@ -119,10 +144,18 @@ fun convert(params: MKVMergeCommand) {
   val files = params.videoDir.listFiles()!!.filter { !it.isDirectory && it.isFile }
   val audioFiles = params.audioDir.listFiles()!!.filter { !it.isDirectory && it.isFile }
   val regex = params.createRegex()
-  val toConvert = files.associateWith { regex.find(it.name) }.filter { it.value != null }.map {
+  val toConvert = files.associateWith { regex.find(it.name) }.filter { it.value != null }.mapNotNull {
     val foundPhrase = it.value!!.groups[0]!!.value
-    Pair(it.key, audioFiles.first { it.name.contains(foundPhrase, true) })
+    val second = audioFiles.firstOrNull { it.name.contains(foundPhrase, true) }
+    if (second != null) {
+      Pair(it.key, second)
+    } else {
+      println("No matching audio file found using phrase '$foundPhrase' for video '${it.key.name}'")
+      null
+    }
   }.toMap()
+  
+  require(toConvert.isNotEmpty()) { "No matching files to convert" }
   
   val width = (toConvert.maxOfOrNull { it.key.name.length } ?: 20).toInt()
   

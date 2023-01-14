@@ -17,7 +17,7 @@ mainClassName = ext.className
 
 
 dependencies {
-    compile project(":util")
+    implementation project(":util")
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     implementation 'info.picocli:picocli:4.6.3'
     kapt 'info.picocli:picocli-codegen:4.6.3'

@@ -1,0 +1,20 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.jetbrains.kotlin.jvm' version "$kotlin_version"
+    id "org.jetbrains.kotlin.kapt" version "$kotlin_version"
+}
+
+ext.longName = "Command line tools"
+ext.className = "com.sheryv.tools.scaffoldermicro.ScaffolderMain"
+
+mainClassName = ext.className
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-script-runtime:$kotlin_version"
+
+    implementation project(':util')
+    implementation 'com.github.spullara.mustache.java:compiler:0.9.10'
+    implementation 'info.picocli:picocli:4.7.0'
+    kapt 'info.picocli:picocli-codegen:4.7.0'
+}

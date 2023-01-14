@@ -1,9 +1,8 @@
+apply plugin: 'java-library'
 apply plugin: 'maven-publish'
 
 
 ext.longName = "Shared project with utility classes"
-sourceCompatibility = 1.11
-targetCompatibility = 1.11
 
 version getVersionName(name)
 
@@ -15,8 +14,8 @@ jar {
 
 
 dependencies {
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
-    compile group: 'ch.qos.logback', name: 'logback-core', version: '1.2.7'
-    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.7'
-    compile group: 'org.apache.commons', name: 'commons-text', version: '1.8'
+    api 'org.slf4j:slf4j-api:1.7.25'
+    api 'ch.qos.logback:logback-core:1.4.4'
+    api 'ch.qos.logback:logback-classic:1.4.4'
+    api 'org.apache.commons:commons-text:1.10.0'
 }

@@ -12,24 +12,25 @@ import java.util.regex.Pattern
 //        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${ext.kotlin}")
 //    }
 //}
+
 plugins {
-    id 'java'
+//    id 'java-library'
     id 'maven-publish'
+//    id "org.jetbrains.kotlin.kapt" version "1.7.20"
 }
 
-String kotlin = '1.7.10'
+String kotlin = '1.7.20'
 
 allprojects {
     apply plugin: 'java'
     apply plugin: 'maven-publish'
-    sourceCompatibility = 1.11
-    targetCompatibility = 1.11
+
     ext.author = "Sheryv"
     ext.longName = "ShvTools root"
     ext.className = ""
     ext.site = 'https://github.com/Sheryv/ShvTools'
     ext.kotlin_version = kotlin
-    ext.kotlin_plugin_version = '1.7.10'
+    ext.kotlin_plugin_version = '1.7.20'
     ext.shortVersion = "0.1"
 
     group = 'com.sheryv'
@@ -136,31 +137,46 @@ allprojects {
 
 subprojects {
     repositories {
-        mavenLocal()
         mavenCentral()
+        mavenLocal()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
     }
 
     dependencies {
-        //    compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-        testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
-        testCompileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
-        compileOnly group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
-        annotationProcessor group: 'org.projectlombok', name: 'lombok', version: '1.18.2'
-        compile group: 'com.google.code.findbugs', name: 'jsr305', version: '3.0.2'
+        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
+        implementation 'com.google.code.findbugs:jsr305:3.0.2'
+        annotationProcessor 'org.projectlombok:lombok:1.18.24'
+        compileOnly 'org.projectlombok:lombok:1.18.24'
+
+        testCompileOnly 'org.projectlombok:lombok:1.18.24'
+
+        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
+        testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
     }
 
+    test {
+        useJUnitPlatform()
+    }
+
+    java {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+
+//    compileKotlin {
+//        kotlinOptions.jvmTarget = "17"
+//    }
+//    compileTestKotlin {
+//        kotlinOptions.jvmTarget = "17"
+//    }
 }
 
 repositories {
     mavenLocal()
     mavenCentral()
-}
-
-dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation "org.jetbrains.kotlin:kotlin-script-runtime:$kotlin_version"
-    implementation 'info.picocli:picocli:4.6.1'
 }
 
 

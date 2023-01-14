@@ -50,7 +50,7 @@ dependencies {
     kapt("com.querydsl:querydsl-apt:5.0.0:jpa")
 //    kapt("com.querydsl:querydsl-apt:5.0.0")
 //    kapt("com.querydsl:querydsl-apt:5.0.0:general")
-    compile project(':util')
+    implementation project(':util')
 
 }
 
