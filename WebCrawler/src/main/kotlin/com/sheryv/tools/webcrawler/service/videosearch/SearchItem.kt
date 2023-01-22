@@ -19,7 +19,12 @@ class SearchItem(
   val voteCount: Long = 0,
   @JsonProperty("first_air_date")
   val firstAirDate: String? = null,
+  @JsonProperty("poster_path")
+  val posterPath: String? = null,
 ) {
+  
+  fun posterUrl() = "http://image.tmdb.org/t/p/w500$posterPath"
+  
   override fun toString(): String {
     return String.format("%-40s | %2.1f [%s] %7d (%.1f) %d", name, popularity, firstAirDate, id, voteAverage, voteCount)
   }

@@ -88,8 +88,7 @@ public class FileUtils {
   }
   
   public static String fixFileNameWithCollonSupport(String fileName) {
-    String s = StringUtils.replace(fileName, ": ", " - ");
-    s = StringUtils.replace(s, ":", "-");
+    String s = StringUtils.replace(fileName, ":", " ");
     return fixFileName(s);
   }
 }

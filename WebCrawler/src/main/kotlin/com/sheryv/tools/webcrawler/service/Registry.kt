@@ -7,6 +7,7 @@ import com.sheryv.tools.webcrawler.process.impl.filmweb.FilmwebCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.CommonVideoServers
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.VideoServerDefinition
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilmanCrawlerDef
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilserCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.fmovies.FMoviesCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.zerion.ZerionCrawlerDef
 
@@ -19,6 +20,7 @@ object Registry {
         ZerionCrawlerDef(),
         FilmanCrawlerDef(),
         FMoviesCrawlerDef(),
+        FilserCrawlerDef(),
       )
     }
   

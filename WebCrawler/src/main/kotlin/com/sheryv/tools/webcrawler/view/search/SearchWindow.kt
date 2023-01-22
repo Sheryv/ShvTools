@@ -24,7 +24,8 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
+import java.time.LocalDate
 import java.util.function.Consumer
 import javax.swing.*
 import javax.swing.event.ChangeEvent
@@ -214,11 +215,21 @@ class SearchWindow {
           return@map found.copy(title = ep.name).apply { lastSize = found.lastSize }
         }
         Episode(ep.name, ep.episodeNumber, null, "")
-      }
+      } to api.getImdbId(i.id)
     },
-      { episodeList ->
+      { (episodeList, imdb) ->
         if (episodeList.isNotEmpty()) {
-          val series = Series(i.name, season, lastSeries!!.lang, lastSeries!!.seriesUrl, episodeList)
+          val series = Series(
+            i.name,
+            season,
+            lastSeries!!.lang,
+            lastSeries!!.seriesUrl,
+            i.posterUrl(),
+            i.id.toString(),
+            imdb,
+            i.firstAirDate?.let { LocalDate.parse(it) },
+            episodeList
+          )
           fillList(series)
         }
       }, {
@@ -260,12 +271,11 @@ class SearchWindow {
       val option: Int = fileChooser.showOpenDialog(panel)
       if (option == JFileChooser.APPROVE_OPTION) {
         val file: File = fileChooser.selectedFile
-        series!!.episodes.map { ep: Episode ->
+        val dir = Path.of(file.absolutePath).resolve(series!!.generateDirectoryPathForSeason())
+        Files.createDirectories(dir)
+        series.episodes.map { ep: Episode ->
           ep.generateFileName(series, settings, field.text)
         }.forEach { f: String ->
-          val dir =
-            Paths.get(file.absolutePath, FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", series.title, series.season)))
-          Files.createDirectories(dir)
           Files.createFile(dir.resolve(f))
         }
         lg().info("Files generated in $file")

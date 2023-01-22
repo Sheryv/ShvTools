@@ -11,12 +11,11 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.Runner
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
-import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
-import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
+import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGenerator
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
 import com.sheryv.tools.webcrawler.utils.*
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
@@ -25,6 +24,7 @@ import com.sheryv.tools.webcrawler.view.search.SearchWindow
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.util.ChangeListener
+import com.sheryv.util.HttpSupport
 import com.sheryv.util.VersionUtils
 import javafx.animation.PauseTransition
 import javafx.application.Platform
@@ -41,14 +41,14 @@ import javafx.util.Duration
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.swing.JFrame
 import javax.swing.UIManager
-import kotlin.io.path.exists
-import kotlin.io.path.isExecutable
-import kotlin.io.path.isRegularFile
+import kotlin.io.path.*
 
 
 class MainView : BaseView(), ViewActionsProvider {
@@ -91,8 +91,7 @@ class MainView : BaseView(), ViewActionsProvider {
     tvScrapers.isShowRoot = false
     tvScrapers.selectionModel.selectionMode = SelectionMode.SINGLE
     
-    val processFetchedLinksMenu = Menu("Process fetched links")
-    val streamingRelatedMenus = listOf(processFetchedLinksMenu).onEach { it.isDisable = true }
+    val streamingRelatedMenus = streamingMenu()
     
     tvScrapers.selectionModel.selectedItemProperty().addListener { _, _, n ->
       if (n.isLeaf) {
@@ -100,8 +99,13 @@ class MainView : BaseView(), ViewActionsProvider {
         GlobalState.currentCrawler = selected!!
         showSettingsForSelectedScraper()
         
-        val isVideoScraper = selected!!.findSettings(config) is StreamingWebsiteSettings
-        streamingRelatedMenus.forEach { it.isDisable = !isVideoScraper }
+        if (selected!!.findSettings(config) is StreamingWebsiteSettings) {
+          if (!menu.menus.contains(streamingRelatedMenus)) {
+            menu.menus.add(streamingRelatedMenus)
+          }
+        } else {
+          menu.menus.remove(streamingRelatedMenus)
+        }
 //        tfSavePath.text = config.savePath ?: Path.of(
 //          SystemUtils.userDownloadDir(),
 //          "${settings.outputPath}-${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${settings.outputFormat.extension}"
@@ -227,120 +231,86 @@ class MainView : BaseView(), ViewActionsProvider {
     
     
     menu.menus.addAll(
-      Menu("File").apply {
-        items.addAll(
-          MenuItem("Save").apply {
-            accelerator = KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN)
-            setOnAction {
-              saveConfig()
-            }
-          },
-          SeparatorMenuItem(),
-          MenuItem("Exit").apply {
-            accelerator = KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN)
-            setOnAction { Platform.exit() }
-          }
-        )
-      },
-      Menu("Process").apply {
-        items.addAll(
-          MenuItem("Start / Pause").apply {
-            accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)
-            setOnAction { startOrPauseProcess() }
-          },
-          MenuItem("Terminate").apply {
-            accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
-            setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
-          },
-        )
-      },
-      Menu("Tools").apply {
-        items.addAll(
-          MenuItem("Run script in opened browser").apply {
-            accelerator = KeyCodeCombination(KeyCode.G, KeyCombination.CONTROL_DOWN)
-            setOnAction { openRunScriptWindow() }
-          },
-          SeparatorMenuItem(),
-          MenuItem("Logs"),
-          SeparatorMenuItem(),
-          MenuItem("Tv Show search tool").apply {
-            accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
-            setOnAction {
-              openSearchEpisodesWindow()
-            }
-          },
-          SeparatorMenuItem(),
-          processFetchedLinksMenu.also {
-            it.items.setAll(
-              MenuItem("Send links to IDM (Internet Download Manager)").apply {
-                accelerator = KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
-                setOnAction {
-                  inBackground {
-                    try {
-                      val settings = selected!!.findSettings(config)
-                      val (done, all) = IDMService(config).addToIDM(
-                        Utils.jsonMapper.readValue(
-                          settings.outputPath.toFile(),
-                          Series::class.java
-                        )
-                      )
-                      inViewThread {
-                        DialogUtils.messageDialog("Successfully added to IDM $done episodes out of $all")
-                      }
-                    } catch (e: Exception) {
-                      lg().error("Error while sending to IDM", e)
-                      inViewThread {
-                        DialogUtils.textAreaDialog(
-                          "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
-                          "Error while sending to IDM", Alert.AlertType.ERROR, true, ButtonType.OK
-                        )
-                      }
-                    }
-                  }
-                }
-              },
-              MenuItem("Generate file for JDownloader 2 import").apply {
-                accelerator = KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
-                setOnAction { openJDownloaderGeneratorView() }
-              },
-            )
-          },
-          SeparatorMenuItem(),
-          CheckMenuItem("Pause processing on next step").apply {
-            accelerator = KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN)
-            setOnAction { GlobalState.pauseOnNextStep = this.isSelected }
-          },
-          MenuItem("Copy options from other crawler").apply {
-            accelerator = KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
-            setOnAction {
-              val type = selected!!.settingsClass
-              val source = config.settings.filter { it.crawlerId != selected!!.id() && type.isInstance(it) }
-              DialogUtils.choiceDialog("Copy options from other scraper", source, "Choose source scraper")?.also {
-                config.updateSettings(it.copy())
-                showSettingsForSelectedScraper()
+      0, listOf(
+        Menu("File").apply {
+          items.addAll(
+            MenuItem("Save").apply {
+              accelerator = KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN)
+              setOnAction {
+                saveConfig()
               }
+            },
+            SeparatorMenuItem(),
+            MenuItem("Exit").apply {
+              accelerator = KeyCodeCombination(KeyCode.Q, KeyCombination.CONTROL_DOWN)
+              setOnAction { Platform.exit() }
             }
-          },
-        )
-      },
-      Menu("Info").apply {
-        items.setAll(
-          MenuItem("Show configuration file location").apply {
-            setOnAction {
-              DialogUtils.messageCopyableDialog(
-                Path.of(Configuration.FILE).toAbsolutePath().toString(),
-                "Location of Configuration file",
-              )
-            }
-          },
-          MenuItem("About").apply {
-            setOnAction {
-              val msg =
-                "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("web-crawler-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
-              DialogUtils.messageCopyableDialog(msg, "About info")
-            }
-          })
-      },
+          )
+        },
+        Menu("Process").apply {
+          items.addAll(
+            MenuItem("Start / Pause").apply {
+              accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)
+              setOnAction { startOrPauseProcess() }
+            },
+            MenuItem("Terminate").apply {
+              accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
+              setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
+            },
+          )
+        },
+        Menu("Tools").apply {
+          items.addAll(
+            MenuItem("Run script in opened browser").apply {
+              accelerator = KeyCodeCombination(KeyCode.G, KeyCombination.CONTROL_DOWN)
+              setOnAction { openRunScriptWindow() }
+            },
+            SeparatorMenuItem(),
+            MenuItem("Logs"),
+            SeparatorMenuItem(),
+            MenuItem("Tv Show search tool").apply {
+              accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
+              setOnAction {
+                openSearchEpisodesWindow()
+              }
+            },
+            SeparatorMenuItem(),
+            CheckMenuItem("Pause processing on next step").apply {
+              accelerator = KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN)
+              setOnAction { GlobalState.pauseOnNextStep = this.isSelected }
+            },
+            MenuItem("Copy options from other crawler").apply {
+              accelerator = KeyCodeCombination(KeyCode.M, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
+              setOnAction {
+                val type = selected!!.settingsClass
+                val source = config.settings.filter { it.crawlerId != selected!!.id() && type.isInstance(it) }
+                DialogUtils.choiceDialog("Copy options from other scraper", source, "Choose source scraper")?.also {
+                  config.updateSettings(it.copy())
+                  showSettingsForSelectedScraper()
+                }
+              }
+            },
+          )
+        },
+        Menu("Info").apply {
+          items.setAll(
+            MenuItem("Show configuration file location").apply {
+              setOnAction {
+                DialogUtils.messageCopyableDialog(
+                  Path.of(Configuration.FILE).toAbsolutePath().toString(),
+                  "Location of Configuration file",
+                )
+              }
+            },
+            MenuItem("About").apply {
+              setOnAction {
+                val msg =
+                  "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("web-crawler-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
+                DialogUtils.messageCopyableDialog(msg, "About info")
+              }
+            })
+        },
+      )
     )
   }
   
@@ -456,6 +426,88 @@ class MainView : BaseView(), ViewActionsProvider {
       inViewThread {
         lbStatusOfSelectedBrowser.text = ver ?: "Provided path is incorrect"
       }
+    }
+  }
+  
+  private fun streamingMenu(): Menu {
+    return Menu("Streaming website crawler").apply {
+      items.setAll(
+        Menu("Process fetched links").apply {
+          items.setAll(
+            MenuItem("Send links to IDM (Internet Download Manager)").apply {
+              accelerator = KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
+              setOnAction {
+                inBackground {
+                  try {
+                    val settings = selected!!.findSettings(config)
+                    val (done, all) = IDMService(config).addToIDM(
+                      Utils.jsonMapper.readValue(
+                        settings.outputPath.toFile(),
+                        Series::class.java
+                      )
+                    )
+                    inViewThread {
+                      DialogUtils.messageDialog("Successfully added to IDM $done episodes out of $all")
+                    }
+                  } catch (e: Exception) {
+                    lg().error("Error while sending to IDM", e)
+                    inViewThread {
+                      DialogUtils.textAreaDialog(
+                        "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
+                        "Error while sending to IDM", Alert.AlertType.ERROR, true, ButtonType.OK
+                      )
+                    }
+                  }
+                }
+              }
+            },
+            MenuItem("Generate file for JDownloader 2 import").apply {
+              accelerator = KeyCodeCombination(KeyCode.J, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
+              setOnAction { openJDownloaderGeneratorView() }
+            },
+          )
+        },
+        SeparatorMenuItem(),
+        MenuItem("Generate .nfo and metadata files for found episodes").apply {
+          setOnAction {
+            inBackground {
+              try {
+                val settings = selected!!.findSettings(config) as StreamingWebsiteSettings
+                val series = Utils.jsonMapper.readValue(
+                  settings.outputPath.toFile(),
+                  Series::class.java
+                )
+                MetadataGenerator(settings).generateNfoMetadata(series)
+                val seriesDir = Path.of(settings.downloadDir).resolve(series.generateDirectoryPathForSeason())
+                Files.copy(settings.outputPath, seriesDir.resolve("web_crawler_metadata.json"), StandardCopyOption.REPLACE_EXISTING)
+                
+                if (seriesDir.parent.listDirectoryEntries().none { it.name == "poster.jpg" || it.name == "poster.png" }) {
+                  val http = HttpSupport()
+                  series.posterUrl?.also {
+                    val format = it.substringAfterLast('.', "jpg")
+                    http.stream(HttpSupport.getRequest(series.posterUrl)).use {
+                      Files.copy(it, seriesDir.parent.resolve("poster.$format"), StandardCopyOption.REPLACE_EXISTING)
+                    }
+                  }
+                }
+                
+                inViewThread {
+                  DialogUtils.messageDialog("Successfully generated metadata in directory ${seriesDir.toAbsolutePath()}")
+                }
+              } catch (e: Exception) {
+                lg().error("Error while generating", e)
+                inViewThread {
+                  DialogUtils.textAreaDialog(
+                    "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
+                    "Error while generating", Alert.AlertType.ERROR, true, ButtonType.OK
+                  )
+                }
+              }
+            }
+          }
+        }
+      )
+      
     }
   }
   

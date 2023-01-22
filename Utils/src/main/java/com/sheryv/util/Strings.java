@@ -30,7 +30,7 @@ public class Strings {
   }
   
   public static String fillTemplate(String template, Map<String, Object> values) {
-    return getTemplater(values).replace(template.toLowerCase());
+    return getTemplater(values).replace(template);
 }
   
   public static String generateId(int size) {

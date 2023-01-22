@@ -19,14 +19,9 @@ public class HttpSupport {
     this.client = HttpClient.newHttpClient();
   }
   
-  
   public String sendGet(String url) {
-    try {
-      var request = HttpRequest.newBuilder(new URL(url).toURI()).GET().build();
-      return send(request);
-    } catch (URISyntaxException | IOException e) {
-      throw new RuntimeException(e);
-    }
+    var request = getRequest(url);
+    return send(request);
   }
   
   public String sendPost(String url, String body) {
@@ -50,6 +45,14 @@ public class HttpSupport {
     try {
       return client.send(request, HttpResponse.BodyHandlers.ofInputStream()).body();
     } catch (IOException | InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+  }
+  
+  public static HttpRequest getRequest(String url) {
+    try {
+      return HttpRequest.newBuilder(new URL(url).toURI()).GET().build();
+    } catch (URISyntaxException | IOException e) {
       throw new RuntimeException(e);
     }
   }

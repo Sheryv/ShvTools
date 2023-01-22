@@ -14,7 +14,6 @@ import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.util.FileUtils
 import javafx.fxml.FXML
 import javafx.scene.control.*
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.format.DateTimeFormatter
@@ -74,18 +73,21 @@ class JDownloaderView : BaseView() {
         .filter { chFilterToStreamingFilesOnly.isSelected && it.downloadUrl!!.isStreaming || !chFilterToStreamingFilesOnly.isSelected }
       
       taJsonList.text = Utils.jsonMapper.writeValueAsString(filtered.map {
-        val parentDir = FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season))
+        val downloadDir = if (chOverwritePackagizerRules.isSelected)
+          Path.of(settings.downloadDir).resolve(lastSeries.generateDirectoryPathForSeason())
+        else
+          Path.of(settings.downloadDir)
         JDownloaderCrawlerEntry(
           it.downloadUrl!!.base,
           it.generateFileName(lastSeries, settings),
-          Path.of(settings.downloadDir, if(chOverwritePackagizerRules.isSelected) parentDir else "").toAbsolutePath().toString(),
-          parentDir,
+          downloadDir.toAbsolutePath().toString(),
+          FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season)),
           it.sourcePageUrl,
           overwritePackagizerEnabled = chOverwritePackagizerRules.isSelected
         )
       }.toList())
       taSimpleLinks.text =
-        filtered.joinToString("\n") { String.format("%s#s%02de%02d", it.downloadUrl!!.base, lastSeries.season, it.number) }
+        filtered.joinToString("\n") { String.format("%s#S%02dE%02d", it.downloadUrl!!.base, lastSeries.season, it.number) }
     } catch (e: Exception) {
       throw RuntimeException("Cannot read file with fetched links at '${settings.outputPath}'", e)
     }

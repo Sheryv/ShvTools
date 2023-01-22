@@ -27,4 +27,11 @@ class TmdbApi {
     val json = support.sendGet("https://api.themoviedb.org/3/tv/$id/season/$season?api_key=${settings.tmdbKey}&language=en-US")
     return Utils.jsonMapper.readValue(json, TmdbSeason::class.java)
   }
+  
+  fun getImdbId(id: Long): String {
+    val support = HttpSupport()
+    val settings = GlobalState.settingsForCurrentScraper() as StreamingWebsiteSettings
+    val json = support.sendGet("https://api.themoviedb.org/3/tv/$id/external_ids?api_key=${settings.tmdbKey}&language=en-US")
+    return Utils.jsonMapper.readValue(json, Map::class.java)["imdb_id"].toString()
+  }
 }

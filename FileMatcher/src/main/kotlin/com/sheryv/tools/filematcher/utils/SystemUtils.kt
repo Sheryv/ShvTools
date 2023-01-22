@@ -117,7 +117,7 @@ object SystemUtils {
   }
   
   fun resolveEnvironmentVariables(s: String): String {
-    return Strings.fillTemplate(s, PROPS)
+    return Strings.fillTemplate(s.lowercase(), PROPS)
   }
 }
 

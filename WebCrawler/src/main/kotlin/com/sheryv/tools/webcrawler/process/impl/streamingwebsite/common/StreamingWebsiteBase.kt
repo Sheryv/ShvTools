@@ -59,7 +59,7 @@ abstract class StreamingWebsiteBase(
       }
     } else null) ?: Series(settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
     
-    driver.get(series.seriesUrl)
+    driver.get(getSeriesLink())
 //    driver.get("https://bot.sannysoft.com/")
     driver.waitForVisibility(By.tagName("body"))
     title = driver.title
@@ -70,64 +70,72 @@ abstract class StreamingWebsiteBase(
     var i = settings.searchStartIndex
     while (i <= items.size && (i <= settings.searchStopIndex || settings.searchStopIndex < 0)) {
       val item: VideoData = items[i - 1]
-
+      
       var downloadUrl: VideoUrl? = null
-      val err = mutableListOf<ErrorEntry>()
-      val serverHandlers = streamingServersHandlers()
       try {
         goToEpisodePage(item)
         waitIfPaused()
-        val allServers: List<VideoServer> = loadItemDataFromSummaryPageAndGetServers(item).let { list ->
-          if (list.any { it.type != EpisodeAudioTypes.UNKNOWN }) {
-            val enabled = settings.allowedEpisodeTypes.filter { it.enabled }.map { it.kind }
-            val n = mutableListOf<VideoServer>()
-            for (en in enabled) {
-              n.addAll(list.filter { it.type == en }.sortedBy { it.format.quality.priority })
+        if (isSingleBuiltinHostingPerEpisode(item)) {
+          item.server = VideoServer("_builtin", 0)
+          downloadUrl = findLoadedVideoDownloadUrl(item, builtinHostingServerHandler(item))
+        } else {
+          val serverHandlers = streamingServersHandlers()
+          
+          val allServers: List<VideoServer> = loadItemDataFromSummaryPageAndGetServers(item).let { list ->
+            if (list.any { it.type != EpisodeAudioTypes.UNKNOWN }) {
+              val enabled = settings.allowedEpisodeTypes.filter { it.enabled }.map { it.kind }
+              val n = mutableListOf<VideoServer>()
+              for (en in enabled) {
+                n.addAll(list.filter { it.type == en }.sortedBy { it.format.quality.priority })
+              }
+              n
+            } else {
+              list.sortedBy { it.format.quality.priority }
             }
-            n
-          } else {
-            list.sortedBy { it.format.quality.priority }
           }
-        }
-        waitIfPaused()
-        if (allServers.isEmpty()) throw IllegalArgumentException(
-          String.format(
-            "No hosting found for: E%02d %s | %s%n",
-            item.number,
-            item.title,
-            item.episodePageUrl
+          waitIfPaused()
+          if (allServers.isEmpty()) throw IllegalArgumentException(
+            String.format(
+              "No hosting found for: E%02d %s | %s%n",
+              item.number,
+              item.title,
+              item.episodePageUrl
+            )
           )
-        )
-        lg().info("Servers found for E${item.number.toString().padStart(2, '0')}: "
-            + allServers.joinToString(" | ") { "(${it.index}) ${it.serverName} - ${it.type} - ${it.format}" })
-        
-        val priorities = getPriorities(i, allServers, serverHandlers)
-        lg().info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
-          val indexes = v.joinToString(",") { it.index.toString() }
-          "${k.definition.label()}=($indexes)"
-        })
-        
-        for (pair in priorities) {
-          for (server in pair.second) {
-            try {
-              item.server = server
-              waitIfPaused()
-              downloadUrl = goToExternalServerVideoPage(item) {
+          lg().info("Servers found for E${item.number.toString().padStart(2, '0')}: "
+              + allServers.joinToString(" | ") { "(${it.index}) ${it.serverName} - ${it.type} - ${it.format}" })
+          
+          val priorities = getPriorities(i, allServers, serverHandlers)
+          lg().info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
+            val indexes = v.joinToString(",") { it.index.toString() }
+            "${k.definition.label()}=($indexes)"
+          })
+          
+          for (pair in priorities) {
+            for (server in pair.second) {
+              try {
+                item.server = server
                 waitIfPaused()
-                findLoadedVideoDownloadUrl(item)
+                downloadUrl = goToExternalServerVideoPage(item) {
+                  waitIfPaused()
+                  findLoadedVideoDownloadUrl(item, streamingServersHandlers()[server.matchedServerDef]!!)
+                }
+                
+                if (downloadUrl != null) {
+                  break
+                }
+              } catch (e: TerminationException) {
+                throw e
+              } catch (e: Exception) {
+                lg().error(
+                  "Error while searching download url at ${server.serverName} [${server.index}] | ${server.videoPageExternalUrl}",
+                  e
+                )
               }
-              
-              if (downloadUrl != null) {
-                break
-              }
-            } catch (e: TerminationException) {
-              throw e
-            } catch (e: Exception) {
-              lg().error("Error while searching download url at ${server.serverName} [${server.index}] | ${server.videoPageExternalUrl}", e)
             }
-          }
-          if (downloadUrl != null) {
-            break
+            if (downloadUrl != null) {
+              break
+            }
           }
         }
       } catch (e: TerminationException) {
@@ -135,6 +143,7 @@ abstract class StreamingWebsiteBase(
       } catch (e: Exception) {
         lg().error("Error while searching download url", e)
       }
+      val err = mutableListOf<ErrorEntry>()
       if (downloadUrl == null) {
         err.add(ErrorEntry(2, "Download url not found"))
       }
@@ -160,11 +169,10 @@ abstract class StreamingWebsiteBase(
   }
   
   
-  protected open suspend fun findLoadedVideoDownloadUrl(data: VideoData): VideoUrl? {
+  protected open suspend fun findLoadedVideoDownloadUrl(data: VideoData, serverHandler: VideoServerHandler? = null): VideoUrl? {
     delay(200)
     
-    val serverHandler = streamingServersHandlers()[data.server.matchedServerDef]!!
-    var found = serverHandler.findVideoSrcUrl()
+    var found = serverHandler!!.findVideoSrcUrl()
     if (found == null) {
       checkForCaptchaAndOtherOverlays(data)
       runBlocking(Dispatchers.Main) {
@@ -190,7 +198,7 @@ abstract class StreamingWebsiteBase(
   protected open suspend fun getSeriesLink() = getFullUrl(settings.seriesUrl)
   
   protected open suspend fun <T> goToExternalServerVideoPage(data: VideoData, blockExecutedOnPage: (suspend () -> T)? = null): T? {
-    driver.navigate().to(data.server.videoPageExternalUrl)
+    driver.navigate().to(getFullUrl(data.server.videoPageExternalUrl!!))
     return blockExecutedOnPage?.invoke()
   }
   
@@ -267,6 +275,12 @@ abstract class StreamingWebsiteBase(
   
   protected open suspend fun checkForCaptchaAndOtherOverlays(data: VideoData) {
   
+  }
+  
+  protected open suspend fun isSingleBuiltinHostingPerEpisode(data: VideoData): Boolean = false
+  
+  protected open suspend fun builtinHostingServerHandler(data: VideoData): VideoServerHandler {
+    throw NotImplementedError()
   }
   
   private fun createHandlerWithCustomRegexCheck(

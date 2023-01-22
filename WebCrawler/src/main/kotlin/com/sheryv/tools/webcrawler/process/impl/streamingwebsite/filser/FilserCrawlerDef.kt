@@ -7,10 +7,10 @@ import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 
-class FilmanCrawlerDef : StreamingCrawlerBase(
-  "filman",
-  "Filman",
-  "https://filman.cc",
+class FilserCrawlerDef : StreamingCrawlerBase(
+  "filser",
+  "Filser",
+  "https://filser.cc",
 ) {
   
   override fun build(

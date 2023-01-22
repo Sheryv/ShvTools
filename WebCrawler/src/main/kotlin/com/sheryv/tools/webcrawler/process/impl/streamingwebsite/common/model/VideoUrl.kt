@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import com.sheryv.tools.webcrawler.config.Configuration
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
 @JsonSubTypes(
@@ -15,6 +16,17 @@ sealed interface VideoUrl {
   val isStreaming: Boolean
   
   fun defaultFileFormat() = FileFormats.MP4
+  
+  fun resolveFileExtension(): String {
+    if (Configuration.property("crawler.streaming.episode.get-extension-from-url").toBoolean()) {
+      val indexOf = base.lastIndexOf(".")
+      if (indexOf > 0 && base.length - indexOf <= 5) {
+        return base.substring(indexOf + 1, base.length)
+      }
+    }
+    
+    return defaultFileFormat().extension
+  }
 }
 
 data class M3U8Url(
