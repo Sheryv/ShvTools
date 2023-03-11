@@ -6,10 +6,7 @@ import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
-import com.sheryv.tools.webcrawler.process.base.model.SDriver
-import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
-import com.sheryv.tools.webcrawler.process.base.model.Step
-import com.sheryv.tools.webcrawler.process.base.model.TerminationException
+import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.lg
 import org.openqa.selenium.SessionNotCreatedException
@@ -20,7 +17,8 @@ import kotlin.io.path.isExecutable
 class Runner(
   private val configuration: Configuration,
   private val browser: BrowserConfig,
-  private val crawlerDef: CrawlerDef
+  private val crawlerDef: CrawlerDef,
+  private val params: ProcessParams
 ) {
   
   suspend fun prepare(settings: SettingsBase) {
@@ -41,7 +39,7 @@ class Runner(
     var driver: SDriver? = null
     try {
       driver = browser.selectedDriver.webDriverBuilder.build(config, browser)
-      val crawler = crawlerDef.build(config, browser, driver)
+      val crawler = crawlerDef.build(config, browser, driver, params)
       
       driver.initialize(crawler)
       if (crawler is SeleniumCrawler<SettingsBase>) {

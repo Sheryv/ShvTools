@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.ProcessingStates
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.TerminationException
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.BrowserResponseEvent
@@ -24,9 +25,10 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, S>,
-  driver: SeleniumDriver
+  driver: SeleniumDriver,
+  params: ProcessParams
 ) :
-  Crawler<SeleniumDriver, S>(configuration, browser, def, driver) {
+  Crawler<SeleniumDriver, S>(configuration, browser, def, driver, params) {
   
   protected val wait: WebDriverWait by lazy { WebDriverWait(driver, Duration.ofSeconds(15)) }
   protected lateinit var title: String

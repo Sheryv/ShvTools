@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.Crawler
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 
@@ -16,8 +17,9 @@ class FilserCrawlerDef : StreamingCrawlerBase(
   override fun build(
     configuration: Configuration,
     browser: BrowserConfig,
-    driver: SeleniumDriver
+    driver: SeleniumDriver,
+    params: ProcessParams
   ): Crawler<SeleniumDriver, StreamingWebsiteSettings> {
-    return FilserCrawler(configuration, browser, this, driver)
+    return FilserCrawler(configuration, browser, this, driver, params)
   }
 }

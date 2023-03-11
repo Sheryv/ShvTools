@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
@@ -16,8 +17,9 @@ class FMoviesCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver
-) : StreamingWebsiteBase(configuration, browser, def, driver) {
+  driver: SeleniumDriver,
+  params: ProcessParams
+) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
   
   override suspend fun getMainLang() = "en"
   

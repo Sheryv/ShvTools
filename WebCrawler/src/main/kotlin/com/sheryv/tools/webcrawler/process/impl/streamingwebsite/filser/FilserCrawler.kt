@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
@@ -19,15 +20,16 @@ class FilserCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver
-) : StreamingWebsiteBase(configuration, browser, def, driver) {
-  private val urlPattern = Regex(Regex.escape(def.attributes.websiteUrl) + """/(title|watch)/(\w+)/.*""")
+  driver: SeleniumDriver,
+  params: ProcessParams
+) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
+  private val urlPattern = Regex("(" +Regex.escape(def.attributes.websiteUrl) + """)?/?(title|watch)/(\w+)/?.*""")
   
   
   override suspend fun getMainLang() = "pl"
   
   override suspend fun findEpisodeItems(serverIndex: String?): List<VideoData> {
-    val id = urlPattern.matchEntire(series.seriesUrl)!!.groupValues[2]
+    val id = urlPattern.matchEntire(series.seriesUrl)!!.groupValues[3]
     driver.navigate().to("${def.attributes.websiteUrl}/title/$id/${settings.seasonNumber}")
     delay(300)
     

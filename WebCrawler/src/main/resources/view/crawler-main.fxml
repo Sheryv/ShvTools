@@ -61,9 +61,102 @@
             </VBox>
             <VBox>
                <children>
-                  <TabPane maxWidth="1.7976931348623157E308" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
+                  <TabPane maxWidth="1.7976931348623157E308" styleClass="root-tabs" tabClosingPolicy="UNAVAILABLE" VBox.vgrow="ALWAYS">
                     <tabs>
-                      <Tab text="General">
+                        <Tab text="Status">
+                           <content>
+                              <ScrollPane fitToHeight="true" fitToWidth="true" vbarPolicy="ALWAYS">
+                                 <content>
+                                    <VBox fx:id="vbCrawlerStatus" spacing="15.0">
+                                       <padding>
+                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                       </padding>
+                                       <children>
+                                          <TextArea fx:id="taCrawlerStatus" editable="false" styleClass="mono" VBox.vgrow="ALWAYS" />
+                                       </children>
+                                    </VBox>
+                                 </content>
+                              </ScrollPane>
+                           </content>
+                        </Tab>
+                        <Tab text="Crawler options">
+                           <content>
+                              <VBox>
+                                 <children>
+                                    <Separator prefWidth="200.0" />
+                                    <TabPane tabClosingPolicy="UNAVAILABLE">
+                                       <tabs>
+                                          <Tab text="Current">
+                                             <content>
+                                                <ScrollPane fitToHeight="true" fitToWidth="true" vbarPolicy="ALWAYS">
+                                                   <content>
+                                                      <VBox fx:id="vbOptions" spacing="15.0">
+                                                         <children>
+                                                            <AnchorPane styleClass="ValuePreviewSettingsRow" VBox.vgrow="NEVER">
+                                                               <children>
+                                                                  <Label layoutY="6.0" text="Save path" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0" />
+                                                                  <TextField fx:id="tfSavePath" alignment="TOP_LEFT" editable="false" prefHeight="25.0" prefWidth="406.0" text="sdf s fsd  fsd f234234" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="174.0" AnchorPane.topAnchor="18.0">
+                                                                     <opaqueInsets>
+                                                                        <Insets />
+                                                                     </opaqueInsets>
+                                                                  </TextField>
+                                                                  <Button fx:id="btnSavePath" layoutX="413.0" layoutY="17.0" mnemonicParsing="false" text="..." AnchorPane.rightAnchor="143.0" AnchorPane.topAnchor="18.0" />
+                                                               </children>
+                                                               <VBox.margin>
+                                                                  <Insets />
+                                                               </VBox.margin>
+                                                            </AnchorPane>
+                                                            <Label text="Label" />
+                                                            <VBox />
+                                                            <Slider blockIncrement="2.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
+                                                            <VBox styleClass="HeaderSettingsRow">
+                                                               <children>
+                                                                  <Label maxWidth="-Infinity" text="General" />
+                                                                  <Separator prefWidth="200.0" />
+                                                               </children>
+                                                            </VBox>
+                                                            <Label text="Label" />
+                                                            <CheckBox mnemonicParsing="false" text="CheckBox">
+                                                               <padding>
+                                                                  <Insets bottom="10.0" top="10.0" />
+                                                               </padding>
+                                                            </CheckBox>
+                                                            <Button mnemonicParsing="false" styleClass="ic-copy">
+                                                               <graphic>
+                                                                  <Region />
+                                                               </graphic>
+                                                            </Button>
+                                                            <Spinner editable="true" />
+                                                            <TextArea />
+                                                         </children>
+                                                         <padding>
+                                                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                                         </padding>
+                                                      </VBox>
+                                                   </content>
+                                                </ScrollPane>
+                                             </content>
+                                          </Tab>
+                                          <Tab text="Shared/Parent">
+                                             <content>
+                                                <ScrollPane fitToHeight="true" fitToWidth="true" vbarPolicy="ALWAYS">
+                                                   <content>
+                                                      <VBox fx:id="vbSharedOptions" spacing="15.0">
+                                                         <padding>
+                                                            <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+                                                         </padding>
+                                                      </VBox>
+                                                   </content>
+                                                </ScrollPane>
+                                             </content>
+                                          </Tab>
+                                       </tabs>
+                                    </TabPane>
+                                 </children>
+                              </VBox>
+                           </content>
+                        </Tab>
+                      <Tab text="Browser">
                            <content>
                               <ScrollPane fitToHeight="true" fitToWidth="true">
                                  <content>
@@ -165,56 +258,6 @@
                                        <opaqueInsets>
                                           <Insets />
                                        </opaqueInsets>
-                                       <padding>
-                                          <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-                                       </padding>
-                                    </VBox>
-                                 </content>
-                              </ScrollPane>
-                           </content>
-                        </Tab>
-                        <Tab text="Crawler options">
-                           <content>
-                              <ScrollPane fitToHeight="true" fitToWidth="true" vbarPolicy="ALWAYS">
-                                 <content>
-                                    <VBox fx:id="vbOptions" spacing="15.0">
-                                       <children>
-                                          <AnchorPane styleClass="ValuePreviewSettingsRow" VBox.vgrow="NEVER">
-                                             <children>
-                                                <Label layoutY="6.0" text="Save path" AnchorPane.leftAnchor="0.0" AnchorPane.topAnchor="0.0" />
-                                                <TextField fx:id="tfSavePath" alignment="TOP_LEFT" editable="false" prefHeight="25.0" prefWidth="406.0" text="sdf s fsd  fsd f234234" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="174.0" AnchorPane.topAnchor="18.0">
-                                                   <opaqueInsets>
-                                                      <Insets />
-                                                   </opaqueInsets></TextField>
-                                                <Button fx:id="btnSavePath" layoutX="413.0" layoutY="17.0" mnemonicParsing="false" text="..." AnchorPane.rightAnchor="143.0" AnchorPane.topAnchor="18.0" />
-                                             </children>
-                                             <VBox.margin>
-                                                <Insets />
-                                             </VBox.margin>
-                                          </AnchorPane>
-                                          <Label text="Label" />
-                                          <VBox />
-                                          <Slider blockIncrement="2.0" minorTickCount="4" showTickLabels="true" showTickMarks="true" snapToTicks="true" />
-                                          <VBox styleClass="HeaderSettingsRow">
-                                             <children>
-                                                <Label maxWidth="-Infinity" text="General" />
-                                                <Separator prefWidth="200.0" />
-                                             </children>
-                                          </VBox>
-                                          <Label text="Label" />
-                                          <CheckBox mnemonicParsing="false" text="CheckBox">
-                                             <padding>
-                                                <Insets bottom="10.0" top="10.0" />
-                                             </padding>
-                                          </CheckBox>
-                                          <Button mnemonicParsing="false" styleClass="ic-copy">
-                                             <graphic>
-                                                <Region />
-                                             </graphic>
-                                          </Button>
-                                          <Spinner editable="true" />
-                                          <TextArea />
-                                       </children>
                                        <padding>
                                           <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                                        </padding>

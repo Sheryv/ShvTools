@@ -12,8 +12,10 @@ import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
 import com.fasterxml.jackson.databind.util.StdDateFormat
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
+import com.sheryv.util.InternalEvent
 import com.sheryv.util.logging.LoggingUtils
 import kotlinx.coroutines.*
+import org.greenrobot.eventbus.EventBus
 import org.slf4j.Logger
 import java.nio.file.Path
 import java.text.DecimalFormat
@@ -121,3 +123,20 @@ fun inViewThread(
   return GlobalScope.launch(Dispatchers.Main, start, block)
 }
 
+fun eventsAttach(receiver: Any) {
+  EventBus.getDefault().register(receiver)
+  LoggingUtils.getLogger(receiver::class.java).debug("Registered event bus to ${receiver::class.simpleName}")
+}
+
+fun eventsDetach(receiver: Any) {
+  if (EventBus.getDefault().isRegistered(receiver)) {
+    EventBus.getDefault().unregister(receiver)
+    LoggingUtils.getLogger(receiver::class.java).debug("Unregistered event bus from ${receiver::class.simpleName}")
+  } else {
+    LoggingUtils.getLogger(receiver::class.java).trace("Trying to unregister event listener that was not registered")
+  }
+}
+
+fun postEvent(event: InternalEvent) {
+  EventBus.getDefault().post(event)
+}

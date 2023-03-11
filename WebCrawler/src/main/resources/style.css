@@ -3,7 +3,7 @@
     -icon-paint: -fx-light-text-color;
 }
 
-.tab, #top-tools {
+.root-tabs > .tab-header-area > .headers-region > .tab, #top-tools {
     -fx-font-size: 14px;
 }
 

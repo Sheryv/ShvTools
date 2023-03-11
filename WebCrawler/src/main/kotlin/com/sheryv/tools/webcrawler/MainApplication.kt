@@ -1,5 +1,7 @@
 package com.sheryv.tools.webcrawler
 
+import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.util.SwingUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.view.MainView
 import javafx.application.Application
@@ -8,6 +10,7 @@ import javafx.scene.Parent
 import javafx.scene.Scene
 import javafx.scene.image.Image
 import javafx.stage.Stage
+import javax.swing.SwingUtilities
 
 class MainApplication : Application() {
   override fun start(primaryStage: Stage?) {

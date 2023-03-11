@@ -43,6 +43,8 @@ data class M3U8Url(
   override val isStreaming: Boolean = true
   
   override fun defaultFileFormat() = FileFormats.TS
+  
+  override fun toString(): String = base
 }
 
 data class DirectUrl(
@@ -57,4 +59,6 @@ data class DirectUrl(
   
   @JsonIgnore
   override val isStreaming: Boolean = false
+  
+  override fun toString(): String = base
 }

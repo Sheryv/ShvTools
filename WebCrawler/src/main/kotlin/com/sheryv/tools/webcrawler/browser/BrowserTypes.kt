@@ -53,8 +53,8 @@ enum class BrowserTypes(
     return BrowserConfig(this, supportedDrivers.map { it.toConfig() }.toSet(), BrowserSupport.get.findBrowserPath(this))
   }
   
-  fun getPathForUserProfileInBrowser(): Path? {
-    return BrowserSupport.get.getPathForUserProfileInBrowser(this)
+  fun getPathForUserProfileInBrowser(browser: BrowserConfig): Path? {
+    return BrowserSupport.get.getPathForUserProfileInBrowser(browser, this)
   }
   
   override fun toString(): String {

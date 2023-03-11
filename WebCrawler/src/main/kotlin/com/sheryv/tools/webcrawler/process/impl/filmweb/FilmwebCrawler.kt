@@ -5,16 +5,21 @@ import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.FilmwebSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.utils.Utils.deserializeList
 import com.sheryv.tools.webcrawler.utils.lg
 import org.openqa.selenium.By
-import java.io.File
 
-class FilmwebCrawler(configuration: Configuration, browser: BrowserConfig, def: CrawlerDefinition<SeleniumDriver, FilmwebSettings>, driver: SeleniumDriver) :
-  SeleniumCrawler<FilmwebSettings>(configuration, browser, def, driver) {
+class FilmwebCrawler(
+  configuration: Configuration,
+  browser: BrowserConfig,
+  def: CrawlerDefinition<SeleniumDriver, FilmwebSettings>,
+  driver: SeleniumDriver,
+  params: ProcessParams
+) : SeleniumCrawler<FilmwebSettings>(configuration, browser, def, driver, params) {
   
   private val result = FilmwebResult()
   private lateinit var user: String
@@ -102,7 +107,8 @@ class FilmwebCrawler(configuration: Configuration, browser: BrowserConfig, def: 
   
   private fun loadItemsPaged(currentUrl: String): List<FilmwebSearch>? {
     driver.waitFor(By.cssSelector(".userVotesPage .userVotesPage__results"))
-    val pagination = driver.findElements(By.cssSelector(".pagination .pagination__item:not(.pagination__item--next):not(.pagination__item--prev)"))
+    val pagination =
+      driver.findElements(By.cssSelector(".pagination .pagination__item:not(.pagination__item--next):not(.pagination__item--prev)"))
     val result = mutableListOf<FilmwebSearch>()
     
     if (pagination.isNotEmpty()) {

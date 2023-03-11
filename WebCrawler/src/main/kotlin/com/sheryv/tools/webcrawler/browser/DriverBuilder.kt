@@ -14,7 +14,6 @@ import org.openqa.selenium.firefox.FirefoxOptions
 import org.openqa.selenium.firefox.FirefoxProfile
 import org.openqa.selenium.logging.LogType
 import org.openqa.selenium.logging.LoggingPreferences
-import java.io.File
 import java.util.logging.Level
 
 abstract class DriverBuilder {
@@ -22,7 +21,7 @@ abstract class DriverBuilder {
   
   protected fun setDefaults(options: MutableCapabilities, config: Configuration, browser: BrowserConfig) {
     if (config.browserSettings.useUserProfile == true) {
-      val userDataPath = browser.type.getPathForUserProfileInBrowser()
+      val userDataPath = browser.type.getPathForUserProfileInBrowser(browser)
       if (userDataPath != null) {
         when (options) {
           is ChromeOptions -> {

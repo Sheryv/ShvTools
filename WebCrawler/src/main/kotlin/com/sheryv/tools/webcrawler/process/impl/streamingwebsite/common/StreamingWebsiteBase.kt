@@ -7,10 +7,7 @@ import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
-import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
-import com.sheryv.tools.webcrawler.process.base.model.SimpleStep
-import com.sheryv.tools.webcrawler.process.base.model.Step
-import com.sheryv.tools.webcrawler.process.base.model.TerminationException
+import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.utils.lg
@@ -26,8 +23,9 @@ abstract class StreamingWebsiteBase(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver
-) : SeleniumCrawler<StreamingWebsiteSettings>(configuration, browser, def, driver) {
+  driver: SeleniumDriver,
+  params: ProcessParams
+) : SeleniumCrawler<StreamingWebsiteSettings>(configuration, browser, def, driver, params) {
   lateinit var series: Series
   
   override fun getSteps(): List<Step<out Any, out Any>> {
@@ -69,6 +67,11 @@ abstract class StreamingWebsiteBase(
     waitIfPaused()
     var i = settings.searchStartIndex
     while (i <= items.size && (i <= settings.searchStopIndex || settings.searchStopIndex < 0)) {
+      if (params.runOnlyForFailedEpisodes && series.episodes.size > i && series.episodes[i].downloadUrl?.base?.isNotBlank() == true ) {
+        i++
+        continue
+      }
+      
       val item: VideoData = items[i - 1]
       
       var downloadUrl: VideoUrl? = null

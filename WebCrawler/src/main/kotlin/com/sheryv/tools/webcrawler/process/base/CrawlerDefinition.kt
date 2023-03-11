@@ -3,8 +3,11 @@ package com.sheryv.tools.webcrawler.process.base
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
+import com.sheryv.tools.webcrawler.process.base.event.FetchedDataStatusChangedEvent
 import com.sheryv.tools.webcrawler.process.base.model.Format
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
+import com.sheryv.tools.webcrawler.utils.postEvent
 import java.net.URL
 
 typealias CrawlerDef = CrawlerDefinition<in SDriver, SettingsBase>
@@ -24,8 +27,14 @@ abstract class CrawlerDefinition<T : SDriver, S : SettingsBase>(
   abstract fun build(
     configuration: Configuration,
     browser: BrowserConfig,
-    driver: T
+    driver: T,
+    params: ProcessParams
   ): Crawler<T, S>
+  
+  fun update(config: Configuration) {
+  }
+  
+  protected open fun currentStatusToText(config: Configuration): String = ""
   
   override fun toString(): String {
     val url = URL(attributes.websiteUrl)

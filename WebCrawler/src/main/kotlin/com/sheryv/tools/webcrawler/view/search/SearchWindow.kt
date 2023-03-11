@@ -1,7 +1,9 @@
 package com.sheryv.tools.webcrawler.view.search
 
+import com.formdev.flatlaf.FlatDarkLaf
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
+import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
@@ -12,6 +14,7 @@ import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.utils.inBackground
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.tools.webcrawler.utils.postEvent
 import com.sheryv.util.FileUtils
 import com.sheryv.util.Strings
 import org.apache.commons.lang3.StringUtils
@@ -94,6 +97,7 @@ class SearchWindow {
           null,
           {
             Utils.jsonMapper.writeValue(settings.outputPath.toFile(), lastSeries)
+            postEvent(FetchedDataExternalChangeEvent())
           },
           null,
           { setProgress(100) }
@@ -111,12 +115,17 @@ class SearchWindow {
         {
           var prog = 0f
           for (episode in lastSeries!!.episodes) {
-            val size = getDownloadSize(episode.downloadUrl?.base.orEmpty())
-            episode.lastSize = size
+            try {
+              val size = getDownloadSize(episode.downloadUrl?.base.orEmpty())
+              episode.lastSize = size
+            } catch (e: Exception) {
+              lg().error("Cant get video size: " + episode.generateFileName(lastSeries!!, settings), e)
+            }
             prog += part
             setProgress(prog.toInt())
             EventQueue.invokeLater { fillList(lastSeries) }
           }
+          
           null
         },
         null,
@@ -170,9 +179,9 @@ class SearchWindow {
           }
         }, listOf(toIdmBtn, loadSizeBtn)
       )
-      if (i % 2 != 0) {
-        row.background = Color(223, 223, 223)
-      }
+//      if (i % 2 != 0) {
+//        row.background = Color(223, 223, 223)
+//      }
       /* row.addMouseListener(new MouseAdapter() {
                 private Border grayBorder = BorderFactory.createLineBorder(Color.DARK_GRAY, 2);
                 private Border prev;
@@ -428,7 +437,7 @@ class SearchWindow {
     }
     panel.add(row)
     val separator = JPanel(true)
-    separator.background = Color(210, 210, 210)
+//    separator.background = Color(210, 210, 210)
     separator.preferredSize = Dimension(100, 1)
     separator.maximumSize = Dimension(Int.MAX_VALUE, 1)
     panel.add(separator)

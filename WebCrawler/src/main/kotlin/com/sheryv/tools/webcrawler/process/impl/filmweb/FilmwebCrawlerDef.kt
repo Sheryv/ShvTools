@@ -6,6 +6,7 @@ import com.sheryv.tools.webcrawler.config.impl.FilmwebSettings
 import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 
 class FilmwebCrawlerDef : CrawlerDefinition<SeleniumDriver, FilmwebSettings>(
@@ -20,9 +21,10 @@ class FilmwebCrawlerDef : CrawlerDefinition<SeleniumDriver, FilmwebSettings>(
   override fun build(
     configuration: Configuration,
     browser: BrowserConfig,
-    driver: SeleniumDriver
+    driver: SeleniumDriver,
+    params: ProcessParams
   ): Crawler<SeleniumDriver, FilmwebSettings> {
-    return FilmwebCrawler(configuration, browser, this, driver)
+    return FilmwebCrawler(configuration, browser, this, driver, params)
   }
   
   override fun createDefaultSettings(): FilmwebSettings {

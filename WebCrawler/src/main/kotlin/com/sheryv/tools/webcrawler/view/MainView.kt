@@ -12,6 +12,9 @@ import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.Runner
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
+import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
+import com.sheryv.tools.webcrawler.process.base.event.FetchedDataStatusChangedEvent
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
@@ -38,6 +41,8 @@ import javafx.scene.input.KeyCombination
 import javafx.scene.layout.*
 import javafx.stage.Modality
 import javafx.util.Duration
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -47,7 +52,6 @@ import java.nio.file.StandardCopyOption
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.swing.JFrame
-import javax.swing.UIManager
 import kotlin.io.path.*
 
 
@@ -83,6 +87,7 @@ class MainView : BaseView(), ViewActionsProvider {
   
   
   private fun init() {
+    eventsAttach(this)
     stage.title = TITLE
     config.crawler
     tvScrapers.root = TreeItem()
@@ -95,10 +100,12 @@ class MainView : BaseView(), ViewActionsProvider {
     
     tvScrapers.selectionModel.selectedItemProperty().addListener { _, _, n ->
       if (n.isLeaf) {
+        registry.values.forEach { eventsDetach(it) }
         selected = registry.get(n.value.id)!!
+        eventsAttach(selected!!)
         GlobalState.currentCrawler = selected!!
         showSettingsForSelectedScraper()
-        
+
         if (selected!!.findSettings(config) is StreamingWebsiteSettings) {
           if (!menu.menus.contains(streamingRelatedMenus)) {
             menu.menus.add(streamingRelatedMenus)
@@ -110,6 +117,7 @@ class MainView : BaseView(), ViewActionsProvider {
 //          SystemUtils.userDownloadDir(),
 //          "${settings.outputPath}-${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${settings.outputFormat.extension}"
 //        ).toAbsolutePath().toString()
+        postEvent(FetchedDataExternalChangeEvent())
       }
     }
     
@@ -150,6 +158,7 @@ class MainView : BaseView(), ViewActionsProvider {
             btnStop.isVisible = false
           }
           ProcessingStates.IDLE -> {
+            postEvent(FetchedDataExternalChangeEvent())
             btnStop.isVisible = false
             progressProcess.isVisible = false
             btnStart.isDisable = false
@@ -253,6 +262,9 @@ class MainView : BaseView(), ViewActionsProvider {
               accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)
               setOnAction { startOrPauseProcess() }
             },
+            MenuItem("Start for failed episodes only").apply {
+              setOnAction { startOrPauseProcess(true) }
+            },
             MenuItem("Terminate").apply {
               accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
               setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
@@ -267,13 +279,6 @@ class MainView : BaseView(), ViewActionsProvider {
             },
             SeparatorMenuItem(),
             MenuItem("Logs"),
-            SeparatorMenuItem(),
-            MenuItem("Tv Show search tool").apply {
-              accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
-              setOnAction {
-                openSearchEpisodesWindow()
-              }
-            },
             SeparatorMenuItem(),
             CheckMenuItem("Pause processing on next step").apply {
               accelerator = KeyCodeCombination(KeyCode.P, KeyCombination.CONTROL_DOWN)
@@ -314,14 +319,14 @@ class MainView : BaseView(), ViewActionsProvider {
     )
   }
   
-  private fun startOrPauseProcess() {
+  private fun startOrPauseProcess(runOnlyForFailedEpisodes: Boolean = false) {
     if (selected != null) {
       when (GlobalState.processingState.value) {
         ProcessingStates.IDLE -> {
           GlobalState.processingState.set(ProcessingStates.RUNNING)
           
           val browser = config.browserSettings.currentBrowser()
-          val runner = Runner(config, browser, selected!!)
+          val runner = Runner(config, browser, selected!!, ProcessParams(runOnlyForFailedEpisodes))
           val settings = settingsReader.invoke()
           inBackground {
             try {
@@ -391,7 +396,7 @@ class MainView : BaseView(), ViewActionsProvider {
       return
     }
     EventQueue.invokeLater {
-      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+//      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
       val f = JFrame()
       f.title = "Search and fill episodes links"
       f.contentPane.add(SearchWindow().init(config, selected!!.findSettings(config) as StreamingWebsiteSettings).mainPanel)
@@ -434,6 +439,13 @@ class MainView : BaseView(), ViewActionsProvider {
       items.setAll(
         Menu("Process fetched links").apply {
           items.setAll(
+            MenuItem("Tv Show search tool").apply {
+              accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
+              setOnAction {
+                openSearchEpisodesWindow()
+              }
+            },
+            SeparatorMenuItem(),
             MenuItem("Send links to IDM (Internet Download Manager)").apply {
               accelerator = KeyCodeCombination(KeyCode.I, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
               setOnAction {
@@ -622,6 +634,11 @@ class MainView : BaseView(), ViewActionsProvider {
     GlobalState.runningProcess.removeListener(listener)
   }
   
+  @Subscribe(threadMode = ThreadMode.MAIN)
+  internal fun onFetchedDataStatusChangedEvent(e: FetchedDataStatusChangedEvent) = inViewThread {
+    taCrawlerStatus.text = e.statusText
+  }
+  
   @FXML
   private lateinit var tfSavePath: TextField
   
@@ -684,4 +701,10 @@ class MainView : BaseView(), ViewActionsProvider {
   
   @FXML
   private lateinit var progressProcess: ProgressIndicator
+  
+  @FXML
+  private lateinit var taCrawlerStatus: TextArea
+  
+  @FXML
+  private lateinit var vbSharedOptions: VBox
 }

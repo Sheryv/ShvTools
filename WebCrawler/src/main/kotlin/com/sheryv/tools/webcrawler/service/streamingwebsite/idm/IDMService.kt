@@ -8,6 +8,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Se
 import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.FileUtils
 import kotlinx.coroutines.delay
+import java.nio.file.Path
 
 class IDMService(val configuration: Configuration) {
   
@@ -32,12 +33,11 @@ class IDMService(val configuration: Configuration) {
     require(idmExePath.isNotBlank()) { "Path to IDM exe cannot be empty" }
     require(episode.downloadUrl?.isDirect == true) { "Only direct download urls are supported by IDM" }
     val ex = String.format(
-      "\"%s\" /n /f \"%s\" /p \"%s\\%s\"" +
+      "\"%s\" /n /f \"%s\" /p \"%s\"" +
           " /a /d %s",
       idmExePath,
       episode.generateFileName(series, settings),
-      settings.downloadDir,
-      FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", series.title, series.season)),
+      Path.of(settings.downloadDir).resolve(series.generateDirectoryPathForSeason()),
       episode.downloadUrl!!.base
     )
     

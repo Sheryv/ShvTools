@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
@@ -19,8 +20,9 @@ class FilmanCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver
-) : StreamingWebsiteBase(configuration, browser, def, driver) {
+  driver: SeleniumDriver,
+  params: ProcessParams
+) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
   
   override suspend fun getMainLang() = "pl"
   
@@ -70,20 +72,27 @@ class FilmanCrawler(
     val js = "\$('#links > tbody > tr').get()[${data.server.index}].children[0].children[0].click()"
     driver.executeScript(js)
     wait(By.cssSelector("#player-container #frame"))
-    driver.executeScript("\$('#player-container #frame a.btn').get()[0].click()")
-    delay(500)
     
-    if (driver.windowHandles.size > tabs.size) {
-      driver.switchTo().window(driver.windowHandles.first { !tabs.contains(it) })
+    if (driver.findElements(By.cssSelector("#player-container #frame a.btn")).isNotEmpty()) {
+      
+      driver.executeScript("\$('#player-container #frame a.btn').get()[0].click()")
+      delay(500)
+      
+      if (driver.windowHandles.size > tabs.size) {
+        driver.switchTo().window(driver.windowHandles.first { !tabs.contains(it) })
+      }
+      
+      val res = blockExecutedOnPage?.invoke()
+      
+      if (driver.windowHandle != current) {
+        driver.close()
+      }
+      driver.switchTo().window(current)
+      return res
+    } else {
+      driver.switchTo().frame(driver.findElement(By.cssSelector("#player-container #frame iframe")))
+      return blockExecutedOnPage?.invoke()
     }
-    
-    val res = blockExecutedOnPage?.invoke()
-    
-    if (driver.windowHandle != current) {
-      driver.close()
-    }
-    driver.switchTo().window(current)
-    return res
   }
   
 }

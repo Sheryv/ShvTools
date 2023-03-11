@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.service
 
+import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
 import com.sheryv.tools.webcrawler.config.Configuration
 import java.nio.file.Files
@@ -47,7 +48,7 @@ abstract class BrowserSupport {
     return script
   }
   
-  abstract fun getPathForUserProfileInBrowser(type: BrowserTypes): Path?
+  abstract fun getPathForUserProfileInBrowser(browser: BrowserConfig, type: BrowserTypes): Path?
   
   protected abstract fun buildPossibleBrowserPathsWithPrefix(prefix: String): List<String>
   
@@ -70,7 +71,7 @@ private class WindowsBrowserSupport : BrowserSupport() {
     "%programfiles(x86)%\\$prefix"
   )
   
-  override fun getPathForUserProfileInBrowser(type: BrowserTypes): Path? {
+  override fun getPathForUserProfileInBrowser(browser: BrowserConfig, type: BrowserTypes): Path? {
     val firefoxUserProfilePattern = Configuration.property("firefox.browser.profile.name-pattern")!!
     return (if (type == BrowserTypes.FIREFOX)
       Files.newDirectoryStream(Paths.get(System.getenv("APPDATA") + "\\Mozilla\\Firefox\\Profiles"), firefoxUserProfilePattern)
@@ -81,7 +82,12 @@ private class WindowsBrowserSupport : BrowserSupport() {
           BrowserTypes.BRAVE -> "BraveSoftware\\Brave-Browser\\User Data"
           BrowserTypes.EDGE -> "Microsoft\\Edge\\User Data"
           BrowserTypes.CHROME -> "Google\\Chrome\\User Data"
-          else -> return null
+          else -> when(browser.binaryPath!!.fileName.toString().lowercase()) {
+            "brave.exe" -> "BraveSoftware\\Brave-Browser\\User Data"
+            "msedge.exe" -> "Microsoft\\Edge\\User Data"
+            "chrome.exe" -> "Google\\Chrome\\User Data"
+            else -> null
+          }
         }
       ))?.takeIf { it.exists() && it.isDirectory() }
   }
@@ -94,7 +100,7 @@ private class MacOsBrowserSupport : UnixBrowserSupport() {
     "/Applications/$prefix.app"
   )
   
-  override fun getPathForUserProfileInBrowser(type: BrowserTypes): Path? {
+  override fun getPathForUserProfileInBrowser(browser: BrowserConfig, type: BrowserTypes): Path? {
     val firefoxUserProfilePattern = Configuration.property("firefox.browser.profile.name-pattern")!!
     return (if (type == BrowserTypes.FIREFOX)
       Files.newDirectoryStream(Paths.get("~/Library/Application Support/Firefox/Profiles"), firefoxUserProfilePattern)
@@ -116,7 +122,7 @@ private class LinuxBrowserSupport : UnixBrowserSupport() {
     "/usr/bin/$prefix"
   )
   
-  override fun getPathForUserProfileInBrowser(type: BrowserTypes): Path? {
+  override fun getPathForUserProfileInBrowser(browser: BrowserConfig, type: BrowserTypes): Path? {
     val firefoxUserProfilePattern = Configuration.property("firefox.browser.profile.name-pattern")!!
     return (if (type == BrowserTypes.FIREFOX)
       Files.newDirectoryStream(Paths.get("~/.mozilla/firefox"), firefoxUserProfilePattern)

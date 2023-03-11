@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.ProcessingStates
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
+import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
 import com.sheryv.tools.webcrawler.process.base.model.TerminationException
@@ -15,7 +16,8 @@ abstract class Crawler<T : SDriver, S : SettingsBase>(
   protected val configuration: Configuration,
   val browser: BrowserConfig,
   val def: CrawlerDefinition<T, S>,
-  val driver: T
+  val driver: T,
+  val params: ProcessParams
 ) {
   abstract fun getSteps(): List<Step<out Any, out Any>>
   
