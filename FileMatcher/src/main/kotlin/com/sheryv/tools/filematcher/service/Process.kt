@@ -5,7 +5,7 @@ import com.sheryv.tools.filematcher.model.ResultType
 import com.sheryv.tools.filematcher.utils.eventsAttach
 import com.sheryv.tools.filematcher.utils.eventsDetach
 import com.sheryv.tools.filematcher.utils.inBackground
-import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.withContext
@@ -25,7 +25,7 @@ abstract class Process<Output>(
           val output = process()
           onEndAsync(ProcessResult(ResultType.SUCCESS, this@Process, data = output))
         } catch (e: Exception) {
-          lg().error("Error in process", e)
+          log.error("Error in process", e)
           onEndAsync(ProcessResult(ResultType.ERROR, this@Process, e))
         }
       }

@@ -8,6 +8,8 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinModule
 import com.sheryv.util.FileUtils
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.logging.log
 import java.io.*
 import java.net.URI
 import java.net.URL
@@ -30,7 +32,7 @@ object DataUtils {
     if (file.exists())
       file.delete()
     
-    lg().info("Downloading ${file.name} from: $urlStr")
+    log.info("Downloading ${file.name} from: $urlStr")
     var cancelled = false
     try {
       val url = URL(urlStr)
@@ -50,12 +52,12 @@ object DataUtils {
             done = fos.channel.transferFrom(rbc, pos, java.lang.Long.MAX_VALUE)
             pos += done
           } while (done >= len)
-          lg().debug("Download finished ${file.name}")
+          log.debug("Download finished ${file.name}")
         }
       }
     } finally {
       if (cancelled) {
-        lg().warn("Downloading cancelled. Unfinished file '${file.absolutePath}' will be deleted")
+        log.warn("Downloading cancelled. Unfinished file '${file.absolutePath}' will be deleted")
         file.delete()
         return null
       }
@@ -79,7 +81,7 @@ object DataUtils {
   }
   
   fun <T> downloadAndParseOld(url: String, output: Class<T>): T {
-    lg().info("Downloading text from: $url")
+    log.info("Downloading text from: $url")
     val indexOf = url.lastIndexOf('.')
     val extension = url.substring(indexOf + 1)
     
@@ -92,12 +94,12 @@ object DataUtils {
     }
     
     val result = mapper.readValue(BufferedInputStream(connection.getInputStream()), output)
-    lg().debug("Downloaded and mapped text from: $url")
+    log.debug("Downloaded and mapped text from: $url")
     return result
   }
   
   fun <T> downloadAndParse(url: String, output: Class<T>): T {
-    lg().info("Downloading text from: $url")
+    log.info("Downloading text from: $url")
     val t = System.currentTimeMillis()
     val indexOf = url.lastIndexOf('.')
     val extension = url.substring(indexOf + 1)
@@ -123,7 +125,7 @@ object DataUtils {
     println("before mapping " + (System.currentTimeMillis() - t))
     val result = mapper.readValue(response.body(), output)
     println("after mapping " + (System.currentTimeMillis() - t))
-    lg().debug("Downloaded and mapped text from: $url")
+    log.debug("Downloaded and mapped text from: $url")
     return result
   }
   
@@ -137,25 +139,9 @@ object DataUtils {
     return res
   }
   
-  fun jsonMapper(): ObjectMapper {
-    val map = ObjectMapper()
-    map.configure(SerializationFeature.INDENT_OUTPUT, true)
-    map.registerModule(KotlinModule())
-    map.registerModule(JavaTimeModule())
-    map.dateFormat = StdDateFormat()
-    map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-    return map
-  }
+  fun jsonMapper() = SerialisationUtils.jsonMapper
   
-  fun yamlMapper(): ObjectMapper {
-    val map = ObjectMapper(YAMLFactory())
-    map.registerModule(KotlinModule())
-    map.registerModule(JavaTimeModule())
-    map.dateFormat = StdDateFormat()
-    map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-    map.setSerializationInclusion(JsonInclude.Include.NON_NULL)
-    return map
-  }
+  fun yamlMapper() = SerialisationUtils.yamlMapper
   
   fun appendCommentsToYamlFile(
     input: File,

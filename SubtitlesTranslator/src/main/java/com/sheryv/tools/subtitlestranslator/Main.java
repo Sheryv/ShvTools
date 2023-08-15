@@ -30,7 +30,7 @@ public class Main {
                 System.out.println("Example file was written to " + config.getAbsolutePath());
                 System.out.println("Use with param 's' to start");
             }
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }

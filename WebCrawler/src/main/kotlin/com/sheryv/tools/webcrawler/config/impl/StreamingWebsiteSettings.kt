@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.EpisodeType
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.StreamQuality
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
+import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.DownloaderConfig
 import com.sheryv.tools.webcrawler.view.settings.*
 import java.nio.file.Path
 

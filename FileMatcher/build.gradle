@@ -1,71 +1,19 @@
 plugins {
-    id 'java'
     id 'application'
-    id 'org.jetbrains.kotlin.jvm' version "$kotlin_version"
-    id "org.jetbrains.kotlin.plugin.allopen" version "$kotlin_plugin_version"
-    id 'org.openjfx.javafxplugin' version '0.0.13'
-    id 'edu.sc.seis.launch4j' version '2.5.3'
+    alias(libs.plugins.launch4j)
+    alias(libs.plugins.javafx)
 }
 
-group 'com.sheryv'
 ext.longName = "Tool to synchronize files from configured web location with local folder"
 ext.className = "com.sheryv.tools.filematcher.MainLauncher"
-ext.file = "ShvFileMatcher"
 
-javafx {
-    modules = ["javafx.controls", "javafx.fxml"]
-    version = "17"
-}
-
-launch4j {
-    jar = "${project.buildDir}\\libs\\${project.name}-${project.ext.getVersionName(project.name)}" + '.jar'
-    mainClassName = project.ext["className"]
-    icon = "${projectDir}\\src\\main\\resources\\icons\\app.ico"
-    mutexName = 'com.sheryv.tools.filematcher.FileMatcherGUIMutex'
-    outfile = project.ext["file"] + "_" + project.ext.shortVersion + ".exe"
-    fileDescription = project.ext["file"] + "startup file"
-    copyright = project.ext["site"]
-    companyName = project.ext["author"]
-    bundledJrePath = "jre"
-    jvmOptions = ["-Xms32m", "-Xmx256m"]
-//    jvmOptions = ["-Xms32m", "-Xmx256m", "-Dspring.profiles.active=dev"]
-//    bundledJrePath = '%JAVA_HOME%'
-//    headerType = 'console'
-//    splashFileName = '..\\..\\..\\res\\splash.bmp'
-//    splashTimeout = 15
-//    println '>>> Icon >> ' + icon
-//    println '>>> Jar  >> ' + jar
-
-}
-
-createExe {
-    doFirst {
-        launch4j.textVersion = project.ext.shortVersion
-        launch4j.version = project.version
-    }
-}
-
-
-mainClassName = ext.className
-
-
-version getVersionName(project.name)
+ext.addJavafx()
+ext.addLaunch4j()
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.0")
-    implementation('com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.13.0')
-
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-javafx:1.6.4")
-
     implementation 'org.kocakosm:jblake2:0.4'
-    implementation 'org.codehaus.janino:janino:3.1.8'
-    implementation 'org.codehaus.janino:commons-compiler:3.1.8'
-    implementation 'org.greenrobot:eventbus:3.1.1'
-}
-
-
-dependencies {
+//    implementation libs.janino
+//    implementation libs.janino.compiler
+    implementation project(':ui-util')
     implementation project(':web-util')
 }

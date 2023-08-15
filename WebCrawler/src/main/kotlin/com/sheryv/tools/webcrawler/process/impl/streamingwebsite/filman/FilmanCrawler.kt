@@ -47,7 +47,7 @@ class FilmanCrawler(
   }
   
   override suspend fun loadItemDataFromSummaryPageAndGetServers(data: VideoData): List<VideoServer> {
-    val js = "return \$('#links > tbody > tr').get().map(n=>({a: n.children[1].textContent, " +
+    val js = "return \$('#links > tbody > tr').get().filter(n => n.children.length > 0).map(n => ({a: n.children[1].textContent, " +
         "q: n.children[2].textContent, h: n.children[0].children[0].children[0].getAttribute('alt'), d: n.children[0].innerText}))"
     
     return driver.executeScriptFetchList(js)?.mapIndexed { i, map ->

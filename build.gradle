@@ -1,41 +1,117 @@
+import org.gradle.api.plugins.internal.DefaultJavaApplication
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+import org.jetbrains.kotlin.gradle.plugin.KaptExtension
+
+import java.nio.file.Paths
 import java.util.regex.Pattern
 
-
-
-//buildscript {
-//    repositories {
-//        maven {
-//            url = uri("https://plugins.gradle.org/m2/")
-//        }
-//    }
-//    dependencies {
-//        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${ext.kotlin}")
-//    }
-//}
-
 plugins {
-//    id 'java-library'
-    id 'maven-publish'
-//    id "org.jetbrains.kotlin.kapt" version "1.7.20"
+    alias(libs.plugins.kotlin.jvm)
+//    alias(libs.plugins.kotlin.allopen)
+    alias(libs.plugins.kotlin.kapt) apply false
+    alias(libs.plugins.launch4j) apply false
+    alias(libs.plugins.javafx) apply false
 }
 
-String kotlin = '1.7.20'
 
 allprojects {
-    apply plugin: 'java'
-    apply plugin: 'maven-publish'
-
     ext.author = "Sheryv"
     ext.longName = "ShvTools root"
     ext.className = ""
     ext.site = 'https://github.com/Sheryv/ShvTools'
-    ext.kotlin_version = kotlin
-    ext.kotlin_plugin_version = '1.7.20'
     ext.shortVersion = "0.1"
+    ext.jarPrefix = ""
+    ext.file = "Shv" + project.projectDir.name
 
-    group = 'com.sheryv'
+    group = 'com.sheryv.shvtools'
+}
 
-    task fatJar(type: Jar) {
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+    apply plugin: libs.plugins.kotlin.jvm.get().pluginId
+//    apply plugin: libs.plugins.kotlin.allopen.get().pluginId
+
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+
+    dependencies {
+        implementation libs.bundles.kotlin
+        testImplementation libs.bundles.tests
+    }
+
+
+    ext.addJavafx = {
+//        project.extensions.getByType(JavaFXOptions).with {
+//            modules = ["javafx.controls", "javafx.fxml"]
+//            version = "17"
+//        }
+
+        javafx {
+            modules = ["javafx.controls", "javafx.fxml"]
+            version = "17"
+//            configuration = "implementation"
+//            platform = "linux"
+        }
+    }
+
+    ext.addLaunch4j = {
+        def os = DefaultNativePlatform.currentOperatingSystem
+        def arch = DefaultNativePlatform.currentArchitecture
+
+        String file = project.ext["file"] + "-" + project.ext.shortVersion + ".exe"
+        String iconPath = "${projectDir}\\src\\main\\resources\\icons\\app.ico"
+        String jre = "jre"
+        if (os.linux || os.macOsX) {
+            file = file.replace(".exe", "")
+            iconPath = iconPath.replace("\\", "/")
+            jre = null
+        }
+
+        launch4j {
+            mainClassName = project.ext["className"].toString()
+            icon = iconPath
+            mutexName = "com.sheryv.tools.${project.name}.GUIMutex"
+            outfile = file
+            fileDescription = project.ext["file"] + " startup file"
+            copyright = project.ext["site"].toString()
+            companyName = project.ext["author"].toString()
+            textVersion = project.ext.shortVersion
+            version = project.version
+            bundledJrePath = jre
+            jvmOptions = ["-Xms32m", "-Xmx256m"]
+            headerType = 'console'
+            stayAlive = true
+            //    splashFileName = '..\\..\\..\\res\\splash.bmp'
+            //    splashTimeout = 15
+        }
+
+        tasks.named("createExe")?.configure {
+            doFirst {
+                project.extensions.getByName("launch4j").with {
+                    textVersion = project.ext.shortVersion
+                    version = project.version
+                }
+            }
+        }
+    }
+
+    ext.addKapt = {
+        extensions.getByType(KaptExtension).with {
+            arguments {
+                arg("project", "${project.group}/${project.name}")
+                arg("other.resource.patterns", "Explorer.*")
+            }
+        }
+    }
+
+
+    tasks.register('fatJar', Jar) {
         afterEvaluate { p ->
             manifest {
                 attributes 'Implementation-Title': p.longName,
@@ -50,40 +126,41 @@ allprojects {
         }
     }
 
+
+    tasks.register('nativeImage', Exec) {
+        //requires VS native tools command prompt context
+        def p = Paths.get(project.buildDir.absolutePath, 'libs', project.name + '-all-java11' + "-${project.ext.shortVersion}.jar").toAbsolutePath().toString()
+        println(p)
+        commandLine("native-image -dsa -jar \"$p\" ${project.name}-${project.ext.shortVersion}")
+    }
+
+
+    tasks.register('linuxJar', Exec) {
+        javafx {
+            platfrom = "linux"
+        }
+
+    }
+
+
+    extensions.findByType(DefaultJavaApplication)?.with {
+        mainClassName = ext.className
+    }
+
     jar {
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
         afterEvaluate { p ->
-            archiveName = "${baseName}-${project.ext.shortVersion}.${extension}"
+            manifest {
+                attributes 'Implementation-Title': p.longName,
+                        'Implementation-Version': p.version,
+                        'Implementation-Vendor': p.author + ', ' + p.site,
+                        'Main-Class': p.className
+            }
+
+            archiveName = "${project.ext['jarPrefix']}${baseName}-${project.ext['shortVersion']}.${extension}"
         }
     }
 
-//    ext.getVersionName = { module, folder = '\\src\\main\\resources\\' ->
-////    def code = project.hasProperty('versionCode') ? versionCode.toInteger() : -1
-////    println "VersionCode is set to $code"
-////    return code
-//
-//        def suffix = "-version.txt"
-//        def nm = projectDir.absolutePath + folder + module + suffix
-//        def f = new File((String) nm);
-//        def time = System.currentTimeMillis()
-//        if (!f.exists()) {
-//            f = new File((String) nm)
-//            f.write("0.1.0\n"+time)
-//        }
-//        def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)\\s?.*")
-//        def version = f.getText()
-//        def matcherVersionNumber = patternVersionNumber.matcher(version)
-//        matcherVersionNumber.find()
-//        def majorVersion = Integer.parseInt(matcherVersionNumber.group(1))
-//        def minorVersion = Integer.parseInt(matcherVersionNumber.group(2))
-//        def pointVersion = Integer.parseInt(matcherVersionNumber.group(3))
-//        def begin = majorVersion + "." + minorVersion
-//        project.ext.shortVersion = begin
-//        def newVer = begin + "." + (pointVersion + 1)
-//        println("Version inc: " + version + " > " + newVer)
-//
-//        f.write(newVer+"\n"+time)
-//        return newVer
-//    }
     ext.getVersionName = { module, getShort = false, inc = false ->
         //    def code = project.hasProperty("versionCode") ? versionCode.toInteger() : -1
 //    println "VersionCode is set to $code"
@@ -95,7 +172,7 @@ allprojects {
         def f = file(nm)
         if (!f.exists()) {
             f = file(nm)
-            f.write("$version\n" + System.currentTimeMillis())
+            f.write("${project.ext["shortVersion"]}.0\n" + System.currentTimeMillis())
         }
         def patternVersionNumber = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)")
         def lines = f.readLines()
@@ -133,28 +210,6 @@ allprojects {
         }
     }
 
-}
-
-subprojects {
-    repositories {
-        mavenCentral()
-        mavenLocal()
-        maven {
-            url "https://plugins.gradle.org/m2/"
-        }
-    }
-
-    dependencies {
-        implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
-        implementation 'com.google.code.findbugs:jsr305:3.0.2'
-        annotationProcessor 'org.projectlombok:lombok:1.18.24'
-        compileOnly 'org.projectlombok:lombok:1.18.24'
-
-        testCompileOnly 'org.projectlombok:lombok:1.18.24'
-
-        testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
-        testImplementation 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
-    }
 
     test {
         useJUnitPlatform()
@@ -165,13 +220,18 @@ subprojects {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    compileKotlin {
+        kotlinOptions.jvmTarget = "17"
+    }
+    compileTestKotlin {
+        kotlinOptions.jvmTarget = "17"
+    }
 
-//    compileKotlin {
-//        kotlinOptions.jvmTarget = "17"
-//    }
-//    compileTestKotlin {
-//        kotlinOptions.jvmTarget = "17"
-//    }
+    sourceSets.main {
+        java.srcDirs("build/generated/ksp/main/kotlin")
+    }
+
+    version ext.getVersionName(name)
 }
 
 repositories {
@@ -180,9 +240,3 @@ repositories {
 }
 
 
-//compileKotlin {
-//    kotlinOptions.jvmTarget = "1.8"
-//}
-//compileTestKotlin {
-//    kotlinOptions.jvmTarget = "1.8"
-//}

@@ -1,31 +1,40 @@
 package com.sheryv.tools.webcrawler.view.jdownloader
 
-import com.sheryv.tools.webcrawler.BaseView
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.ConfigurationChangedEvent
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.jdownloader.JDownloaderCrawlerEntry
 import com.sheryv.tools.webcrawler.utils.DialogUtils
-import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
+import com.sheryv.util.DateUtils
 import com.sheryv.util.FileUtils
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.fx.core.view.FxmlView
 import javafx.fxml.FXML
 import javafx.scene.control.*
+import javafx.stage.Stage
+import org.greenrobot.eventbus.Subscribe
+import org.koin.core.component.get
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.format.DateTimeFormatter
 
-class JDownloaderView : BaseView() {
-  private lateinit var config: Configuration
+class JDownloaderView : FxmlView("view/jdownloader-generate.fxml") {
+  override val config: Configuration = get()
   private lateinit var settings: StreamingWebsiteSettings
   private lateinit var scraper: CrawlerDef
   private lateinit var lastSeries: Series
   
-  override fun onViewCreated() {
-    config = Configuration.get()
+  init {
+    this.title = "Generate file for JDownloader 2 import - ${ViewUtils.TITLE}"
+  }
+  
+  override fun onViewCreated(stage: Stage) {
+    super.onViewCreated(stage)
     scraper = GlobalState.currentCrawler
     settings = scraper.findSettings(config) as StreamingWebsiteSettings
     
@@ -53,8 +62,8 @@ class JDownloaderView : BaseView() {
   
   private fun generate() {
     try {
-      val filename = "${FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season))}_" +
-          "${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.crawljob"
+      val filename = "${FileUtils.fixFileNameWithColonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season))}_" +
+          "${DateUtils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.crawljob"
       Files.writeString(Path.of(tfWatchedDir.text, filename), taJsonList.text)
       DialogUtils.messageDialog("File generated. \nNow wait for next scan of JDownloader Folder Watch")
     } catch (e: Exception) {
@@ -67,12 +76,12 @@ class JDownloaderView : BaseView() {
   
   private fun loadEpisodes() {
     try {
-      lastSeries = Utils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
+      lastSeries = SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
       val filtered = lastSeries.episodes.asSequence()
         .filter { it.downloadUrl != null }
         .filter { chFilterToStreamingFilesOnly.isSelected && it.downloadUrl!!.isStreaming || !chFilterToStreamingFilesOnly.isSelected }
       
-      taJsonList.text = Utils.jsonMapper.writeValueAsString(filtered.map {
+      taJsonList.text = SerialisationUtils.jsonMapper.writeValueAsString(filtered.map {
         val downloadDir = if (chOverwritePackagizerRules.isSelected)
           Path.of(settings.downloadDir).resolve(lastSeries.generateDirectoryPathForSeason())
         else
@@ -81,7 +90,7 @@ class JDownloaderView : BaseView() {
           it.downloadUrl!!.base,
           it.generateFileName(lastSeries, settings),
           downloadDir.toAbsolutePath().toString(),
-          FileUtils.fixFileNameWithCollonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season)),
+          FileUtils.fixFileNameWithColonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season)),
           it.sourcePageUrl,
           overwritePackagizerEnabled = chOverwritePackagizerRules.isSelected
         )
@@ -91,6 +100,11 @@ class JDownloaderView : BaseView() {
     } catch (e: Exception) {
       throw RuntimeException("Cannot read file with fetched links at '${settings.outputPath}'", e)
     }
+  }
+  
+  @Subscribe
+  fun onConfigurationChangedEvent(e: ConfigurationChangedEvent) {
+  
   }
   
   

@@ -10,8 +10,9 @@ import com.sheryv.tools.webcrawler.process.base.event.FetchedDataStatusChangedEv
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.SystemSupport
-import com.sheryv.tools.webcrawler.utils.Utils
-import com.sheryv.tools.webcrawler.utils.postEvent
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.emitEvent
+import com.sheryv.util.event.AsyncEvent
 import org.greenrobot.eventbus.Subscribe
 import java.nio.file.Files
 
@@ -24,6 +25,12 @@ abstract class StreamingCrawlerBase(
   StreamingWebsiteSettings::class.java
 ) {
   
+  override fun handleEvent(e: AsyncEvent) {
+    when(e){
+      is FetchedDataExternalChangeEvent -> onFetchedDataExternalChangeEvent(e)
+    }
+  }
+  
   override fun createDefaultSettings(): StreamingWebsiteSettings {
     return StreamingWebsiteSettings(
       id(),
@@ -31,15 +38,13 @@ abstract class StreamingCrawlerBase(
     )
   }
   
-  
-  @Subscribe
-  internal fun onFetchedDataExternalChangeEvent(e: FetchedDataExternalChangeEvent) {
+  protected fun onFetchedDataExternalChangeEvent(e: FetchedDataExternalChangeEvent) {
     val path = findSettings(Configuration.get()).outputPath
     if (!Files.exists(path)) {
-      postEvent(FetchedDataStatusChangedEvent(""))
+      emitEvent(FetchedDataStatusChangedEvent(""))
       return
     }
-    val series = Utils.jsonMapper.readValue(path.toFile(), Series::class.java)
+    val series = SerialisationUtils.jsonMapper.readValue(path.toFile(), Series::class.java)
     var output = """Series title: ${series.title}
       |Season: ${series.season}
       |
@@ -52,6 +57,6 @@ abstract class StreamingCrawlerBase(
         it.title.padEnd(37).take(37)
       } | ${it.downloadUrl.toString()}"
     }
-    postEvent(FetchedDataStatusChangedEvent(output))
+    emitEvent(FetchedDataStatusChangedEvent(output))
   }
 }

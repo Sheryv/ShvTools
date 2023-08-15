@@ -5,11 +5,14 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.FileFormats
-import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.tools.webcrawler.utils.Utils
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.apache.http.client.methods.RequestBuilder
 import org.openqa.selenium.By
+
 
 open class VideoServerHandler(
   private val server: VideoServerDefinition,
@@ -17,6 +20,7 @@ open class VideoServerHandler(
   private val scraper: SeleniumCrawler<out SettingsBase>,
   private val overrideFileFormat: FileFormats? = null
 ) {
+  
   
   open suspend fun findVideoSrcUrl(timeout: Int = 12): String? {
     server.innerIframeCssSelector()?.let {
@@ -31,8 +35,8 @@ open class VideoServerHandler(
     
     val byVideo = By.cssSelector("video:not(.hidden)")
     
-    if(scraper.wait(byVideo, 5) == null) {
-      lg().error("video container not found on page (Did link expired?)")
+    if (scraper.wait(byVideo, 5) == null) {
+      log.error("video container not found on page (Did link expired?)")
       return null
     }
     val found = scraper.waitForNonEmptyAttribute(byVideo, "src", timeout)
@@ -43,4 +47,26 @@ open class VideoServerHandler(
   }
   
   open fun checkIfM3U8UrlCorrect(url: String): Boolean = true
+  
+  open fun tryToGetCorrectM3U8Url(incorrectUrl: String): String? {
+    if (incorrectUrl.contains("master.m3u8")) {
+      val prefix = incorrectUrl.substringBefore("master.m3u8")
+      
+      val file = Utils.httpClientExecute(RequestBuilder.get(incorrectUrl).build())
+      
+//      val file = HttpClients.createDefault().use { httpclient ->
+//        val httpGet = ClassicRequestBuilder.get(incorrectUrl).build()
+//
+//        httpclient.execute(httpGet) { response: ClassicHttpResponse ->
+//          EntityUtils.toString(response.entity)
+//        }
+//      }
+
+//      val file = HttpSupport(false).sendGet(incorrectUrl).body()
+      if (file.startsWith("#EXTM3U")) {
+        return file.lines().firstOrNull { it.startsWith("index") && checkIfM3U8UrlCorrect(prefix + it) }?.let { prefix + it }
+      }
+    }
+    return null
+  }
 }

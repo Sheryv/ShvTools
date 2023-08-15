@@ -75,7 +75,7 @@ class CustomDialog<T>(
     labelControl.prefWidth = Region.USE_COMPUTED_SIZE
 //    labelControl.textProperty().bind(dialogPane.contentTextProperty())
 
-//    dialogPane.contentTextProperty().addListener { o: Observable? -> updateGrid() }
+//    dialogPane.contentTextProperty().addListener { o: com.sheryv.util.Observable? -> updateGrid() }
     this.title = title ?: ControlResources.getString("Dialog.confirm.title")
     dialogPane.headerText = header ?: ControlResources.getString("Dialog.confirm.header")
     dialogPane.styleClass.add("text-input-dialog")

@@ -17,6 +17,6 @@ data class Series(
 ) {
   
   fun generateDirectoryPathForSeason(): Path {
-    return Path.of(FileUtils.fixFileNameWithCollonSupport(title), String.format("Season %02d", season))
+    return Path.of(FileUtils.fixFileNameWithColonSupport(title), String.format("Season %02d", season))
   }
 }

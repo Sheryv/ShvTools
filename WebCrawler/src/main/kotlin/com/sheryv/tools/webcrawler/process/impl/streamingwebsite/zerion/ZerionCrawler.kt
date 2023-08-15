@@ -65,7 +65,7 @@ class ZerionCrawler(
   override suspend fun checkForCaptchaAndOtherOverlays(data: VideoData) {
     val captacha = wait(By.cssSelector(".hcaptcha"))
     if (captacha != null) {
-      GlobalState.processingState.set(ProcessingStates.PAUSED)
+      GlobalState.processingState.value = (ProcessingStates.PAUSED)
       runBlocking(Dispatchers.Main) {
         GlobalState.view.showMessageDialog("Captcha detected! Solve it and resume process.")
       }

@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.service
 
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.logging.log
 import java.awt.Desktop
 import java.io.BufferedReader
 import java.io.File
@@ -60,10 +61,10 @@ abstract class SystemSupport {
         } else {
           f.parent
         }
-        lg().debug("Directory parse result: [$f] -> [$res]")
+        log.debug("Directory parse result: [$f] -> [$res]")
         res
       } else {
-        lg().info("Directory parse with null result: [$f]")
+        log.info("Directory parse with null result: [$f]")
         null
       }
     } ?: default
@@ -99,7 +100,7 @@ abstract class SystemSupport {
       Path.of(it).listDirectoryEntries("$name*").filter { it.isExecutable() }
     }
     if (found.size > 1) {
-      lg().warn("Found many executables on path for name '$name'\n", found.joinToString("\n"))
+      log.warn("Found many executables on path for name '$name'\n", found.joinToString("\n"))
     }
     return found.firstOrNull()
   }
@@ -162,7 +163,7 @@ abstract class SystemSupport {
         indexOf = part.indexOf('"')
         return part.take(indexOf)
       } catch (e: Exception) {
-        lg().error("Cannot read registry ", e)
+        log.error("Cannot read registry ", e)
         return null
       }
     }

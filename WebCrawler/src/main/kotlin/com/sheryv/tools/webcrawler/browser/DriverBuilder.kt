@@ -3,7 +3,7 @@ package com.sheryv.tools.webcrawler.browser
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
-import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.logging.log
 import org.openqa.selenium.MutableCapabilities
 import org.openqa.selenium.chrome.ChromeDriver
 import org.openqa.selenium.chrome.ChromeOptions
@@ -26,7 +26,7 @@ abstract class DriverBuilder {
         when (options) {
           is ChromeOptions -> {
             options.addArguments("--user-data-dir=$userDataPath")
-            lg().info(
+            log.info(
               "Using user profile from '{}'. Driver options class: {}, browser: {}",
               userDataPath,
               options::class.java,
@@ -35,7 +35,7 @@ abstract class DriverBuilder {
           }
           is FirefoxOptions -> {
             options.profile = FirefoxProfile(userDataPath.toFile())
-            lg().info(
+            log.info(
               "Using user profile from '{}'. Driver options class: {}, browser: {}",
               userDataPath,
               options::class.java,
@@ -43,7 +43,7 @@ abstract class DriverBuilder {
             )
           }
           else -> {
-            lg().warn(
+            log.warn(
               "User data/profile directory not used because driver is not supported. Driver options class: {}, browser: {}",
               options::class.java,
               browser.type
@@ -51,7 +51,7 @@ abstract class DriverBuilder {
           }
         }
       } else {
-        lg().warn(
+        log.warn(
           "User data/profile directory not used because it was not found. Driver options class: {}, browser: {}",
           options::class.java,
           browser.type

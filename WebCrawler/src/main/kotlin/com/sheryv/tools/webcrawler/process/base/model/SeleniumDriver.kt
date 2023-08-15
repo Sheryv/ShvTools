@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.service.BrowserSupport
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.logging.log
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -163,21 +164,21 @@ open class SeleniumDriver(
   
   fun executeScript(script: String): Any? {
     val res = executor.executeScript(script)
-//    lg().debug("Executed JS: $script")
+//    log.debug("Executed JS: $script")
     return res
   }
   
   fun executeScriptFunction(function: String, vararg params: String): Any? {
     val exp = getFunctionExpressionWithCheck(function, params)
     val r = executor.executeScript(exp)
-    lg().debug("Executed function: $function(${params.joinToString(", ")}) |\nresult: $r")
+    log.debug("Executed function: $function(${params.joinToString(", ")}) |\nresult: $r")
     return r
   }
   
   fun executeScriptFunctionToList(function: String, vararg params: String): List<Map<String, *>>? {
     val exp = getFunctionExpressionWithCheck(function, params)
     val r = executeScriptFetchList(exp)
-    lg().debug("Executed function: $function(${params.joinToString(", ")}) |\nresult: $r")
+    log.debug("Executed function: $function(${params.joinToString(", ")}) |\nresult: $r")
     return r
   }
   

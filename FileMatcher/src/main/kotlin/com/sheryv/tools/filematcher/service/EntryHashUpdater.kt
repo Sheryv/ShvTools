@@ -3,6 +3,7 @@ package com.sheryv.tools.filematcher.service
 import com.sheryv.tools.filematcher.model.*
 import com.sheryv.tools.filematcher.utils.Hashing
 import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.util.logging.log
 import java.io.File
 import java.nio.file.Paths
 
@@ -28,7 +29,7 @@ class EntryHashUpdater(
           val md5 = Hashing.md5(file)
           e.hashes = e.hashes?.copy(md5 = md5) ?: Hash(md5)
         } else {
-          lg().info("File does not exist: {}", file.toAbsolutePath())
+          log.info("File does not exist: {}", file.toAbsolutePath())
         }
       }
     }

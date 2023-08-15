@@ -1,8 +1,6 @@
 package com.sheryv.tools.webcrawler.view
 
-import com.sheryv.tools.webcrawler.BaseView
 import com.sheryv.tools.webcrawler.GlobalState
-import com.sheryv.tools.webcrawler.MainApplication
 import com.sheryv.tools.webcrawler.ProcessingStates
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
 import com.sheryv.tools.webcrawler.browser.DriverTypes
@@ -18,17 +16,22 @@ import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
+import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.Downloader
 import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGenerator
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
-import com.sheryv.tools.webcrawler.utils.*
+import com.sheryv.tools.webcrawler.utils.DialogUtils
+import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
+import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
 import com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView
+import com.sheryv.tools.webcrawler.view.search.SearchView
 import com.sheryv.tools.webcrawler.view.search.SearchWindow
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
-import com.sheryv.util.ChangeListener
-import com.sheryv.util.HttpSupport
-import com.sheryv.util.VersionUtils
+import com.sheryv.util.*
+import com.sheryv.util.fx.core.view.FxmlView
+import com.sheryv.util.fx.core.view.ViewFactory
+import com.sheryv.util.logging.log
 import javafx.animation.PauseTransition
 import javafx.application.Platform
 import javafx.event.EventHandler
@@ -40,9 +43,12 @@ import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.layout.*
 import javafx.stage.Modality
+import javafx.stage.Stage
 import javafx.util.Duration
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import org.koin.core.component.get
+import org.koin.core.component.inject
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
@@ -55,19 +61,21 @@ import javax.swing.JFrame
 import kotlin.io.path.*
 
 
-class MainView : BaseView(), ViewActionsProvider {
+class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   private lateinit var registry: Map<String, CrawlerDef>
   private var selected: CrawlerDef? = null
-  private lateinit var config: Configuration
   private lateinit var settingsReader: SettingsPanelReader
+  private val viewFactory: ViewFactory = get()
+  
+  override val config: Configuration by inject()
   
   init {
     GlobalState.view = this
   }
   
-  override fun onViewCreated() {
+  override fun onViewCreated(stage: Stage) {
+    super.onViewCreated(stage)
     try {
-      config = Configuration.get()
       registry = Registry.get().crawlers().associate { it.id() to it as CrawlerDef }
       prepareRegistry()
       init()
@@ -87,8 +95,6 @@ class MainView : BaseView(), ViewActionsProvider {
   
   
   private fun init() {
-    eventsAttach(this)
-    stage.title = TITLE
     config.crawler
     tvScrapers.root = TreeItem()
     tvScrapers.root.children.addAll(CrawlerListItem.fromDefs(config, registry.values).map { it.toTreeItem() })
@@ -98,14 +104,22 @@ class MainView : BaseView(), ViewActionsProvider {
     
     val streamingRelatedMenus = streamingMenu()
     
+    subscribeEvent<FetchedDataStatusChangedEvent> {
+      taCrawlerStatus.text = it.statusText
+    }
+    
     tvScrapers.selectionModel.selectedItemProperty().addListener { _, _, n ->
       if (n.isLeaf) {
-        registry.values.forEach { eventsDetach(it) }
+        registry.values.forEach {
+          it.unsubscribeAllEvents()
+//          eventsDetach(it)
+        }
         selected = registry.get(n.value.id)!!
-        eventsAttach(selected!!)
+        selected!!.subscribeEvents()
+//        eventsAttach(selected!!)
         GlobalState.currentCrawler = selected!!
         showSettingsForSelectedScraper()
-
+        
         if (selected!!.findSettings(config) is StreamingWebsiteSettings) {
           if (!menu.menus.contains(streamingRelatedMenus)) {
             menu.menus.add(streamingRelatedMenus)
@@ -117,7 +131,7 @@ class MainView : BaseView(), ViewActionsProvider {
 //          SystemUtils.userDownloadDir(),
 //          "${settings.outputPath}-${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${settings.outputFormat.extension}"
 //        ).toAbsolutePath().toString()
-        postEvent(FetchedDataExternalChangeEvent())
+        emitEvent(FetchedDataExternalChangeEvent())
       }
     }
     
@@ -130,12 +144,12 @@ class MainView : BaseView(), ViewActionsProvider {
     }
     btnStart.setOnAction { startOrPauseProcess() }
     btnPause.setOnAction { startOrPauseProcess() }
-    btnStop.setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
+    btnStop.setOnAction { GlobalState.processingState.value = ProcessingStates.STOPPING }
     btnStop.isVisible = false
     btnPause.isVisible = false
     progressProcess.isVisible = false
-    GlobalState.processingState.addListener { o, n ->
-      inViewThread {
+    GlobalState.processingState.addListener({ o: ProcessingStates, n: ProcessingStates ->
+      inMainThread {
         
         when (n!!) {
           ProcessingStates.RUNNING -> {
@@ -145,20 +159,24 @@ class MainView : BaseView(), ViewActionsProvider {
             btnStart.styleClass.add("btn-info")
             btnStart.styleClass.remove("btn-success")
           }
+          
           ProcessingStates.PAUSED -> {
             progressProcess.isVisible = false
             btnStart.text = "Resume"
             btnStart.isDisable = false
           }
+          
           ProcessingStates.PAUSING -> {
             btnStart.isDisable = true
           }
+          
           ProcessingStates.STOPPING -> {
             btnStart.isDisable = true
             btnStop.isVisible = false
           }
+          
           ProcessingStates.IDLE -> {
-            postEvent(FetchedDataExternalChangeEvent())
+            emitEvent(FetchedDataExternalChangeEvent())
             btnStop.isVisible = false
             progressProcess.isVisible = false
             btnStart.isDisable = false
@@ -168,7 +186,7 @@ class MainView : BaseView(), ViewActionsProvider {
           }
         }
       }
-    }
+    })
     
     cbBrowserDriverType.selectionModel.selectedItemProperty().addListener { _, _, n ->
       if (n != null) {
@@ -245,9 +263,7 @@ class MainView : BaseView(), ViewActionsProvider {
           items.addAll(
             MenuItem("Save").apply {
               accelerator = KeyCodeCombination(KeyCode.S, KeyCombination.CONTROL_DOWN)
-              setOnAction {
-                saveConfig()
-              }
+              setOnAction { saveConfig() }
             },
             SeparatorMenuItem(),
             MenuItem("Exit").apply {
@@ -267,7 +283,7 @@ class MainView : BaseView(), ViewActionsProvider {
             },
             MenuItem("Terminate").apply {
               accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
-              setOnAction { GlobalState.processingState.set(ProcessingStates.STOPPING) }
+              setOnAction { GlobalState.processingState.value = (ProcessingStates.STOPPING) }
             },
           )
         },
@@ -295,6 +311,19 @@ class MainView : BaseView(), ViewActionsProvider {
                 }
               }
             },
+            SeparatorMenuItem(),
+            MenuItem("Merge many files to single one").apply {
+              setOnAction {
+                DialogUtils.openDirectoryDialog(stage, "Select directory with input files")?.let { dir ->
+                  DialogUtils.saveFileDialog(stage, initialFile = dir.resolve(dir.fileName).toAbsolutePath().toString())?.let {
+                    DialogUtils.messageDialog("Merging of '$it' started")
+                    inBackground {
+                      FileUtils.mergeFilesFromDirToSingle(dir.listDirectoryEntries(), it)
+                    }
+                  }
+                }
+              }
+            },
           )
         },
         Menu("Info").apply {
@@ -317,13 +346,19 @@ class MainView : BaseView(), ViewActionsProvider {
         },
       )
     )
+    
+    
+    stage.setOnCloseRequest {
+      Downloader.terminateScheduler()
+    }
+    
   }
   
   private fun startOrPauseProcess(runOnlyForFailedEpisodes: Boolean = false) {
     if (selected != null) {
       when (GlobalState.processingState.value) {
         ProcessingStates.IDLE -> {
-          GlobalState.processingState.set(ProcessingStates.RUNNING)
+          GlobalState.processingState.value = (ProcessingStates.RUNNING)
           
           val browser = config.browserSettings.currentBrowser()
           val runner = Runner(config, browser, selected!!, ProcessParams(runOnlyForFailedEpisodes))
@@ -334,20 +369,21 @@ class MainView : BaseView(), ViewActionsProvider {
               saveConfig()
               runner.start()
             } catch (e: Exception) {
-              lg().error("Running error", e)
-              inViewThread {
+              log.error("Running error", e)
+              inMainThread {
                 DialogUtils.textAreaDialog(
                   "Details", e.stackTraceToString(), TITLE,
                   "Error occurred while scraping", Alert.AlertType.ERROR, false, ButtonType.OK
                 )
               }
             } finally {
-              GlobalState.processingState.set(ProcessingStates.IDLE)
+              GlobalState.processingState.value = (ProcessingStates.IDLE)
             }
           }
         }
-        ProcessingStates.RUNNING -> GlobalState.processingState.set(ProcessingStates.PAUSING)
-        ProcessingStates.PAUSED -> GlobalState.processingState.set(ProcessingStates.RUNNING)
+        
+        ProcessingStates.RUNNING -> GlobalState.processingState.value = (ProcessingStates.PAUSING)
+        ProcessingStates.PAUSED -> GlobalState.processingState.value = (ProcessingStates.RUNNING)
         else -> {}
       }
     }
@@ -412,9 +448,9 @@ class MainView : BaseView(), ViewActionsProvider {
   
   private fun openJDownloaderGeneratorView() {
     try {
-      MainApplication.createWindow<JDownloaderView>("view/jdownloader-generate.fxml", "Generate file for JDownloader 2 import - $TITLE")
+      viewFactory.createWindow<JDownloaderView>()()
     } catch (e: Exception) {
-      lg().error("Error while opening dialog JDownloader 2 import", e)
+      log.error("Error while opening dialog JDownloader 2 import", e)
       DialogUtils.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
         "Error while opening dialog JDownloader 2 import", Alert.AlertType.ERROR, true, ButtonType.OK
@@ -428,7 +464,7 @@ class MainView : BaseView(), ViewActionsProvider {
       val ver = if (p.exists() && p.isRegularFile()) {
         SystemSupport.get.getFileVersion(p).takeIf { it.isNotEmpty() }?.let { "Recognized version is: ${it.first()}" }
       } else null
-      inViewThread {
+      inMainThread {
         lbStatusOfSelectedBrowser.text = ver ?: "Provided path is incorrect"
       }
     }
@@ -437,12 +473,18 @@ class MainView : BaseView(), ViewActionsProvider {
   private fun streamingMenu(): Menu {
     return Menu("Streaming website crawler").apply {
       items.setAll(
+        MenuItem("Downloading status window").apply {
+          setOnAction {
+            openDownloaderWindow()
+          }
+        },
         Menu("Process fetched links").apply {
           items.setAll(
             MenuItem("Tv Show search tool").apply {
               accelerator = KeyCodeCombination(KeyCode.F, KeyCombination.CONTROL_DOWN)
               setOnAction {
-                openSearchEpisodesWindow()
+                viewFactory.createWindow<SearchView>()()
+//                openSearchEpisodesWindow()
               }
             },
             SeparatorMenuItem(),
@@ -453,22 +495,55 @@ class MainView : BaseView(), ViewActionsProvider {
                   try {
                     val settings = selected!!.findSettings(config)
                     val (done, all) = IDMService(config).addToIDM(
-                      Utils.jsonMapper.readValue(
+                      SerialisationUtils.jsonMapper.readValue(
                         settings.outputPath.toFile(),
                         Series::class.java
                       )
                     )
-                    inViewThread {
+                    inMainThread {
                       DialogUtils.messageDialog("Successfully added to IDM $done episodes out of $all")
                     }
                   } catch (e: Exception) {
-                    lg().error("Error while sending to IDM", e)
-                    inViewThread {
+                    log.error("Error while sending to IDM", e)
+                    inMainThread {
                       DialogUtils.textAreaDialog(
                         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
                         "Error while sending to IDM", Alert.AlertType.ERROR, true, ButtonType.OK
                       )
                     }
+                  }
+                }
+              }
+            },
+            MenuItem("Add M3U8 based episodes to download queue").apply {
+              accelerator = KeyCodeCombination(KeyCode.U, KeyCombination.CONTROL_DOWN, KeyCombination.SHIFT_DOWN)
+              setOnAction {
+                val settings = selected!!.findSettings(config) as StreamingWebsiteSettings
+                val series = SerialisationUtils.jsonMapper.readValue(
+                  settings.outputPath.toFile(),
+                  Series::class.java
+                )
+                val episodes = series.episodes.asSequence()
+                  .filter { it.downloadUrl != null }
+                  .filter { it.downloadUrl!!.isStreaming }
+                  .map {
+                    it to Path.of(settings.downloadDir).resolve(series.generateDirectoryPathForSeason())
+                      .resolve(it.generateFileName(series, settings))
+                  }
+                  .toList()
+                when (DialogUtils.textAreaDialog(
+                  "List of HLS files - ${episodes.size} to be added",
+                  episodes.joinToString("\n") { (e, path) -> "$path - ${e.downloadUrl}" },
+                  header = null,
+                  type = Alert.AlertType.NONE,
+                  wrapText = false,
+                  buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL)
+                )) {
+                  ButtonType.OK -> {
+                    episodes.forEach { (e, path) ->
+                      Downloader.add(e.downloadUrl!!.base, path)
+                    }
+                    openDownloaderWindow()
                   }
                 }
               }
@@ -485,7 +560,7 @@ class MainView : BaseView(), ViewActionsProvider {
             inBackground {
               try {
                 val settings = selected!!.findSettings(config) as StreamingWebsiteSettings
-                val series = Utils.jsonMapper.readValue(
+                val series = SerialisationUtils.jsonMapper.readValue(
                   settings.outputPath.toFile(),
                   Series::class.java
                 )
@@ -503,12 +578,12 @@ class MainView : BaseView(), ViewActionsProvider {
                   }
                 }
                 
-                inViewThread {
+                inMainThread {
                   DialogUtils.messageDialog("Successfully generated metadata in directory ${seriesDir.toAbsolutePath()}")
                 }
               } catch (e: Exception) {
-                lg().error("Error while generating", e)
-                inViewThread {
+                log.error("Error while generating", e)
+                inMainThread {
                   DialogUtils.textAreaDialog(
                     "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
                     "Error while generating", Alert.AlertType.ERROR, true, ButtonType.OK
@@ -520,6 +595,18 @@ class MainView : BaseView(), ViewActionsProvider {
         }
       )
       
+    }
+  }
+  
+  private fun openDownloaderWindow() {
+    try {
+      viewFactory.createWindow<DownloaderView>()()
+    } catch (e: Exception) {
+      log.error("Error while opening downloader dialog", e)
+      DialogUtils.textAreaDialog(
+        "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
+        "Error while opening downloader dialog", Alert.AlertType.ERROR, true, ButtonType.OK
+      )
     }
   }
   
@@ -536,7 +623,7 @@ class MainView : BaseView(), ViewActionsProvider {
     btn.isDisable = GlobalState.runningProcess.value == null
     msg.isVisible = GlobalState.runningProcess.value == null
     
-    val listener: ChangeListener<SeleniumCrawler<SettingsBase>> = ChangeListener { _, n ->
+    val listener: ChangeListener<SeleniumCrawler<SettingsBase>?> = ChangeListener { _, n ->
       btn.isDisable = n == null
       msg.isVisible = n == null
     }
@@ -603,7 +690,7 @@ class MainView : BaseView(), ViewActionsProvider {
     GridPane.setHgrow(bottomRow, Priority.ALWAYS)
     
     alert.dialogPane.content = expContent
-    MainApplication.appendStyleSheets(alert.dialogPane.scene)
+    viewFactory.appendStyleSheets(alert.dialogPane.scene)
     
     inputArea.textProperty().addListener { _, _, n -> config.lastUserScript = n }
     
@@ -623,7 +710,7 @@ class MainView : BaseView(), ViewActionsProvider {
         }
         
         val script = lines.take(lines.size - 1).joinToString("\n") + last
-        lg().debug("Executing:\n$script")
+        log.debug("Executing:\n$script")
         val res = it.driver.executeScript(script)
         outputArea.appendText("[${LocalDateTime.now().withNano(0).format(DateTimeFormatter.ISO_LOCAL_TIME)}]: ${res.toString()}\n")
         outputArea.scrollTop = Double.MAX_VALUE
@@ -635,7 +722,7 @@ class MainView : BaseView(), ViewActionsProvider {
   }
   
   @Subscribe(threadMode = ThreadMode.MAIN)
-  internal fun onFetchedDataStatusChangedEvent(e: FetchedDataStatusChangedEvent) = inViewThread {
+  internal fun onFetchedDataStatusChangedEvent(e: FetchedDataStatusChangedEvent) = inMainThread {
     taCrawlerStatus.text = e.statusText
   }
   

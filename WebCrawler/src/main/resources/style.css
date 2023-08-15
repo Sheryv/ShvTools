@@ -100,6 +100,30 @@
     -fx-background-color: derive(-fx-accent, -5%), -fx-accent;
 }
 
+
+.tree-table-row-cell, .table-row-cell {
+    -fx-background-color: -fx-table-cell-border-color, -fx-control-inner-background;
+    -fx-background-insets: 0, 0 0 1 0;
+    -fx-padding: 0.0em;
+    -fx-text-fill: -fx-text-inner-color;
+}
+
+.tree-table-row-cell:odd, .table-row-cell:odd {
+    -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background, -5%);
+    -fx-background-insets: 0, 0 0 1 0;
+}
+
+.tree-table-row-cell:selected, .table-row-cell:selected {
+    -fx-background-color: derive(-fx-control-inner-background, -20%);
+    -fx-background-insets: 0, 1, 2;
+}
+
+.tree-table-view:focused .tree-table-row-cell:selected,
+.table-view:focused .table-row-cell:selected {
+    -fx-background-color: derive(-fx-accent, -5%), -fx-accent;
+}
+
+
 .container-border {
     -fx-border-color: derive(-fx-control-inner-background, -20%);
     -fx-border-radius: 5px;

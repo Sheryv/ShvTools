@@ -1,7 +1,7 @@
 package com.sheryv.tools.filematcher.model
 
 import com.sheryv.tools.filematcher.utils.SystemUtils
-import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.util.logging.log
 
 data class BasePath(
   val default: String? = null,
@@ -13,7 +13,7 @@ data class BasePath(
     val s = systemAwareValue()
     if (s.contains("\${")) {
       val resolved = SystemUtils.resolveEnvironmentVariables(s)
-      lg().debug("Environment variables resolution: [$s] -> [$resolved]")
+      log.debug("Environment variables resolution: [$s] -> [$resolved]")
       return resolved
     }
     return s

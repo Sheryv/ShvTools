@@ -15,4 +15,8 @@ dependencies {
     implementation 'commons-beanutils:commons-beanutils:1.9.2'
     implementation 'org.seleniumhq.selenium:selenium-java:4.5.3'
 //    compile 'com.google.code.gson:gson:2.8.5'
+
+    annotationProcessor 'org.projectlombok:lombok:1.18.24'
+    compileOnly 'org.projectlombok:lombok:1.18.24'
+
 }

@@ -5,6 +5,7 @@ import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.lg
 import com.sheryv.tools.filematcher.utils.postEvent
+import com.sheryv.util.logging.log
 import javafx.scene.control.Alert
 import javafx.scene.control.ButtonType
 import kotlinx.coroutines.Dispatchers
@@ -55,12 +56,12 @@ class FileMatcher(
           )
         )
       }
-      lg().info("Item state verification '${entry.name}' [id=${entry.id}]")
+      log.info("Item state verification '${entry.name}' [id=${entry.id}]")
       val matchingFiles = findMatchingFiles(entry, dir)
       val file = matchingFiles.firstOrNull { it.name == entry.name }
       if (file != null && file.exists()) {
         if (entry.hashes != null && entry.hashes!!.hasAny()) {
-          lg().debug("Calculating hash '${entry.name}' [id=${entry.id}], file: ${file.absolutePath}")
+          log.debug("Calculating hash '${entry.name}' [id=${entry.id}], file: ${file.absolutePath}")
           val match = entry.hashes!!.getCorrespondingHasherAndCompare().invoke(file)
           if (match) {
             ItemState.SYNCED
@@ -78,7 +79,7 @@ class FileMatcher(
         ItemState.NOT_EXISTS
       }
     } else {
-      lg().info("Directory does not exists: '${dir.absolutePath}' for '${entry.name}' [id=${entry.id}]")
+      log.info("Directory does not exists: '${dir.absolutePath}' for '${entry.name}' [id=${entry.id}]")
       ItemState.NOT_EXISTS
     }
     

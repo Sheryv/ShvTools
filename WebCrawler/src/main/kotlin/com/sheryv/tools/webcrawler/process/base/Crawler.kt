@@ -21,7 +21,7 @@ abstract class Crawler<T : SDriver, S : SettingsBase>(
 ) {
   abstract fun getSteps(): List<Step<out Any, out Any>>
   
-  fun log(text: String, vararg params: Any) {
+  fun logText(text: String, vararg params: Any) {
     lg(javaClass).debug("[${def.id()}|${browser.type.name}] " + text, *params)
   }
   
@@ -35,7 +35,7 @@ abstract class Crawler<T : SDriver, S : SettingsBase>(
       throw TerminationException()
     }
     if (state.value == ProcessingStates.PAUSING) {
-      state.set(ProcessingStates.PAUSED)
+      state.value = ProcessingStates.PAUSED
     }
     
     while (state.value == ProcessingStates.PAUSED) {
@@ -45,7 +45,7 @@ abstract class Crawler<T : SDriver, S : SettingsBase>(
       throw TerminationException()
     }
     if (GlobalState.pauseOnNextStep) {
-      state.set(ProcessingStates.PAUSING)
+      state.value = ProcessingStates.PAUSING
     }
   }
 }

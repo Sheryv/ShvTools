@@ -1,13 +1,15 @@
 rootProject.name = 'shvtools'
 
+
 include 'Utils'
 findProject(':Utils')?.name = 'util'
 include 'WebUtils'
 findProject(':WebUtils')?.name = 'web-util'
+include 'UiUtils'
+findProject(':UiUtils')?.name = 'ui-util'
 
 
 include 'CmdTools'
-include 'AndroidAdbAppUninstaller'
 include 'SubtitlesTranslator'
 include 'FileMatcher'
 include 'ExplorerCopyFilesWithVerifyHandler'
@@ -15,7 +17,6 @@ include 'QRCodeProcessor'
 include 'WebCrawler'
 //include 'CloudServerManager'
 findProject(':CmdTools')?.name = 'cmd-tools'
-findProject(':AndroidAdbAppUninstaller')?.name = 'android-adb-app-uninstaller'
 findProject(':SubtitlesTranslator')?.name = 'subtitles-translator'
 findProject(':FileMatcher')?.name = 'file-matcher'
 findProject(':ExplorerCopyFilesWithVerifyHandler')?.name = 'copy-with-verify-handler'
@@ -23,3 +24,88 @@ findProject(':QRCodeProcessor')?.name = 'qrcode-processor'
 findProject(':WebCrawler')?.name = 'web-crawler'
 //findProject(':CloudServerManager')?.name = 'cloud-server-manager'
 
+
+String kotlin_version = '1.9.0'
+String kotlin_plugin_version = kotlin_version
+
+dependencyResolutionManagement {
+    versionCatalogs {
+        libs {
+            def kotlinVer = version('kotlin', kotlin_version)
+            def jacksonVer = version('jackson', '2.15.2')
+            def kotlinPluginVer = version('kotlin-plugin', kotlin_plugin_version)
+            def kotlinLibVer = version('kotlin-lib', '1.7.2')
+            def koinVer = version('koin', '3.4.3')
+
+            plugin('kotlin-jvm', 'org.jetbrains.kotlin.jvm').versionRef(kotlinPluginVer)
+            plugin('kotlin-allopen', 'org.jetbrains.kotlin.plugin.allopen').versionRef(kotlinPluginVer)
+            plugin('kotlin-kapt', 'org.jetbrains.kotlin.kapt').versionRef(kotlinPluginVer)
+            plugin('javafx', 'org.openjfx.javafxplugin').version('0.0.13')
+            plugin('launch4j', 'edu.sc.seis.launch4j').version('3.0.4')
+            plugin('ksp', 'com.google.devtools.ksp').version('1.9.0-1.0.13')
+            plugin('kotlin-serialization', 'org.jetbrains.kotlin.plugin.serialization').versionRef(kotlinPluginVer)
+
+            library('kotlin', "org.jetbrains.kotlin", "kotlin-stdlib-jdk8").versionRef(kotlinVer)
+            library('kotlin-coroutines', "org.jetbrains.kotlinx", "kotlinx-coroutines-core").versionRef(kotlinLibVer)
+            library('kotlin-javafx', "org.jetbrains.kotlinx", "kotlinx-coroutines-javafx").versionRef(kotlinLibVer)
+
+            library('jackson.core', 'com.fasterxml.jackson.core', 'jackson-core').versionRef(jacksonVer)
+            library('jackson.yaml', 'com.fasterxml.jackson.dataformat', 'jackson-dataformat-yaml').versionRef(jacksonVer)
+            library('jackson.annotations', 'com.fasterxml.jackson.core', 'jackson-annotations').versionRef(jacksonVer)
+            library('jackson.databind', 'com.fasterxml.jackson.core', 'jackson-databind').versionRef(jacksonVer)
+            library('jackson.jsr310', 'com.fasterxml.jackson.datatype', 'jackson-datatype-jsr310').versionRef(jacksonVer)
+            library('jackson.kotlin', 'com.fasterxml.jackson.module', 'jackson-module-kotlin').versionRef(jacksonVer)
+            library('kotlin-json', 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.5.1')
+            library('kaml', 'com.charleskorn.kaml:kaml:0.55.0')
+
+            library('slf4j', 'org.slf4j:slf4j-api:1.7.25')
+            library('logback-core', 'ch.qos.logback:logback-core:1.4.9')
+            library('logback-classic', 'ch.qos.logback:logback-classic:1.4.9')
+//            library('tinylog', 'org.tinylog:tinylog-api-kotlin:2.6.2')
+//            library('tinylog-impl', 'org.tinylog:tinylog-impl:2.6.2')
+//            library('tinylog-slf4j', 'org.tinylog:slf4j-tinylog:2.6.2')
+
+            library('apache-commons-text', 'org.apache.commons:commons-text:1.10.0')
+//            library('janino', 'org.codehaus.janino:janino:3.1.8')
+//            library('janino-compiler', 'org.codehaus.janino:commons-compiler:3.1.8')
+
+            library('picocli', 'info.picocli:picocli:4.7.4')
+            library('picocli-codegen', 'info.picocli:picocli-codegen:4.7.4')
+
+            library('mustache', 'com.github.spullara.mustache.java:compiler:0.9.10')
+            library('flatlaf', 'com.formdev:flatlaf:3.1.1')
+            library('selenium', 'org.seleniumhq.selenium:selenium-java:4.10.0')
+            library('apache-http', 'org.apache.httpcomponents:httpclient:4.5.14')
+
+            library('jsoup', 'org.jsoup:jsoup:1.16.1')
+
+            library('greenrobot', "org.greenrobot:eventbus-java:3.3.1")
+
+
+            library('koin', "io.insert-koin", "koin-core").versionRef(koinVer)
+            library('koin-coroutines', "io.insert-koin", "koin-core-coroutines").versionRef(koinVer)
+            library('koin-logger', "io.insert-koin", "koin-logger-slf4j").versionRef(koinVer)
+
+            library('koin-ksp', "io.insert-koin", "koin-ksp-compiler").version('1.2.2')
+            library('koin-annotations', "io.insert-koin", "koin-annotations").version('1.2.2')
+
+            library('koin-test', "io.insert-koin", "koin-test").versionRef(koinVer)
+            library('koin-test-junit5', "io.insert-koin", "koin-test-junit5").versionRef(koinVer)
+
+
+            library('easybind', "org.fxmisc.easybind:easybind:1.0.3")
+
+
+            library('junit-api', "org.junit.jupiter:junit-jupiter-api:5.9.0")
+            library('junit-engine', "org.junit.jupiter:junit-jupiter-engine:5.9.0")
+
+            bundle('kotlin', ['kotlin', 'kotlin-coroutines'])
+            bundle('tests', ['junit-api', 'junit-engine'])
+//            bundle('logging', ['slf4j', 'tinylog', 'tinylog-impl', 'logback-core', 'logback-classic'])
+            bundle('logging', ['slf4j', 'logback-core', 'logback-classic'])
+            bundle('jackson', ['jackson.core', 'jackson.yaml', 'jackson.annotations', 'jackson.databind', 'jackson.jsr310', 'jackson.kotlin'])
+            bundle('koin', ['koin', 'koin-coroutines', 'koin-logger'])
+            bundle('koin-tests', ['koin-test', 'koin-test-junit5'])
+        }
+    }
+}

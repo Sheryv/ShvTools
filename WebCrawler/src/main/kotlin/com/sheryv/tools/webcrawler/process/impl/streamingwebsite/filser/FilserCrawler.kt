@@ -33,13 +33,14 @@ class FilserCrawler(
     driver.navigate().to("${def.attributes.websiteUrl}/title/$id/${settings.seasonNumber}")
     delay(300)
     
-    wait.until<List<WebElement>>(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("#episode_list")))
+    wait.until<List<WebElement>>(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("#episode_list .episode-box a")))
     val js =
       "return Array.from(document.querySelectorAll('#episode_list .episode-box a')).map(n=>({e: n.querySelector(':scope > span').textContent, u:n.getAttribute('href')}))"
     
     val fixNameRegex = Regex("""^\d+\.""")
-    
-    return driver.executeScriptFetchList(js)?.mapIndexed { i, t ->
+  
+    val list = driver.executeScriptFetchList(js)
+    return list?.mapIndexed { i, t ->
       val nameRaw = t["e"].toString()
       val name = nameRaw.trim { it <= ' ' }.replace(fixNameRegex, "").trim()
       val link = t["u"].toString().trim()

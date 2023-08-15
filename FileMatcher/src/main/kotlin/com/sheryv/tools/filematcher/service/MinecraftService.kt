@@ -8,6 +8,7 @@ import com.sheryv.tools.filematcher.model.minecraft.Addon
 import com.sheryv.tools.filematcher.model.minecraft.InstanceConfig
 import com.sheryv.tools.filematcher.utils.DataUtils
 import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.util.logging.log
 import java.io.File
 import java.nio.file.Paths
 
@@ -92,7 +93,7 @@ class MinecraftService {
         2
       }
       val version = matchResult.groupValues[vGroup].trim()
-      lg().info("${prefix.padEnd(30)} | ${version.padEnd(20)} > ${e.name}")
+      log.info("${prefix.padEnd(30)} | ${version.padEnd(20)} > ${e.name}")
       
       val targetPath = e.target.copy(matching = Matching(wildcard = "$prefix*.jar"))
       return Pair(e.copy(target = targetPath, version = if (version.isNotBlank()) version else e.version), true)

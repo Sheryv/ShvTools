@@ -2,9 +2,12 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
-import com.sheryv.tools.webcrawler.utils.Utils
+import com.sheryv.util.DateUtils
 import com.sheryv.util.FileUtils
 import com.sheryv.util.Strings
+import com.sheryv.util.fx.lib.longProperty
+import com.sheryv.util.fx.lib.objectProperty
+import com.sheryv.util.fx.lib.stringProperty
 import java.time.OffsetDateTime
 
 data class Episode(
@@ -15,11 +18,14 @@ data class Episode(
   val type: EpisodeAudioTypes? = null,
   val format: EpisodeFormat? = null,
   val errors: List<ErrorEntry> = emptyList(),
-  val created: OffsetDateTime = Utils.now()
+  val created: OffsetDateTime = DateUtils.now()
 ) {
   @JsonIgnore
-  var lastSize: Long = 0
-  val updated: OffsetDateTime = Utils.now()
+  val lastSize = objectProperty(0L)
+  @JsonIgnore
+  val url = stringProperty(downloadUrl?.toString() ?: "")
+  
+  val updated: OffsetDateTime = DateUtils.now()
   
   fun generateFileName(series: Series,  settings: StreamingWebsiteSettings, fileExtension: String = downloadUrl?.resolveFileExtension() ?: "mp4"): String {
     val values: MutableMap<String, Any> = LinkedHashMap()
@@ -28,7 +34,7 @@ data class Episode(
     values["episode_number"] = String.format("%02d", number)
     values["episode_name"] = title
     values["file_extension"] = ".$fileExtension"
-    return FileUtils.fixFileNameWithCollonSupport(
+    return FileUtils.fixFileNameWithColonSupport(
       Strings.fillTemplate(
         settings.episodeCodeFormatter + settings.episodeNameFormatter,
         values

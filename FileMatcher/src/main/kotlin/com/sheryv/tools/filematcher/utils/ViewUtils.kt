@@ -3,6 +3,7 @@ package com.sheryv.tools.filematcher.utils
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.TargetPath
 import com.sheryv.tools.filematcher.view.BaseView
+import com.sheryv.util.logging.log
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
 import javafx.beans.value.ObservableValueBase
@@ -224,7 +225,7 @@ object ViewUtils {
     try {
       return block()
     } catch (e: Exception) {
-      lg().error("Error in action", e)
+      log.error("Error in action", e)
       DialogUtils.textAreaDialog(
         "Details",
         e.stackTraceToString(),

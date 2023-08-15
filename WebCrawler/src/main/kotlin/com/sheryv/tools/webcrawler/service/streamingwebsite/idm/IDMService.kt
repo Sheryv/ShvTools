@@ -7,6 +7,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Ep
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.FileUtils
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.delay
 import java.nio.file.Path
 
@@ -22,7 +23,7 @@ class IDMService(val configuration: Configuration) {
         c++
         delay(1000)
       } else {
-        lg().info("No download link for $episode")
+        log.info("No download link for $episode")
       }
     }
     return c to episodes.size
@@ -42,10 +43,10 @@ class IDMService(val configuration: Configuration) {
     )
     
     try {
-      lg().info("\n> IDM {} {}", episode.number, ex)
+      log.info("\n> IDM {} {}", episode.number, ex)
       Runtime.getRuntime().exec(ex)
     } catch (e: Exception) {
-      lg().error("Error while adding to IDM", e)
+      log.error("Error while adding to IDM", e)
     }
   }
 }

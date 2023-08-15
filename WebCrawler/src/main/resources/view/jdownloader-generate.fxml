@@ -12,7 +12,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 
-<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" spacing="10.0" xmlns="http://javafx.com/javafx/19" fx:controller="com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView" xmlns:fx="http://javafx.com/fxml/1">
+<VBox maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" spacing="10.0" xmlns="http://javafx.com/javafx/19" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <Label text="This window allow you to generate &quot;.crawljob&quot; files that can be imported by Folder Watch extension in JDownloader 2. &#10;Just provide path to direcotry watched by JDownloader and click one of the buttons &quot;Generate file for...&quot;. &#10;Make sure your JDownloader is running and Folder Watch extension is enabled and configured" wrapText="true" VBox.vgrow="SOMETIMES" />
       <FlowPane hgap="5.0" vgap="5.0">

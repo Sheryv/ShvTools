@@ -10,6 +10,7 @@ import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.ViewUtils
 import com.sheryv.tools.filematcher.utils.lg
 import com.sheryv.tools.lasso.util.OnChangeScheduledExecutor
+import com.sheryv.util.logging.log
 import javafx.fxml.FXML
 import javafx.geometry.Insets
 import javafx.scene.control.*
@@ -304,7 +305,7 @@ class DevelopersToolView : BaseView() {
                       if (entry.hashes!!.hasAnySameHash(found.hashes)) {
                         result.remove(entry)
                       } else {
-                        lg().info("Found duplicate for '${entry.name}' [${entry.id}] but hash differs - skipping")
+                        log.info("Found duplicate for '${entry.name}' [${entry.id}] but hash differs - skipping")
                       }
                     }
                   }
@@ -479,7 +480,7 @@ class DevelopersToolView : BaseView() {
         }
       }.start()
     } catch (e: Exception) {
-      lg().error("Error occurred when generating", e)
+      log.error("Error occurred when generating", e)
       DialogUtils.textAreaDialog(
         "Details",
         e.message.orEmpty(),

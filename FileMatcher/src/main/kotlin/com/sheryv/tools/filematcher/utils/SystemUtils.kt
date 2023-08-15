@@ -2,6 +2,7 @@ package com.sheryv.tools.filematcher.utils
 
 
 import com.sheryv.util.Strings
+import com.sheryv.util.logging.log
 import javafx.scene.input.Clipboard
 import javafx.scene.input.ClipboardContent
 import java.awt.Desktop
@@ -75,10 +76,10 @@ object SystemUtils {
         } else {
           f.parent?.let { File(it) }
         }
-        lg().debug("Directory parse result: [$it] -> [$res]")
+        log.debug("Directory parse result: [$it] -> [$res]")
         res
       } else {
-        lg().info("Directory parse with null result: [$it]")
+        log.info("Directory parse with null result: [$it]")
         null
       }
     } ?: default?.let { File(it) }

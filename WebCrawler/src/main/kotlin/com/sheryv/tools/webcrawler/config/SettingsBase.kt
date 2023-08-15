@@ -8,6 +8,7 @@ import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
+import com.sheryv.util.DateUtils
 import java.nio.file.Path
 import java.time.format.DateTimeFormatter
 
@@ -28,7 +29,7 @@ abstract class SettingsBase(
   protected fun defaultOutputPath(): Path {
     return SystemSupport.get.userDownloadDir.resolve(
       "${SystemSupport.get.removeForbiddenFileChars(crawlerAttr.id)}-" +
-          "${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${crawlerAttr.outputFileFormat.extension}"
+          "${DateUtils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${crawlerAttr.outputFileFormat.extension}"
     ).toAbsolutePath()
   }
   

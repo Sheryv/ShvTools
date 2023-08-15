@@ -8,9 +8,9 @@ import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
-import com.sheryv.tools.webcrawler.utils.Utils
-import com.sheryv.tools.webcrawler.utils.Utils.deserializeList
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.logging.log
 import org.openqa.selenium.By
 
 class FilmwebCrawler(
@@ -36,18 +36,18 @@ class FilmwebCrawler(
   }
   
   private fun login(a: Any?): Any {
-    log("Before login")
+    logText("Before login")
     driver.get("/login")
 //    driver.findElements(By.tagName("didomi-notice-agree-button")).firstOrNull()?.click()
-    log("Wait for logging")
+    logText("Wait for logging")
     val link = driver.waitFor(By.cssSelector("header .userAvatar > a"), 60 * 5L)
     val linkHref = link.getAttribute("href")
     user = linkHref.substring(linkHref.lastIndexOf("/") + 1)
-    log("User {}", user)
+    logText("User {}", user)
     
     driver.get("/user/$user")
     
-    log("Wait for profile")
+    logText("Wait for profile")
     driver.waitFor(By.className("UserProfilePageAbout"))
     return user
 //    driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10))
@@ -66,7 +66,7 @@ class FilmwebCrawler(
     if (res != null) {
       result.movies = res
     } else {
-      lg().warn("No rated movie was found")
+      log.warn("No rated movie was found")
     }
     return ""
   }
@@ -79,7 +79,7 @@ class FilmwebCrawler(
     if (res != null) {
       result.tvShows = res
     } else {
-      lg().warn("No rated tv show was found")
+      log.warn("No rated tv show was found")
     }
     
     return ""
@@ -93,15 +93,15 @@ class FilmwebCrawler(
     if (res != null) {
       result.wantToSee = res
     } else {
-      lg().warn("No rated want to see entry was found")
+      log.warn("No rated want to see entry was found")
     }
     
     return ""
   }
   
   private fun save(a: Any?): Any {
-    Utils.jsonMapper.writeValue(settings.outputPath.toFile(), result)
-    lg().info("File saved " + settings.outputPath)
+    SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), result)
+    log.info("File saved " + settings.outputPath)
     return ""
   }
   
@@ -135,7 +135,7 @@ class FilmwebCrawler(
     val listWrapper = driver.waitFor(By.cssSelector(".userVotesPage .userVotesPage__results"))
     val list = listWrapper.findElements(By.className("userVotesPage__result"))
     
-    val res: List<FilmwebSearch>? = deserializeList(driver.executeScriptFunctionToList("loadItemsFromPage"))
+    val res: List<FilmwebSearch>? = SerialisationUtils.deserializeList(driver.executeScriptFunctionToList("loadItemsFromPage"))
     
     return res
   }

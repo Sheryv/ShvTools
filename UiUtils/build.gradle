@@ -1,0 +1,30 @@
+plugins {
+    id 'java-library'
+    alias(libs.plugins.javafx)
+
+}
+
+ext.longName = "Shared project with UI utility classes"
+ext.jarPrefix = "shvtools-"
+
+ext.addJavafx()
+
+repositories {
+    maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+    api project(":util")
+    api libs.kotlin.javafx
+
+    api libs.bundles.koin
+    testApi libs.bundles.koin.tests
+
+    api libs.easybind
+
+    testApi 'com.github.YetiHafen:javafx-customcaption:v1.0.0'
+    testImplementation 'net.java.dev.jna:jna:5.13.0'
+    testImplementation 'net.java.dev.jna:jna-platform:5.13.0'
+}
+
+

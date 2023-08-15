@@ -1,22 +1,14 @@
-apply plugin: 'java-library'
-apply plugin: 'maven-publish'
-
-
-ext.longName = "Shared project with web utility classes"
-
-version getVersionName(name)
-
-jar {
-    afterEvaluate { p ->
-        archiveName = "shvtools-${baseName}-${project.ext.shortVersion}.${extension}"
-    }
+plugins {
+    id 'java-library'
 }
 
+ext.longName = "Shared project with web utility classes"
+ext.jarPrefix = "shvtools-"
 
 dependencies {
-   api project(":util")
-   api group: 'com.fasterxml.jackson.core', name: 'jackson-core', version: '2.13.0'
-   api group: 'com.fasterxml.jackson.dataformat', name: 'jackson-dataformat-yaml', version: '2.13.0'
-   api group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.13.0'
-   api group: 'com.fasterxml.jackson.core', name: 'jackson-databind', version: '2.13.0'
+    api project(":util")
+    api libs.bundles.jackson
+    api libs.bundles.koin
+    testApi libs.bundles.koin.tests
+
 }

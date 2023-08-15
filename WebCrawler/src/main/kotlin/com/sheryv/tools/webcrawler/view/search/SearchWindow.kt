@@ -1,6 +1,5 @@
 package com.sheryv.tools.webcrawler.view.search
 
-import com.formdev.flatlaf.FlatDarkLaf
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
@@ -11,12 +10,8 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
 import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
-import com.sheryv.tools.webcrawler.utils.Utils
-import com.sheryv.tools.webcrawler.utils.inBackground
-import com.sheryv.tools.webcrawler.utils.lg
-import com.sheryv.tools.webcrawler.utils.postEvent
-import com.sheryv.util.FileUtils
-import com.sheryv.util.Strings
+import com.sheryv.util.*
+import com.sheryv.util.logging.log
 import org.apache.commons.lang3.StringUtils
 import java.awt.*
 import java.awt.datatransfer.DataFlavor
@@ -96,8 +91,8 @@ class SearchWindow {
         doInBackground(
           null,
           {
-            Utils.jsonMapper.writeValue(settings.outputPath.toFile(), lastSeries)
-            postEvent(FetchedDataExternalChangeEvent())
+            SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), lastSeries)
+            emitEvent(FetchedDataExternalChangeEvent())
           },
           null,
           { setProgress(100) }
@@ -117,9 +112,9 @@ class SearchWindow {
           for (episode in lastSeries!!.episodes) {
             try {
               val size = getDownloadSize(episode.downloadUrl?.base.orEmpty())
-              episode.lastSize = size
+              episode.lastSize.set(size)
             } catch (e: Exception) {
-              lg().error("Cant get video size: " + episode.generateFileName(lastSeries!!, settings), e)
+              log.error("Cant get video size: " + episode.generateFileName(lastSeries!!, settings), e)
             }
             prog += part
             setProgress(prog.toInt())
@@ -146,7 +141,7 @@ class SearchWindow {
     setProgress(-1)
     doInBackground<Any?, Series>(
       null,
-      { Utils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java) },
+      { SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java) },
       {
         seasonNumber.value = it.season
         searchText.text = it.title
@@ -169,7 +164,7 @@ class SearchWindow {
       val loadSizeBtn = JButton("Size")
       loadSizeBtn.margin = Insets(2, 2, 1, 2)
       loadSizeBtn.addActionListener { loadSize(episode) }
-      val sizeString = if (episode.lastSize == 0L) "" else FileUtils.sizeString(episode.lastSize)
+      val sizeString = if (episode.lastSize.value == 0L) "" else FileUtils.sizeString(episode.lastSize.value)
       val row: JComponent = appendRow(
         episodes, String.format("%02d [%s] %s", episode.number, sizeString, episode.title), episode.downloadUrl?.base,
         String::class.java, {
@@ -221,7 +216,7 @@ class SearchWindow {
         val found = lastSeries!!.episodes.firstOrNull { l -> l.number == ep.episodeNumber && season == lastSeries!!.season }
         
         if (found != null) {
-          return@map found.copy(title = ep.name).apply { lastSize = found.lastSize }
+          return@map found.copy(title = ep.name).apply { lastSize.set(found.lastSize.value) }
         }
         Episode(ep.name, ep.episodeNumber, null, "")
       } to api.getImdbId(i.id)
@@ -287,7 +282,7 @@ class SearchWindow {
         }.forEach { f: String ->
           Files.createFile(dir.resolve(f))
         }
-        lg().info("Files generated in $file")
+        log.info("Files generated in $file")
       }
     }
     topPanel.add(JLabel("Extension:"))
@@ -309,7 +304,7 @@ class SearchWindow {
       episode,
       { getDownloadSize(it.downloadUrl!!.base) },
       {
-        episode.lastSize = it
+        episode.lastSize.set(it)
         fillList(lastSeries)
       },
       { setProgress(100) }
@@ -346,7 +341,7 @@ class SearchWindow {
           EventQueue.invokeLater { success.invoke(r) }
         }
       } catch (e: Exception) {
-        lg().error("In Background task", e)
+        log.error("In Background task", e)
       }
       if (finished != null) {
         val r = result
@@ -420,7 +415,7 @@ class SearchWindow {
         try {
           val data = Toolkit.getDefaultToolkit()
             .systemClipboard.getData(DataFlavor.stringFlavor) as String
-          lg().debug("Read from clipboard: {}", data)
+          log.debug("Read from clipboard: {}", data)
           box.text = data
         } catch (ex: UnsupportedFlavorException) {
           ex.printStackTrace()

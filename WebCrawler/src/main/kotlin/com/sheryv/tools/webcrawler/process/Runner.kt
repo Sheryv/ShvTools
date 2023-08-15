@@ -9,6 +9,7 @@ import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.logging.log
 import org.openqa.selenium.SessionNotCreatedException
 import kotlin.io.path.exists
 import kotlin.io.path.isExecutable
@@ -30,7 +31,7 @@ class Runner(
     val config = configuration.copy()
     val driverPath = browser.currentDriver().path
     if (!driverPath.exists() || !driverPath.isExecutable()) {
-      lg().info("Browser configuration '${browser.type.name}' was rejected because driver was not found at '${driverPath}' or it is not correct executable")
+      log.info("Browser configuration '${browser.type.name}' was rejected because driver was not found at '${driverPath}' or it is not correct executable")
       throw AppError("Cannot start browser because driver was not found at '${driverPath}' or it is not correct executable file")
     }
     
@@ -43,28 +44,28 @@ class Runner(
       
       driver.initialize(crawler)
       if (crawler is SeleniumCrawler<SettingsBase>) {
-        GlobalState.runningProcess.set(crawler)
+        GlobalState.runningProcess.value = (crawler)
       }
-      lg().info("Crawler '${crawler.def}' built")
+      log.info("Crawler '${crawler.def}' built")
       
       val steps = crawler.getSteps() as List<Step<Any, Any>>
       var any: Any? = null
       for (step in steps) {
         crawler.waitIfPaused()
-        lg().info("Running step '${step.name}' by '${crawler.def}'")
+        log.info("Running step '${step.name}' by '${crawler.def}'")
         any = step.run(any)
       }
       
       
-      lg().info("Crawler '${crawler.def}' finished successfully")
+      log.info("Crawler '${crawler.def}' finished successfully")
     } catch (e: SessionNotCreatedException) {
       throw AppError("Cannot start browser: " + e.message, e)
     } catch (e: TerminationException) {
-      lg().info(e.message)
+      log.info(e.message)
     } catch (e: Exception) {
       throw e
     } finally {
-      GlobalState.runningProcess.set(null)
+      GlobalState.runningProcess.value = null
       (driver as? SeleniumDriver)?.quit()
     }
   }

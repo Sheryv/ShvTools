@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.MainApplication
 import javafx.scene.control.*
 import javafx.scene.layout.GridPane
 import javafx.scene.layout.Priority
+import javafx.scene.layout.VBox
 import javafx.stage.DirectoryChooser
 import javafx.stage.FileChooser
 import javafx.stage.Modality
@@ -54,7 +55,7 @@ object DialogUtils {
       if (header != null) {
         headerText = header
         isResizable = true
-        if (owner != null){
+        if (owner != null) {
           initModality(Modality.WINDOW_MODAL)
           initOwner(owner)
         }
@@ -67,14 +68,47 @@ object DialogUtils {
   fun inputDialog(
     title: String,
     header: String? = null,
-    text: String? = null
-  ): String? {
-    val dialog = TextInputDialog(text)
-    dialog.title = title
-    dialog.headerText = header?.padEnd(60)
-    dialog.isResizable = true
-    MainApplication.appendStyleSheets(dialog.dialogPane.scene)
-    return dialog.showAndWait().orElse(null)
+    rows: List<Pair<String, String>>,
+    type: Alert.AlertType = Alert.AlertType.WARNING,
+  ): List<String> {
+    val alert = Alert(type, null, ButtonType.APPLY, ButtonType.CANCEL)
+    if (header != null) {
+      alert.headerText = header
+    }
+    alert.title = title
+    
+    val list = VBox(10.0)
+    list.prefHeight = VBox.USE_COMPUTED_SIZE
+    list.minHeight = 100.0
+    list.maxHeight = MAX_VALUE
+    list.minWidth = 700.0
+    list.prefWidth = VBox.USE_COMPUTED_SIZE
+    alert.isResizable = true
+    
+    val fields = mutableListOf<TextField>()
+    
+    rows.forEachIndexed { i, row ->
+      
+      val lb = Label(row.first)
+      val tf = TextField(row.second)
+      fields.add(tf)
+      tf.maxWidth = MAX_VALUE
+      tf.maxHeight = MAX_VALUE
+      val box = VBox(lb, tf)
+      box.prefHeight = VBox.USE_COMPUTED_SIZE
+      box.minHeight = 10.0
+      box.maxHeight = MAX_VALUE
+      box.prefWidth = VBox.USE_COMPUTED_SIZE
+      list.children.add(box)
+    }
+    
+    alert.dialogPane.content = list
+    
+    MainApplication.appendStyleSheets(alert.dialogPane.scene)
+    return when (alert.showAndWait().orElse(null)) {
+      ButtonType.APPLY -> fields.map { it.text }
+      else -> emptyList()
+    }
   }
   
   fun <T> choiceDialog(
@@ -93,7 +127,7 @@ object DialogUtils {
   
   fun openFileDialog(
     owner: Window,
-    text: String = "Choose file",
+    text: String = "Select file",
     initialFile: String? = null
   ): Path? {
     val directoryChooser = FileChooser()
@@ -116,7 +150,7 @@ object DialogUtils {
   
   fun openDirectoryDialog(
     owner: Window,
-    text: String = "Choose directory",
+    text: String = "Select directory",
     initialDir: String? = null
   ): Path? {
     val directoryChooser = DirectoryChooser()

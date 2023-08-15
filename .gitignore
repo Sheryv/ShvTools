@@ -17,6 +17,7 @@ release
 # gradle/wrapper/gradle-wrapper.properties
 /jre
 /config.json
+config_*.json
 /*/config.json
 /*/drivers
 logs

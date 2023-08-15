@@ -11,6 +11,8 @@ import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -45,14 +47,14 @@ abstract class StreamingWebsiteBase(
   protected suspend fun start() {
     series = (if (Files.exists(settings.outputPath)) {
       try {
-        val current = Utils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
+        val current = SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
         if (current.season == settings.seasonNumber && settings.seriesName.equals(current.title, true)) {
           current.copy(title = settings.seriesName, seriesUrl = getSeriesLink())
         } else {
           null
         }
       } catch (e: Exception) {
-        lg().error("Error while trying to deserialize current series", e)
+        log.error("Error while trying to deserialize current series", e)
         null
       }
     } else null) ?: Series(settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
@@ -67,7 +69,7 @@ abstract class StreamingWebsiteBase(
     waitIfPaused()
     var i = settings.searchStartIndex
     while (i <= items.size && (i <= settings.searchStopIndex || settings.searchStopIndex < 0)) {
-      if (params.runOnlyForFailedEpisodes && series.episodes.size > i && series.episodes[i].downloadUrl?.base?.isNotBlank() == true ) {
+      if (params.runOnlyForFailedEpisodes && series.episodes.size > i && series.episodes[i].downloadUrl?.base?.isNotBlank() == true) {
         i++
         continue
       }
@@ -105,11 +107,11 @@ abstract class StreamingWebsiteBase(
               item.episodePageUrl
             )
           )
-          lg().info("Servers found for E${item.number.toString().padStart(2, '0')}: "
+          log.info("Servers found for E${item.number.toString().padStart(2, '0')}: "
               + allServers.joinToString(" | ") { "(${it.index}) ${it.serverName} - ${it.type} - ${it.format}" })
           
           val priorities = getPriorities(i, allServers, serverHandlers)
-          lg().info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
+          log.info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
             val indexes = v.joinToString(",") { it.index.toString() }
             "${k.definition.label()}=($indexes)"
           })
@@ -130,7 +132,7 @@ abstract class StreamingWebsiteBase(
               } catch (e: TerminationException) {
                 throw e
               } catch (e: Exception) {
-                lg().error(
+                log.error(
                   "Error while searching download url at ${server.serverName} [${server.index}] | ${server.videoPageExternalUrl}",
                   e
                 )
@@ -144,7 +146,7 @@ abstract class StreamingWebsiteBase(
       } catch (e: TerminationException) {
         throw e
       } catch (e: Exception) {
-        lg().error("Error while searching download url", e)
+        log.error("Error while searching download url", e)
       }
       val err = mutableListOf<ErrorEntry>()
       if (downloadUrl == null) {
@@ -165,8 +167,8 @@ abstract class StreamingWebsiteBase(
       episodes.sortBy { it.number }
       series = series.copy(episodes = episodes)
       waitIfPaused()
-      Utils.jsonMapper.writeValue(settings.outputPath.toFile(), series)
-      lg().info("\n$ep\n")
+      SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), series)
+      log.info("\n$ep\n")
       i++
     }
   }
@@ -184,7 +186,7 @@ abstract class StreamingWebsiteBase(
       found = serverHandler.findVideoSrcUrl()
     }
     if (found?.startsWith("blob:") == true) {
-      var s = 12
+      var s = 18
       var streamUrl = getM3U8UrlFromEvents(serverHandler)
       while (streamUrl == null && s > 0) {
         delay(500)
@@ -206,7 +208,7 @@ abstract class StreamingWebsiteBase(
   }
   
   protected open suspend fun goToEpisodePage(data: VideoData) {
-    lg().info("Opening ${data.episodePageUrl}")
+    log.info("Opening ${data.episodePageUrl}")
     driver.navigate().to(getFullUrl(data.episodePageUrl))
   }
   
@@ -254,11 +256,13 @@ abstract class StreamingWebsiteBase(
       val m3u8events = events.filter { it.response.url.contains(".m3u8") }
       val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response.url) }
       if (events.isNotEmpty()) {
-        lg().debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
+        log.debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
           (if (i == index) "[#] " else "[ ] ") + e.response.url
         }.joinToString("\n"))
       }
-      m3u8events.getOrNull(index)?.response?.url
+      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.response.url) }?.also {
+        log.debug("Found alternative url from browser tools: $it")
+      }
     } catch (e: InvalidArgumentException) {
       null
     }
@@ -267,11 +271,14 @@ abstract class StreamingWebsiteBase(
       val m3u8events = events.filter { it.name.contains(".m3u8") }
       val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.name) }
       if (events.isNotEmpty()) {
-        lg().debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
+        log.debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
           (if (i == index) "[#] " else "[ ] ") + e.name
         }.joinToString("\n"))
       }
-      return m3u8events.getOrNull(index)?.name
+      
+      return m3u8events.getOrNull(index)?.name ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name) }?.also {
+        log.debug("Found alternative url from JavaScript performance objects: $it")
+      }
     }
     return url
   }

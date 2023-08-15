@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.service.streamingwebsite.generator
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.logging.log
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -29,7 +30,6 @@ class MetadataGenerator(private val settings: StreamingWebsiteSettings) {
           <runtime>0</runtime>
           <mpaa/>
           <certification/>
-          <id/>
           <imdbid>${series.imdbId.orEmpty()}</imdbid>
           <tmdbid>${series.tvdbId.orEmpty()}</tmdbid>
           <premiered/>
@@ -81,9 +81,9 @@ class MetadataGenerator(private val settings: StreamingWebsiteSettings) {
       Files.createDirectories(file.parent)
       if (!file.exists()) {
         Files.writeString(file, episodeNfo, StandardOpenOption.CREATE)
-        lg().debug("Saved .nfo to $file")
+        log.debug("Saved .nfo to $file")
       } else {
-        lg().debug("Skipped .nfo at $file")
+        log.debug("Skipped .nfo at $file")
       }
     }
   }

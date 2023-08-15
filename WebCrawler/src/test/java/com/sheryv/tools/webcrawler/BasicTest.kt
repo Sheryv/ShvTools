@@ -1,5 +1,7 @@
 package com.sheryv.tools.webcrawler
 
+import com.sheryv.tools.webcrawler.utils.Utils
+import org.apache.http.client.methods.RequestBuilder
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.nio.file.Files
@@ -8,11 +10,10 @@ import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import kotlin.io.path.*
 
+
 class BasicTest {
   val bases = listOf(
-//    Path.of("H:\\Filmy obejrzane\\Seriale"),
-    Path.of("G:\\Filmy\\Filmy obejrzane\\Seriale"),
-//    Path.of("D:\\Filmy_D\\Seriale"),
+    Path.of("H:\\Movies"),
   )
   
   @Test
@@ -148,4 +149,15 @@ class BasicTest {
       }
     }
   }
+  
+  
+  @Test
+  fun name() {
+    val s = Utils.httpClientExecute(
+      RequestBuilder.get("https://delivery-node-3qxdghox0csibqlw.voe-network.net/engine/hls2/01/08895/svjgkz8xnctq_n/master.m3u8?t=3-nHgQRP62mARo0N3VTG2t-U5LQEiu0IhA6oJ8qlrBc&s=1682276985&e=14400&f=44475871&node=delivery-node-3qxdghox0csibqlw.voe-network.net&i=77.65&sp=4500&asn=212163")
+        .build()
+    )
+    println(">>> ${s}")
+  }
 }
+

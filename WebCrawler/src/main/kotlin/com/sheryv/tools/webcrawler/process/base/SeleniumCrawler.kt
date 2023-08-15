@@ -11,7 +11,8 @@ import com.sheryv.tools.webcrawler.process.base.model.TerminationException
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.BrowserResponseEvent
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.JSNetworkEvent
 import com.sheryv.tools.webcrawler.utils.Utils
-import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.delay
 import org.openqa.selenium.By
 import org.openqa.selenium.TimeoutException
@@ -53,7 +54,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
       element = wait.withTimeout(Duration.ofSeconds(timeoutSeconds.toLong())).until(ExpectedConditions.presenceOfElementLocated(selector))
       
     } catch (e: TimeoutException) {
-      lg().warn("ERROR: Selector '{}' not found during {} seconds | {}", selector.toString(), timeoutSeconds, e.message)
+      com.sheryv.util.logging.log.warn("ERROR: Selector '{}' not found during {} seconds | {}", selector.toString(), timeoutSeconds, e.message)
       if (throwEx) {
         throw e
       }
@@ -99,7 +100,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     }
     
     if (!checkIsCorrect(element)) {
-      lg().warn("ERROR: Attribute '{}' not found for selector '{}' during {} seconds", attribute, selector.toString(), timeoutSeconds)
+      log.warn("ERROR: Attribute '{}' not found for selector '{}' during {} seconds", attribute, selector.toString(), timeoutSeconds)
       return null
     }
     return element
@@ -107,9 +108,9 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   
   fun getNetworkResponseEventsFromBrowserTools(): List<BrowserResponseEvent> {
     return driver.manage().logs().get(LogType.PERFORMANCE).all.asSequence()
-      .map { Utils.jsonMapper.readTree(it.message).get("message") }
+      .map { SerialisationUtils.jsonMapper.readTree(it.message).get("message") }
       .filter { it.get("method").asText() == "Network.responseReceived" }
-      .map { Utils.jsonMapper.convertValue(it.get("params"), BrowserResponseEvent::class.java) }
+      .map { SerialisationUtils.jsonMapper.convertValue(it.get("params"), BrowserResponseEvent::class.java) }
       .toList()
   }
   
@@ -117,7 +118,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     return driver.executeScriptFetchList(
       "return window.performance.getEntries().filter(r => r.entryType == 'resource' && r.initiatorType == 'xmlhttprequest')"
     )?.let {
-      Utils.jsonMapper.convertValue(it, Utils.jacksonTypeRef<List<JSNetworkEvent>>())
+      SerialisationUtils.jsonMapper.convertValue(it, SerialisationUtils.type<List<JSNetworkEvent>>())
     }!!
   }
   

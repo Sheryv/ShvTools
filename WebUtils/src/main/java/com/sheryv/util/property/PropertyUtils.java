@@ -1,7 +1,8 @@
 package com.sheryv.util.property;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.lang.reflect.Field;
 import java.nio.charset.Charset;
 import java.util.Optional;
@@ -19,8 +20,8 @@ public class PropertyUtils {
     return charset;
   }
   
-  public static void traversePropertyGroupFields(@Nonnull Class<? extends PropertyGroup> classs,
-                                                 @Nonnull BiConsumer<Field, Comment> consumer,
+  public static void traversePropertyGroupFields(@NotNull Class<? extends PropertyGroup> classs,
+                                                 @NotNull BiConsumer<Field, Comment> consumer,
                                                  @Nullable Class<? extends Comment> annotation) {
     if (annotation == null)
       annotation = Comment.class;

@@ -6,6 +6,7 @@ import com.sheryv.tools.filematcher.model.event.ItemEnableChangedEvent
 import com.sheryv.tools.filematcher.utils.DataUtils
 import com.sheryv.tools.filematcher.utils.lg
 import com.sheryv.tools.filematcher.utils.postEvent
+import com.sheryv.util.logging.log
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import java.lang.IllegalStateException
@@ -56,7 +57,7 @@ class Entry(
   init {
     enabledProperty.addListener { o, _, n ->
       val e = this
-      lg().debug("listener> can change: ${e.enabled != n} | new: $n | $name")
+      log.debug("listener> can change: ${e.enabled != n} | new: $n | $name")
       if (e.enabled != n) {
         enabled = n
         postEvent(ItemEnableChangedEvent(this))
