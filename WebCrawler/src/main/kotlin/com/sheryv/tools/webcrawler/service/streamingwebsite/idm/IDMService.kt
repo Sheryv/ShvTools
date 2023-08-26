@@ -5,8 +5,6 @@ import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
-import com.sheryv.tools.webcrawler.utils.lg
-import com.sheryv.util.FileUtils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.delay
 import java.nio.file.Path

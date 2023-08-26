@@ -8,7 +8,7 @@ import com.sheryv.tools.filematcher.model.event.ItemStateChangedEvent
 import com.sheryv.tools.filematcher.service.*
 import com.sheryv.tools.filematcher.utils.*
 import com.sheryv.tools.lasso.util.OnChangeScheduledExecutor
-import com.sheryv.util.FileUtils
+import com.sheryv.util.io.FileUtils
 import com.sheryv.util.VersionUtils
 import javafx.application.Platform
 import javafx.beans.property.SimpleStringProperty

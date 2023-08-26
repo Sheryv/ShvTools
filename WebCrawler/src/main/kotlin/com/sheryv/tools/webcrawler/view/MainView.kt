@@ -31,6 +31,8 @@ import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.util.*
 import com.sheryv.util.fx.core.view.FxmlView
 import com.sheryv.util.fx.core.view.ViewFactory
+import com.sheryv.util.io.FileUtils
+import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
 import javafx.animation.PauseTransition
 import javafx.application.Platform
@@ -82,7 +84,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
         "Details", e.stackTraceToString(), TITLE,
-        "Error occurred while starting application", Alert.AlertType.ERROR, false, ButtonType.OK
+        "Error occurred while starting application", Alert.AlertType.ERROR, false, false, ButtonType.OK
       )
       throw e
     }
@@ -373,7 +375,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               inMainThread {
                 DialogUtils.textAreaDialog(
                   "Details", e.stackTraceToString(), TITLE,
-                  "Error occurred while scraping", Alert.AlertType.ERROR, false, ButtonType.OK
+                  "Error occurred while scraping", Alert.AlertType.ERROR, false, false, ButtonType.OK
                 )
               }
             } finally {
@@ -410,7 +412,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
         "One or more values is incorrect", e.message + "\n\n" + e.stackTraceToString(), TITLE,
-        "Error while saving configuration for ${selected!!.findSettings(config)}", Alert.AlertType.ERROR, true, ButtonType.OK
+        "Error while saving configuration for ${selected!!.findSettings(config)}", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
     }
   }
@@ -453,7 +455,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       log.error("Error while opening dialog JDownloader 2 import", e)
       DialogUtils.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
-        "Error while opening dialog JDownloader 2 import", Alert.AlertType.ERROR, true, ButtonType.OK
+        "Error while opening dialog JDownloader 2 import", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
     }
   }
@@ -508,7 +510,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                     inMainThread {
                       DialogUtils.textAreaDialog(
                         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
-                        "Error while sending to IDM", Alert.AlertType.ERROR, true, ButtonType.OK
+                        "Error while sending to IDM", Alert.AlertType.ERROR, true, false, ButtonType.OK
                       )
                     }
                   }
@@ -538,7 +540,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                   type = Alert.AlertType.NONE,
                   wrapText = false,
                   buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL)
-                )) {
+                ).first) {
                   ButtonType.OK -> {
                     episodes.forEach { (e, path) ->
                       Downloader.add(e.downloadUrl!!.base, path)
@@ -572,7 +574,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                   val http = HttpSupport()
                   series.posterUrl?.also {
                     val format = it.substringAfterLast('.', "jpg")
-                    http.stream(HttpSupport.getRequest(series.posterUrl)).use {
+                    http.stream(HttpSupport.getRequest(series.posterUrl)).body().use {
                       Files.copy(it, seriesDir.parent.resolve("poster.$format"), StandardCopyOption.REPLACE_EXISTING)
                     }
                   }
@@ -586,7 +588,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                 inMainThread {
                   DialogUtils.textAreaDialog(
                     "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
-                    "Error while generating", Alert.AlertType.ERROR, true, ButtonType.OK
+                    "Error while generating", Alert.AlertType.ERROR, true, false, ButtonType.OK
                   )
                 }
               }
@@ -605,7 +607,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       log.error("Error while opening downloader dialog", e)
       DialogUtils.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
-        "Error while opening downloader dialog", Alert.AlertType.ERROR, true, ButtonType.OK
+        "Error while opening downloader dialog", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
     }
   }

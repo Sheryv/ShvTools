@@ -4,7 +4,6 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.service.BrowserSupport
 import com.sheryv.tools.webcrawler.utils.ViewUtils
-import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.logging.log
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document

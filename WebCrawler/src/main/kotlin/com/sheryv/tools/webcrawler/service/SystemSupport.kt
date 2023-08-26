@@ -1,6 +1,5 @@
 package com.sheryv.tools.webcrawler.service
 
-import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.logging.log
 import java.awt.Desktop
 import java.io.BufferedReader

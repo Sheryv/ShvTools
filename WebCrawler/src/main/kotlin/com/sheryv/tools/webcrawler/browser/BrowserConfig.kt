@@ -16,7 +16,7 @@ class BrowserConfig(
   
   companion object {
     @JvmStatic
-    fun all() = BrowserTypes.values().map { it.toConfig() }.toSet()
+    fun all() = BrowserTypes.entries.map { it.toConfig() }.toSet()
   }
   
   override fun equals(other: Any?): Boolean {

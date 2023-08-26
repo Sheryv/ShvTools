@@ -1,12 +1,12 @@
 package com.sheryv.tools.webcrawler.service.streamingwebsite.downloader
 
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.DownloadingState.*
-import com.sheryv.tools.webcrawler.utils.lg
-import com.sheryv.util.DownloadProgress
-import com.sheryv.util.FileSize
 import com.sheryv.util.Strings
+import com.sheryv.util.io.DataTransferProgress
 import com.sheryv.util.logging.log
+import com.sheryv.util.unit.BinaryTransferSpeed
 import java.nio.file.Path
+import java.time.Instant
 
 abstract class DownloadingTask(
   val output: Path,
@@ -15,6 +15,10 @@ abstract class DownloadingTask(
   protected val config: DownloaderConfig,
 ) {
   
+  protected var initTime: Instant? = null
+  protected var startTime: Instant? = null
+  protected var finishTime: Instant? = null
+  
   var state: DownloadingState = QUEUED
     protected set
   
@@ -22,6 +26,7 @@ abstract class DownloadingTask(
     if (state != PREPROCESS && state != QUEUED) {
       throw IllegalArgumentException("Downloading already started")
     }
+    initTime = Instant.now()
     onStateChange(PREPROCESS, this::changeState)
     log.debug("Preparing download of ${fileName()} [$id]")
     
@@ -31,8 +36,8 @@ abstract class DownloadingTask(
     
     checkIfStopped()
     
-    log.debug("Starting download of ${fileName()} [$id] approx. ${extrapolateSize().full()}")
-    val startTime = System.currentTimeMillis()
+    log.debug("Starting download of ${fileName()} [$id]")
+    startTime = Instant.now()
     
     transfer()
     if (state == FAILED) {
@@ -44,14 +49,14 @@ abstract class DownloadingTask(
     
     checkIfStopped()
     
-    val avgSpeed = avgSpeed(System.currentTimeMillis() - startTime)
+    val avgSpeed = avgSpeed(System.currentTimeMillis() - startTime!!.toEpochMilli())
     
     val file = postProcess()
     onStateChange(COMPLETED, this::changeState)
     
     checkIfStopped()
-    log.debug("Finished download of ${fileName()} [$id] with avg. speed ${avgSpeed.sizeFormatted}${avgSpeed.unit}/s")
-    
+    log.debug("Finished download of ${fileName()} [$id] with avg. speed ${avgSpeed.formatted}")
+    finishTime = Instant.now()
     return file
   }
   
@@ -80,11 +85,13 @@ abstract class DownloadingTask(
   
   abstract fun stop()
   
-  abstract fun avgSpeed(durationMillis: Long): FileSize
+  abstract fun avgSpeed(durationMillis: Long): BinaryTransferSpeed
   
-  abstract fun extrapolateSize(): FileSize
+  abstract fun extrapolateSize(): Long
   
-  abstract fun progress(): DownloadProgress?
+  abstract fun progress(): DataTransferProgress?
+  
+  abstract fun currentlyDownloadedBytes(): Long
   
   fun fileName() = output.fileName.toString()
 

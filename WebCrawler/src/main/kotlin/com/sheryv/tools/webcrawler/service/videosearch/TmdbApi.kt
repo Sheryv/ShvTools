@@ -3,8 +3,7 @@ package com.sheryv.tools.webcrawler.service.videosearch
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.service.SystemSupport
-import com.sheryv.tools.webcrawler.utils.lg
-import com.sheryv.util.HttpSupport
+import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.logging.log
 

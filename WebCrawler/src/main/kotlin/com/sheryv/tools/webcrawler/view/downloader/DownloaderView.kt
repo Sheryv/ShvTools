@@ -97,6 +97,7 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
     tfTempDirPath.text = cf.tempDirPath.toString()
     tfConnectionsPerFile.text = cf.connectionsPerFile.toString()
     tfDefaultDownloadDir.text = cf.defaultDownloadDir.toString()
+    progress.progress = -1.0
     
     listOf(tfConcurrentDownloads, tfMaxRetries, tfTempDirPath, tfConcurrentDownloads).forEach {
       it.focusedProperty().addListener { obs, vo, vn ->
@@ -109,9 +110,9 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
     tvList.columns.setAll(
       column("File", 220.0) { it.fileName() },
       column("State", 100.0) { it.state.label },
-      column("%", 50.0, alignRight = true) { it.progress()?.formatRatioAsPercent(true) ?: "-" },
-      column("Size", 150.0, true) { it.progress()?.let { "${it.formatDownloaded()} / ${it.sizeFromHeader.full()}" } ?: "-" },
-      column("Speed", 100.0, true) { it.progress()?.formatSpeed() ?: "-" },
+      column("%", 50.0, alignRight = true) { it.progress()?.formatRatioAsPercent() ?: "-" },
+      column("Size", 150.0, true) { it.progress()?.let { "${it.currentSize.formatted} / ${it.totalSize?.formatted ?: "-"}" } ?: "-" },
+      column("Speed", 100.0, true) { it.progress()?.avgSpeed?.formatted ?: "-" },
       column("Parts", alignRight = true) { (it as? M3U8DownloadingTask)?.partsNumber() ?: "-" },
       column("ID") { it.id },
       column("URL", 180.0) { it.url },
@@ -175,7 +176,9 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
         btnStart.text = "Hold new downloads"
       }
     }
-    
+    if (Downloader.isRunning()) {
+      btnStart.text = "Hold new downloads"
+    }
     
     subscribeEvent<DownloadingStateChanged> {
       updater.markChanged()
@@ -201,8 +204,10 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
 //    if (tasks.any {!it.started || it.parts.any { !it.process.isComplete }}) {
 //      updater.markChanged()
 //    }
-    val started = tasks.filter { it.state.inBeingProcessed() }.mapNotNull { it.progress() }
-    progress.progress = started.sumOf { it.currentRatio } / started.size
+//    val started = tasks.filter { it.state.inBeingProcessed() }.mapNotNull { it.progress() }
+//    progress.progress = started.sumOf { it.currentRatio } / started.size
+    
+    progress.isVisible = tasks.any { it.state.inBeingProcessed() }
     
     tvList.items.setAll(tasks.reversed())
     tvList.refresh()
@@ -221,11 +226,6 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
       prefWidth = width
       setCellValueFactory { o -> ReadOnlyObjectWrapper(value(o.value)) }
     }
-  }
-  
-  @Subscribe
-  fun onDownloadProgress(e: DownloadingStateChanged) {
-    updater.markChanged()
   }
   
   @FXML

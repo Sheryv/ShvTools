@@ -46,7 +46,7 @@ enum class BrowserTypes(
       ), "MSEdgeHTM"
     ), DriverTypes.EDGE
   ),
-  OTHER("- Custom configuration -", BrowserDefaultPathParts(), *DriverTypes.values()),
+  OTHER("- Custom configuration -", BrowserDefaultPathParts(), *DriverTypes.entries.toTypedArray()),
   ;
   
   fun toConfig(): BrowserConfig {

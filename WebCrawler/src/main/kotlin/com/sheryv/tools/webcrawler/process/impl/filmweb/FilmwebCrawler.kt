@@ -8,7 +8,6 @@ import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
-import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.logging.log
 import org.openqa.selenium.By

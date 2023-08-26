@@ -1,8 +1,10 @@
 package com.sheryv.tools.webcrawler.view
 
-import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.inBackground
-import kotlinx.coroutines.*
+import com.sheryv.util.logging.log
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 class OnChangeScheduledExecutor(private val name: String, private val delayMillis: Long = 400, private val onChange: suspend () -> Unit) {
   private var refreshJob: Job? = null
@@ -10,12 +12,12 @@ class OnChangeScheduledExecutor(private val name: String, private val delayMilli
   
   
   fun start(delayMillis: Long = this.delayMillis): Job {
-    lg(javaClass.name + "#" + name).trace("Refresh coroutine [$name] started with rate $delayMillis")
+    log.trace("Refresh coroutine [$name] started with rate $delayMillis")
     refreshJob = inBackground {
-      while (refreshJob?.isActive == true) {
+      while (isActive) {
         if (changed) {
           changed = false
-          lg(javaClass.name + "#" + name).trace("Refresh coroutine [$name] doing refresh")
+          log.trace("Refresh coroutine [$name] doing refresh")
           onChange()
         }
         delay(delayMillis)
@@ -28,7 +30,7 @@ class OnChangeScheduledExecutor(private val name: String, private val delayMilli
   
   fun stop() {
     refreshJob?.cancel()
-    lg(javaClass.name + "#" + name).trace("Refresh coroutine [$name] stopped")
+    log.trace("Refresh coroutine [$name] stopped")
   }
   
   fun executeNow() {

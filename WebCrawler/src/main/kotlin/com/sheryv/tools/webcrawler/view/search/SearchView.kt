@@ -3,20 +3,26 @@ package com.sheryv.tools.webcrawler.view.search
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
+import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
 import com.sheryv.tools.webcrawler.utils.DialogUtils
-import com.sheryv.util.BinarySize
+import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.emitEvent
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.lib.*
 import com.sheryv.util.inBackground
+import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
 import com.sheryv.util.singleAssign
+import com.sheryv.util.unit.BinarySize
+import javafx.beans.binding.Bindings
 import javafx.collections.FXCollections
 import javafx.geometry.Pos
 import javafx.scene.Parent
@@ -24,9 +30,12 @@ import javafx.scene.control.*
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.layout.Priority
 import javafx.stage.Stage
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.nio.file.Files
+import java.nio.file.Path
 import java.time.LocalDate
+import kotlin.io.path.nameWithoutExtension
 
 class SearchView(override val config: Configuration) : SimpleView() {
   
@@ -36,11 +45,12 @@ class SearchView(override val config: Configuration) : SimpleView() {
   private val api = TmdbApi()
   private val settings = GlobalState.currentCrawler.findSettings(config) as StreamingWebsiteSettings
   
-  private var results = FXCollections.observableArrayList<SearchItem>()
-  private var selectedItem = objectProperty<SearchItem?>()
+  private val results = FXCollections.observableArrayList<SearchItem>()
+  private val selectedItem = objectProperty<SearchItem?>()
   private var sourceSeries: Series? by singleAssign()
-  private var series = objectProperty<Series?>(null)
-  private var episodes = series.toList { it?.episodes }
+  private val series = objectProperty<Series?>(null)
+  private val episodes = series.toList { it?.episodes }
+  private val selectedEpisodes = FXCollections.observableArrayList<Episode>()
   
   override val root: Parent by lazy {
     createRoot {
@@ -77,17 +87,161 @@ class SearchView(override val config: Configuration) : SimpleView() {
           valueProperty().bindBidirectional(selectedItem)
           styleClass.add("mono")
         }
+        button("Offset +").setOnAction {
+          changeOffset(1)
+        }
+        button("Offset -").setOnAction {
+          changeOffset(-1)
+        }
+      }
+      hbox {
+        disableProperty().bind(inProgress)
+        alignment = Pos.CENTER_LEFT
+        spacing = 10.0
+        isFillWidth = true
+        
+        button("Remove selected") {
+          disableProperty().bind(selectedEpisodes.sizeProperty.map { it == 0 })
+          setOnAction {
+            updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) })
+          }
+        }
+        pane {
+          hgrow = Priority.ALWAYS
+        }
         button("Find file size").setOnAction {
-          log.debug("Search")
+          inBackground(inProgress.asEditable()) {
+            val http = HttpSupport()
+            episodes.forEach { e ->
+              e.downloadUrl?.let {
+                
+                val size = if (it.isStreaming) {
+                  Utils.getChunksOfM3U8Video(it.base).takeIf { it.isNotEmpty() }?.let { list ->
+                    http.getContentSize(list.first())?.let { it * list.size }
+                  }
+                } else {
+                  http.getContentSize(it.base)
+                }
+                
+                e.lastSize.set(size ?: 0)
+              }
+            }
+          }
+        }
+        button("Edit as text").setOnAction {
+          
+          val text = series.value!!.episodes.joinToString("\n") { "%2d | %-40s | %s".format(it.number, it.title, it.url.value) }
+          
+          val dialog = DialogUtils.textAreaDialog(
+            "Edit as text:",
+            text,
+            wrapText = false,
+            editable = true,
+            buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL),
+            type = Alert.AlertType.NONE
+          )
+          if (dialog.first == ButtonType.OK) {
+            val mappedEpisodes = dialog.second.lines()
+              .mapIndexed { index, l ->
+                val parts = l.split('|').map { it.trim() }
+                index to parts
+              }
+              .filter { it.second.size >= 3 }
+              .map { (ind, parts) ->
+                val existing = series.value!!.episodes.find { it.number == parts[0].toInt() }
+                val url = parts[2].takeIf { it.isNotBlank() }?.let {
+                  if (it.contains(".m3u8")) M3U8Url(it)
+                  else DirectUrl(it)
+                }
+                
+                if (existing != null) {
+                  val old = existing.url
+                    .takeIf { it.value.isNotBlank() }
+                    ?.let {
+                      if (it.value.contains(".m3u8")) M3U8Url(it.value)
+                      else DirectUrl(it.value)
+                    }
+                    ?: existing.downloadUrl
+                  
+                  existing.copy(number = ind + 1, title = parts[1], downloadUrl = old?.let {
+                    if (url?.base == old.base) old
+                    else url
+                  } ?: url)
+                } else {
+                  Episode(0, parts[1], ind + 1, url, "")
+                }
+              }
+            
+            val s = series.value!!.copy(episodes = mappedEpisodes)
+            
+            if (DialogUtils.textAreaDialog(
+                "Confirm changes:",
+                s.formattedString(),
+                wrapText = false,
+                buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL),
+                type = Alert.AlertType.NONE
+              ).first == ButtonType.OK
+            ) {
+              updateEpisodes(mappedEpisodes)
+            }
+          }
         }
         button("Clear list").setOnAction {
           log.debug("Search")
         }
         button("Save to file").setOnAction {
-          inProgress.set(true)
-          inBackground {
-            delay(6000)
-            inProgress.set(false)
+          if (series.value != null) {
+            inBackground(inProgress.asEditable()) {
+              SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), series.value)
+              emitEvent(FetchedDataExternalChangeEvent())
+            }
+          }
+        }
+        button("Update file names").setOnAction {
+          if (series.value != null) {
+            inBackground(inProgress.asEditable()) {
+              val s = series.value!!
+              val eps = s.episodes.toMutableList()
+              val map = mutableMapOf<String, String>()
+              for (e in s.episodes) {
+                val old =
+                  sourceSeries!!.episodes.find { it.id == e.id && it.id > 0 } ?: sourceSeries!!.episodes.find { it.number == e.number }
+                if (old != null) {
+                  map[old.generateFileName(sourceSeries!!, settings)] = e.generateFileName(s, settings)
+                  eps.remove(e)
+                }
+              }
+              val list = eps.map { it.generateFileName(s, settings) }
+              val seriesDir = Path.of(settings.downloadDir).resolve(s.generateDirectoryPathForSeason())
+              
+              
+              withContext(Dispatchers.Main) {
+                if (DialogUtils.textAreaDialog(
+                    "Confirm following changes:",
+                    "Output: $seriesDir\nMapped files: \n${map.map { it.key + " -> " + it.value }.joinToString("\n")}\nNew files: \n" +
+                        list.joinToString("\n"),
+                    wrapText = false,
+                    editable = true,
+                    buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL),
+                    type = Alert.AlertType.NONE
+                  ).first == ButtonType.OK
+                ) {
+                  withContext(Dispatchers.IO) {
+                    for ((s, t) in map) {
+                      val old = seriesDir.resolve(s)
+                      Files.move(old, seriesDir.resolve(t))
+                      val nfo = seriesDir.resolve(old.nameWithoutExtension + ".nfo")
+                      if (Files.exists(nfo)) {
+                        Files.move(nfo, seriesDir.resolve(seriesDir.resolve(t).nameWithoutExtension + ".nfo"))
+                      }
+                    }
+                    for (c in list) {
+                      Files.createFile(seriesDir.resolve(c))
+                    }
+                  }
+                }
+              }
+            }
           }
         }
         button("Show file list") {
@@ -101,7 +255,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
                 wrapText = false,
                 buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL),
                 type = Alert.AlertType.NONE
-              ) == ButtonType.OK
+              ).first == ButtonType.OK
             ) {
               DialogUtils.openDirectoryDialog(stage)?.run {
                 val dir = toAbsolutePath().resolve(s.generateDirectoryPathForSeason())
@@ -130,6 +284,8 @@ class SearchView(override val config: Configuration) : SimpleView() {
         }
       }
       TableView(episodes).attachTo(this).apply {
+        this.selectionModel.selectionMode = SelectionMode.MULTIPLE
+        Bindings.bindContent(selectedEpisodes, selectionModel.selectedItems);
         styleClass.add("mono")
         vgrow = Priority.ALWAYS
         isFillWidth = true
@@ -174,6 +330,20 @@ class SearchView(override val config: Configuration) : SimpleView() {
     title = "Search and fill episodes links"
   }
   
+  private fun changeOffset(offset: Int) {
+    updateEpisodes(series.value!!.episodes.map {
+      it.copy(number = it.number + offset)
+    })
+  }
+  
+  private fun updateEpisodes(episodes: List<Episode>) {
+    series.set(
+      series.value!!.copy(
+        episodes = episodes
+      )
+    )
+  }
+  
   private fun fetchEpisodes(i: SearchItem) {
     inProgress.set(true)
     inBackground {
@@ -184,16 +354,22 @@ class SearchView(override val config: Configuration) : SimpleView() {
           val found = sourceSeries?.episodes?.firstOrNull { l -> l.number == ep.episodeNumber }
           if (found != null) {
             return@map found.copy(
+              id = ep.id,
               title = ep.name,
-              downloadUrl = found.url.value?.takeIf { it.isNotBlank() }?.let { DirectUrl(found.url.value) })
+              downloadUrl = found.url.takeIf { it.value.isNotBlank() }?.let {
+                if (it.value == found.downloadUrl?.base) found.downloadUrl
+                else if (it.value.contains(".m3u8")) M3U8Url(it.value)
+                else DirectUrl(it.value)
+              })
               .apply { lastSize.set(found.lastSize.value) }
           }
-          Episode(ep.name, ep.episodeNumber, null, "")
+          Episode(ep.id, ep.name, ep.episodeNumber, null, "")
         }
         val imdb = api.getImdbId(i.id)
         
         series.set(
           Series(
+            i.id,
             i.name,
             seasonNum,
             sourceSeries?.lang.orEmpty(),

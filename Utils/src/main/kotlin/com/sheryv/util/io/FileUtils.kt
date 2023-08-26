@@ -1,4 +1,4 @@
-package com.sheryv.util
+package com.sheryv.util.io
 
 import org.apache.commons.lang3.StringUtils
 import java.io.*

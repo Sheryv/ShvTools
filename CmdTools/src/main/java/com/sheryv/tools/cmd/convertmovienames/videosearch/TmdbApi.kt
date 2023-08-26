@@ -3,7 +3,7 @@ package com.sheryv.tools.cmd.convertmovienames.videosearch
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.sheryv.tools.cmd.convertmovienames.ConvertMovieNames
 import com.sheryv.tools.cmd.convertmovienames.VERBOSE
-import com.sheryv.util.HttpSupport
+import com.sheryv.util.io.HttpSupport
 import java.net.URLEncoder
 import java.net.http.HttpResponse
 

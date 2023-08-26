@@ -210,8 +210,9 @@ object DialogUtils {
     header: String? = null,
     type: Alert.AlertType = Alert.AlertType.WARNING,
     wrapText: Boolean = true,
+    editable: Boolean = false,
     vararg buttons: ButtonType = arrayOf(ButtonType.OK)
-  ): ButtonType? {
+  ): Pair<ButtonType?, String> {
     
     val alert = Alert(type, label, *buttons)
     if (header != null) {
@@ -222,7 +223,7 @@ object DialogUtils {
     val lb = Label(label)
     
     val textArea = TextArea(content)
-    textArea.isEditable = false
+    textArea.isEditable = editable
     textArea.isWrapText = wrapText
     textArea.styleClass.add("mono")
     
@@ -242,7 +243,7 @@ object DialogUtils {
     
     alert.dialogPane.content = expContent
     MainApplication.appendStyleSheets(alert.dialogPane.scene)
-    return alert.showAndWait().orElse(null)
+    return alert.showAndWait().map { it to textArea.text }.orElse(Pair(null, textArea.text))
   }
   
 }

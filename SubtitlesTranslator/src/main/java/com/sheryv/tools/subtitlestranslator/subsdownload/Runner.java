@@ -1,7 +1,7 @@
 package com.sheryv.tools.subtitlestranslator.subsdownload;
 
 import com.sheryv.tools.subtitlestranslator.Configuration;
-import com.sheryv.util.HttpSupport;
+import com.sheryv.util.io.HttpSupport;
 import lombok.Getter;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -95,7 +95,7 @@ public class Runner {
   private File download(String link, Options options) throws IOException {
     HttpSupport http = new HttpSupport();
     Path path = Paths.get(options.getTemporaryDirectory(), options.getSeries() + "_" + options.getSeason() + "_" + options.getEpisode() + ".zip");
-    try (InputStream stream = http.stream(HttpSupport.getRequest(options.getBaseUrl() + link))) {
+    try (InputStream stream = http.stream(HttpSupport.getRequest(options.getBaseUrl() + link)).body()) {
       Files.copy(stream, path, StandardCopyOption.REPLACE_EXISTING);
     }
     

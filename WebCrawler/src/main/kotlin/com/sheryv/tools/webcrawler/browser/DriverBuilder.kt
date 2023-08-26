@@ -59,7 +59,7 @@ abstract class DriverBuilder {
       }
     }
     
-    options.setCapability("applicationCacheEnabled", true)
+//    options.setCapability("applicationCacheEnabled", true)
   }
 }
 

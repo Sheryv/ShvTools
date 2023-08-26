@@ -1,8 +1,11 @@
 package com.sheryv.tools.webcrawler.service.streamingwebsite.downloader
 
-import com.sheryv.tools.webcrawler.utils.lg
-import com.sheryv.util.*
+import com.sheryv.tools.webcrawler.utils.Utils
+import com.sheryv.util.io.DataTransferProgress
+import com.sheryv.util.io.FileDownloader
+import com.sheryv.util.io.FileUtils
 import com.sheryv.util.logging.log
+import com.sheryv.util.unit.BinaryTransferSpeed
 import kotlinx.coroutines.delay
 import java.nio.file.Files
 import java.nio.file.Path
@@ -31,20 +34,10 @@ class M3U8DownloadingTask(
   override suspend fun preProcess() {
     tempDir.createDirectories()
     
-    val baseURL = url.substring(0, url.lastIndexOf("/") + 1)
-    parts = HttpSupport().sendString(url).lines()
-      .filter { it.contains(".ts") && !it.trimStart().startsWith("#") }
-      .map {
-        if (it.startsWith("http:") || it.startsWith("https:")) {
-          it
-        } else {
-          baseURL + it
-        }
-      }
-      .mapIndexed { index, url ->
-        val partPath = tempDir.resolve(index.toString().padStart(5, '0') + ".ts.part")
-        M3U8Part(index, partPath, FileDownloader(url, partPath))
-      }
+    parts = Utils.getChunksOfM3U8Video(url).mapIndexed { index, url ->
+      val partPath = tempDir.resolve(index.toString().padStart(5, '0') + ".ts.part")
+      M3U8Part(index, partPath, FileDownloader(url, partPath))
+    }
   }
   
   override suspend fun transfer() {
@@ -121,9 +114,8 @@ class M3U8DownloadingTask(
   }
   
   
-  override fun avgSpeed(durationMillis: Long): FileSize {
-    val started = parts.filter { it.process.started }
-    return FileSize((started.mapNotNull { it.process.progress?.size }.sum() / (durationMillis / 1000.0)).toLong())
+  override fun avgSpeed(durationMillis: Long): BinaryTransferSpeed {
+    return BinaryTransferSpeed.calc(currentlyDownloadedBytes() / (durationMillis / 1000.0))
   }
   
   override fun stop() {
@@ -133,35 +125,41 @@ class M3U8DownloadingTask(
     }
   }
   
-  override fun extrapolateSize(): FileSize {
-    val checked = parts.filter { it.process.isComplete }.takeIf { it.isNotEmpty() }
-      ?: parts.filter { it.process.started }.takeIf { it.isNotEmpty() } ?: return FileSize.ZERO
+  override fun extrapolateSize(): Long {
+    val checked = parts.filter { it.process.isComplete }.mapNotNull { it.process.progress?.totalSizeBytes }.takeIf { it.isNotEmpty() }
+      ?: parts.filter { it.process.started }.mapNotNull { it.process.progress?.totalSizeBytes }.takeIf { it.isNotEmpty() }
+      ?: return 0
     
-    val avgPartSize = (checked.mapNotNull { it.process.progress?.size }.sum() / checked.size)
+    val avgPartSize = checked.sum() / checked.size
     
-    return FileSize(avgPartSize * parts.size)
+    return avgPartSize * parts.size
   }
   
-  override fun progress(): DownloadProgress? {
+  override fun currentlyDownloadedBytes(): Long {
+    return parts.filter { it.process.started }.mapNotNull { it.process.progress?.currentSizeBytes }.sum()
+  }
+  
+  override fun progress(): DataTransferProgress? {
     if (!state.hasStats()) {
       return null
     }
     
-    val totalSize = extrapolateSize()
-    val res = DownloadProgress(totalSize.sizeInBytes)
-    if (totalSize.sizeInBytes > 0) {
-      val list = ArrayList(parts).filter { it.process.started }
-      val bytes = list.mapNotNull { it.process.progress?.currentBytes }.sum()
-      res.currentBytes = bytes
-      
-      val speed = (list.mapNotNull { it.process.progress?.currentSpeed }.sum() / list.size) * parts.size.coerceAtMost(config.connectionsPerFile)
-      res.currentSpeed = speed
-      res.currentRatio = ((bytes.toDouble() / totalSize.sizeInBytes))
-    }
-    return res
+    val currentlyDownloadedBytes = currentlyDownloadedBytes()
+    val speed = startTime?.let {
+      val duration = (finishTime?.toEpochMilli() ?: System.currentTimeMillis()) - it.toEpochMilli()
+      currentlyDownloadedBytes / (duration / 1000.0)
+    } ?: 0.0
+    
+    return DataTransferProgress(
+      initTime!!,
+      extrapolateSize(),
+      speed,
+      currentlyDownloadedBytes
+    )
   }
   
   fun partsNumber() = parts.size
+  
   
   private data class M3U8Part(val index: Int, val file: Path, val process: FileDownloader)
 }

@@ -11,7 +11,7 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.jdownloader.JDownloa
 import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.util.DateUtils
-import com.sheryv.util.FileUtils
+import com.sheryv.util.io.FileUtils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.fx.core.view.FxmlView
 import javafx.fxml.FXML
@@ -69,7 +69,7 @@ class JDownloaderView : FxmlView("view/jdownloader-generate.fxml") {
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), ViewUtils.TITLE,
-        "Error while generating file", Alert.AlertType.ERROR, true, ButtonType.OK
+        "Error while generating file", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
     }
   }

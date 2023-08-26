@@ -11,6 +11,7 @@ import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
 import com.sheryv.util.*
+import com.sheryv.util.io.FileUtils
 import com.sheryv.util.logging.log
 import org.apache.commons.lang3.StringUtils
 import java.awt.*
@@ -218,12 +219,13 @@ class SearchWindow {
         if (found != null) {
           return@map found.copy(title = ep.name).apply { lastSize.set(found.lastSize.value) }
         }
-        Episode(ep.name, ep.episodeNumber, null, "")
+        Episode(0, ep.name, ep.episodeNumber, null, "")
       } to api.getImdbId(i.id)
     },
       { (episodeList, imdb) ->
         if (episodeList.isNotEmpty()) {
           val series = Series(
+            0,
             i.name,
             season,
             lastSeries!!.lang,

@@ -1,11 +1,10 @@
 package com.sheryv.tools.subtitlestranslator;
 
 import com.sheryv.tools.subtitlestranslator.subsdownload.Runner;
-import com.sheryv.util.FileUtils;
+import com.sheryv.util.io.FileUtils;
 import com.sheryv.util.SerialisationUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.concurrent.Executors;
 
 public class Main {

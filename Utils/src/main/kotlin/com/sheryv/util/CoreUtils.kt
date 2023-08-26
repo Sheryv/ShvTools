@@ -4,8 +4,8 @@
 package com.sheryv.util
 
 import com.sheryv.util.event.AsyncEvent
-import com.sheryv.util.event.EventBus
 import com.sheryv.util.event.AsyncEventHandler
+import com.sheryv.util.event.EventBus
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.*
 
@@ -19,19 +19,39 @@ object CoreUtils {
   fun parseBoolean(s: String?) = "1" == s || "true".equals(s, true) || "yes".equals(s, true) || "y".equals(s, true)
 }
 
-
 fun inBackground(
+  toUpdate: EditableValue<Boolean>? = null,
   start: CoroutineStart = CoroutineStart.DEFAULT,
   block: suspend CoroutineScope.() -> Unit
 ): Job {
-  return GlobalScope.launch(Dispatchers.IO, start, block)
+  toUpdate?.set(true)
+  return GlobalScope.launch(Dispatchers.IO, start, block).apply {
+    invokeOnCompletion {
+      toUpdate?.set(false)
+      
+      if (it != null && it != CancellationException()) {
+        log.error("Error executing async block", it)
+      }
+    }
+  }
 }
 
 fun inMainThread(
+  toUpdate: EditableValue<Boolean>? = null,
   start: CoroutineStart = CoroutineStart.DEFAULT,
   block: suspend CoroutineScope.() -> Unit
 ): Job {
-  return GlobalScope.launch(Dispatchers.Main, start, block)
+  toUpdate?.set(true)
+  return GlobalScope.launch(Dispatchers.Main, start) {
+    try {
+      block()
+    } catch (ignored: CancellationException) {
+    } catch (e: Exception) {
+      log.error("Error executing async block", e)
+    } finally {
+      toUpdate?.set(false)
+    }
+  }
 }
 
 //inline fun eventsAttach(receiver: Any) {

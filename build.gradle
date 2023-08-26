@@ -93,6 +93,8 @@ subprojects {
 
         tasks.named("createExe")?.configure {
             doFirst {
+                project.version = project.ext.getVersionName(project.name, false, true)
+
                 project.extensions.getByName("launch4j").with {
                     textVersion = project.ext.shortVersion
                     version = project.version

@@ -10,7 +10,6 @@ import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
 import com.sheryv.tools.webcrawler.utils.Utils
-import com.sheryv.tools.webcrawler.utils.lg
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
@@ -57,7 +56,7 @@ abstract class StreamingWebsiteBase(
         log.error("Error while trying to deserialize current series", e)
         null
       }
-    } else null) ?: Series(settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
+    } else null) ?: Series(0, settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
     
     driver.get(getSeriesLink())
 //    driver.get("https://bot.sannysoft.com/")
@@ -153,6 +152,7 @@ abstract class StreamingWebsiteBase(
         err.add(ErrorEntry(2, "Download url not found"))
       }
       val ep = Episode(
+        0,
         item.title,
         item.number,
         downloadUrl,

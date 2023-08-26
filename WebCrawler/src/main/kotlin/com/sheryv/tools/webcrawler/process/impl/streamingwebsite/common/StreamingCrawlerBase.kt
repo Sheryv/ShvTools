@@ -45,18 +45,6 @@ abstract class StreamingCrawlerBase(
       return
     }
     val series = SerialisationUtils.jsonMapper.readValue(path.toFile(), Series::class.java)
-    var output = """Series title: ${series.title}
-      |Season: ${series.season}
-      |
-      |Episodes: ${series.episodes.size}
-      |
-    """.trimMargin()
-    
-    output += series.episodes.joinToString("\n") {
-      "${it.number.toString().padStart(2)}. ${
-        it.title.padEnd(37).take(37)
-      } | ${it.downloadUrl.toString()}"
-    }
-    emitEvent(FetchedDataStatusChangedEvent(output))
+    emitEvent(FetchedDataStatusChangedEvent(series.formattedString()))
   }
 }

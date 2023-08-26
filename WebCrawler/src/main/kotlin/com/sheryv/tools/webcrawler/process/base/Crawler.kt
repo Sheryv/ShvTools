@@ -9,7 +9,7 @@ import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
 import com.sheryv.tools.webcrawler.process.base.model.TerminationException
-import com.sheryv.tools.webcrawler.utils.lg
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.delay
 
 abstract class Crawler<T : SDriver, S : SettingsBase>(
@@ -22,7 +22,7 @@ abstract class Crawler<T : SDriver, S : SettingsBase>(
   abstract fun getSteps(): List<Step<out Any, out Any>>
   
   fun logText(text: String, vararg params: Any) {
-    lg(javaClass).debug("[${def.id()}|${browser.type.name}] " + text, *params)
+    log.debug("[${def.id()}|${browser.type.name}] " + text, *params)
   }
   
   override fun toString(): String = "${def.attributes.name} [${def.id()}]"

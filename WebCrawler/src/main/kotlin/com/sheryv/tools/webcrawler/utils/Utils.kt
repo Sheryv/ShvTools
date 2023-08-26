@@ -2,20 +2,30 @@ package com.sheryv.tools.webcrawler.utils
 
 //import kotlinx.coroutines.*
 
-import com.sheryv.util.HttpSupport
-import com.sheryv.util.logging.LoggingUtils
+import com.sheryv.util.io.HttpSupport
 import org.apache.http.HttpResponse
 import org.apache.http.client.methods.HttpUriRequest
 import org.apache.http.conn.ssl.NoopHostnameVerifier
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory
 import org.apache.http.impl.client.HttpClients
 import org.apache.http.util.EntityUtils
-import org.slf4j.Logger
 import java.security.MessageDigest
 
 
 object Utils {
   
+  fun getChunksOfM3U8Video(url: String): List<String> {
+    val baseURL = url.substring(0, url.lastIndexOf("/") + 1)
+    return HttpSupport().sendString(url).lines()
+      .filter { it.contains(".ts") && !it.trimStart().startsWith("#") }
+      .map {
+        if (it.startsWith("http:") || it.startsWith("https:")) {
+          it
+        } else {
+          baseURL + it
+        }
+      }
+  }
   
   fun md5Hash(text: String): ByteArray {
     val md = MessageDigest.getInstance("MD5")
@@ -42,13 +52,3 @@ object Utils {
     }
   }
 }
-
-inline fun <reified T> T.lg(clazz: Class<*> = T::class.java): Logger {
-  return LoggingUtils.getLogger(clazz)
-}
-
-inline fun Any.lg(name: String): Logger {
-  return LoggingUtils.getLogger(name)
-}
-
-

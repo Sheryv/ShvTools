@@ -7,7 +7,7 @@ enum class SingleAssignThreadSafetyMode {
   NONE
 }
 
-fun <T> singleAssign(threadSafetyMode: SingleAssignThreadSafetyMode = SingleAssignThreadSafetyMode.SYNCHRONIZED): SingleAssign<T> =
+fun <T> singleAssign(threadSafetyMode: SingleAssignThreadSafetyMode = SingleAssignThreadSafetyMode.NONE): SingleAssign<T> =
   if (threadSafetyMode == SingleAssignThreadSafetyMode.SYNCHRONIZED) SynchronizedSingleAssign() else UnsynchronizedSingleAssign()
 
 interface SingleAssign<T> {

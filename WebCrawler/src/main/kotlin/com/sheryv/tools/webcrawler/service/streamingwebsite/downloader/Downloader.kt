@@ -105,11 +105,6 @@ object Downloader {
   
   fun isRunning() = schedulerJob != null
   
-  @Subscribe
-  fun onConfigChanged(c: ConfigurationChangedEvent) {
-    this.config = c.configuration.downloaderConfig
-  }
-  
   fun tasks(): List<DownloadingTask> = synchronized(lock) {
     return@synchronized queue.toList()
   }
