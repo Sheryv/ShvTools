@@ -9,7 +9,10 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServerFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
@@ -48,12 +51,17 @@ class ZerionCrawler(
           ".filter(v=>v.childNodes[0].nodeName == 'TD')" +
           ".map(v=>{return {h: v.childNodes[0].textContent, q: v.childNodes[1].textContent}})"
     
-    return driver.executeScriptFetchList(js)?.mapIndexed { i, map ->
-      val name = map["h"]!!.toString().trim { it <= ' ' }.lowercase()
-      val format = map["q"]!!.toString().trim { it <= ' ' }.lowercase()
-      
-      VideoServer(name, i, EpisodeAudioTypes.UNKNOWN, VideoServerFormat(format))
-    } ?: emptyList()
+    return driver.executeScriptFetchList(js)
+      ?.map { map ->
+        val name = map["h"]!!.toString().trim { it <= ' ' }.lowercase()
+        val format = map["q"]!!.toString().trim { it <= ' ' }.lowercase()
+        Pair(name, format)
+      }
+      ?.filter { it.first != "premium" }
+      ?.mapIndexed { i, (name, format) ->
+        VideoServer(name, i, EpisodeAudioTypes.UNKNOWN, VideoServerFormat(format))
+      }
+      ?: emptyList()
   }
   
   override suspend fun <T> goToExternalServerVideoPage(data: VideoData, blockExecutedOnPage: (suspend () -> T)?): T? {

@@ -130,19 +130,29 @@ fun Parent.toolbar(vararg nodes: Node, op: ToolBar.() -> Unit = {}): ToolBar {
 @Deprecated("No need to wrap ToolBar children in children{} anymore. Remove the wrapper and all builder items will still be added as before.", ReplaceWith("no children{} wrapper"), DeprecationLevel.WARNING)
 fun ToolBar.children(op: ToolBar.() -> Unit) = apply { op() }
 
-fun Parent.hbox(spacing: Number? = null, alignment: Pos? = null, op: HBox.() -> Unit = {}): HBox {
+fun Parent.hbox(spacing: Number = 10.0, alignment: Pos = Pos.CENTER_LEFT, fillHeight: Boolean = true, op: HBox.() -> Unit = {}): HBox {
   val hbox = HBox()
-  if (alignment != null) hbox.alignment = alignment
-  if (spacing != null) hbox.spacing = spacing.toDouble()
+  hbox.alignment = alignment
+  hbox.spacing = spacing.toDouble()
+  hbox.isFillHeight = fillHeight
+  hbox.maxWidth = Double.MAX_VALUE
+  hbox.maxHeight = Double.MAX_VALUE
   return hbox.attachTo(this, op)
 }
 
-fun Parent.vbox(spacing: Number? = null, alignment: Pos? = null, op: VBox.() -> Unit = {}): VBox {
+fun Parent.hbox0(spacing: Number = 0, alignment: Pos = Pos.CENTER, op: HBox.() -> Unit = {}): HBox = hbox(spacing, alignment, true, op)
+
+fun Parent.vbox(spacing: Number = 10.0, alignment: Pos = Pos.TOP_LEFT, fillWidth: Boolean = true, op: VBox.() -> Unit = {}): VBox {
   val vbox = VBox()
-  if (alignment != null) vbox.alignment = alignment
-  if (spacing != null) vbox.spacing = spacing.toDouble()
+  vbox.alignment = alignment
+  vbox.spacing = spacing.toDouble()
+  vbox.isFillWidth = fillWidth
+  vbox.maxWidth = Double.MAX_VALUE
+  vbox.maxHeight = Double.MAX_VALUE
   return vbox.attachTo(this, op)
 }
+
+fun Parent.vbox0(spacing: Number = 0, alignment: Pos = Pos.CENTER, op: VBox.() -> Unit = {}): VBox = vbox(spacing, alignment, true, op)
 
 fun ToolBar.separator(orientation: Orientation = Orientation.HORIZONTAL, op: Separator.() -> Unit = {}): Separator {
   val separator = Separator(orientation).also(op)

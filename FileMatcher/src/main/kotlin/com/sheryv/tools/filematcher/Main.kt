@@ -18,6 +18,6 @@ fun main(args: Array<String>) {
 
 class Main : Application() {
   override fun start(stage: Stage) {
-    ViewUtils.createWindow<MainView>("main.fxml", "ShvFileMatcher", stage)
+    ViewUtils.createWindow<MainView>("main.fxml", ViewUtils.title, stage)
   }
 }

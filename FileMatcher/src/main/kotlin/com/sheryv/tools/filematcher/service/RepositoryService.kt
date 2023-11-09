@@ -1,17 +1,16 @@
 package com.sheryv.tools.filematcher.service
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.model.*
 import com.sheryv.tools.filematcher.utils.DataUtils
-import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.Utils
-import javafx.stage.Window
 import java.io.File
 import java.io.FileNotFoundException
 import java.net.SocketException
-import java.nio.file.*
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 class RepositoryService {
   
@@ -25,10 +24,10 @@ class RepositoryService {
   
   fun loadRepositoryFromFile(file: File): Repository {
     val mapper = if (file.extension.lowercase() == "json") DataUtils.jsonMapper() else DataUtils.yamlMapper()
-    return loadRepositoryFromTemplate(mapper.readValue(file, RepositoryTemplate::class.java))
+    return loadRepositoryFromTemplate(mapper.readValue(file, RepositoryTemplate::class.java), file.toPath())
   }
   
-  private fun loadRepositoryFromTemplate(template: RepositoryTemplate): Repository {
+  private fun loadRepositoryFromTemplate(template: RepositoryTemplate, baseDir: Path? = null): Repository {
     val repoBaseUrl = template.baseUrl
     val bundles = template.bundles.map { b ->
       val base = if (b.isLink()) {
@@ -49,13 +48,18 @@ class RepositoryService {
       
       val versions = base.versions?.map { ver ->
         if (ver is BundleVersionLink) {
-          val url = buildUrl(ver.link, DataUtils.buildUrlFromBase(base.baseItemUrl, repoBaseUrl))
-          val externalVersion = loadExternalVersion(url)
-          externalVersion.specSource = url
-          externalVersion.copy(
-            versionId = ver.versionId,
-            versionName = ver.versionName.takeIf { !it.isBlank() } ?: externalVersion.versionName
-          )
+          val path = baseDir?.parent?.resolve(ver.link) ?: Path.of(ver.link)
+          if (Files.exists(path)) {
+            DataUtils.yamlMapper().readValue(path.toFile(), BundleVersion::class.java)
+          } else {
+            val url = buildUrl(ver.link, DataUtils.buildUrlFromBase(base.baseItemUrl, repoBaseUrl))
+            val externalVersion = loadExternalVersion(url)
+            externalVersion.specSource = url
+            externalVersion.copy(
+              versionId = ver.versionId,
+              versionName = ver.versionName.takeIf { !it.isBlank() } ?: externalVersion.versionName
+            )
+          }
         } else {
           ver as BundleVersion
         }

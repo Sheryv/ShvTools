@@ -316,6 +316,7 @@ abstract class StreamingWebsiteBase(
       CommonVideoServers.values().associateWith { object : VideoServerHandler(it, driver, this) {} }.toMutableMap()
     
     createHandlerWithCustomRegexCheck(CommonVideoServers.VOE, Regex(""".*index.*.m3u8.*"""), map)
+    createHandlerWithCustomRegexCheck(CommonVideoServers.VTUBE, Regex(""".*index.*.m3u8.*"""), map)
     createHandlerWithCustomRegexCheck(CommonVideoServers.UPSTREAM, Regex(""".*index.*.m3u8.*"""), map)
     createHandlerWithCustomRegexCheck(CommonVideoServers.VIDSTREAM, Regex(""".*v.m3u8.*"""), map)
     return map

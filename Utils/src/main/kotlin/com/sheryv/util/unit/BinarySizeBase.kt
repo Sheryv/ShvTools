@@ -18,7 +18,7 @@ abstract class BinarySizeBase<T : MetricUnit>() : ScientificValue<Double, T>() {
   
   companion object {
     @JvmStatic
-    val defaultFormatter = DecimalFormat("# ##0.#")
+    val defaultFormatter = DecimalFormat("#,##0.#")
     
     @JvmStatic
     protected fun recalculate(value: Double, unit: BinaryUnit): Triple<Double, Long, BinaryUnit> {

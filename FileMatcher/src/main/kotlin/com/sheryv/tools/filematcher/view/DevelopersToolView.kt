@@ -8,7 +8,6 @@ import com.sheryv.tools.filematcher.service.*
 import com.sheryv.tools.filematcher.utils.DialogUtils
 import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.ViewUtils
-import com.sheryv.tools.filematcher.utils.lg
 import com.sheryv.tools.lasso.util.OnChangeScheduledExecutor
 import com.sheryv.util.logging.log
 import javafx.fxml.FXML
@@ -22,7 +21,6 @@ import org.greenrobot.eventbus.Subscribe
 import java.io.File
 import java.nio.file.Paths
 import java.util.*
-import java.util.function.Consumer
 import java.util.regex.Pattern
 
 class DevelopersToolView : BaseView() {
@@ -181,11 +179,13 @@ class DevelopersToolView : BaseView() {
               context.version.entries = it.data!!
               updateView()
             }
+            
             ResultType.ERROR -> DialogUtils.textAreaDialog(
               "Details",
               it.error?.message.orEmpty(),
               "Error occurred when listing items form filesystem"
             )
+            
             else -> {}
           }
           
@@ -219,10 +219,12 @@ class DevelopersToolView : BaseView() {
             ResultType.SUCCESS -> {
               displayRepository(it.data!!)
             }
+            
             ResultType.ERROR -> DialogUtils.textAreaDialog(
               "Details", it.error?.stackTraceToString().orEmpty(),
-              "Error occurred while loading repository", Alert.AlertType.ERROR, false, ButtonType.OK
+              "Error occurred while loading repository", Alert.AlertType.ERROR, false, false, ButtonType.OK
             )
+            
             else -> {}
           }
         }.start()
@@ -267,6 +269,7 @@ class DevelopersToolView : BaseView() {
                       "Details", r.error?.message.orEmpty() + "\n\n------\n" + ExceptionUtils.getStackTrace(r.error),
                       "Error verifying: ", Alert.AlertType.ERROR, wrapText = false
                     )
+                  
                   else -> {}
                 }
               }.start()
@@ -328,6 +331,22 @@ class DevelopersToolView : BaseView() {
                 removeDuplicates()
               }
             },
+            MenuItem("Update urls from lines of text").apply {
+              setOnAction {
+                DialogUtils.textAreaDialog(
+                  "Text",
+                  "",
+                  "Input lines of text with urls - one url per line. Each url should have matching file as its part",
+                  wrapText = false,
+                  editable = true
+                )
+                  .ifPresent {
+                    MinecraftService().updateUrlsFromText(it.second, context!!.version)
+                    DialogUtils.dialog("", "Completed", Alert.AlertType.INFORMATION, ButtonType.OK)
+                    treeView.refresh()
+                  }
+              }
+            }
           )
         )
       }
@@ -373,11 +392,13 @@ class DevelopersToolView : BaseView() {
             Configuration.get().save()
             displayRepository(context!!.repo)
           }
+          
           ResultType.ERROR -> DialogUtils.textAreaDialog(
             "Details",
             it.error?.message.orEmpty(),
             "Error occurred when updating"
           )
+          
           else -> {}
         }
       }.start()
@@ -471,11 +492,13 @@ class DevelopersToolView : BaseView() {
             context = DevContext(it.data!!, it.data.bundles.first().versions.maxByOrNull { it.versionId }!!)
             treeView.root = ViewUtils.toTreeItems(context!!.version.entries)
           }
+          
           ResultType.ERROR -> DialogUtils.textAreaDialog(
             "Details",
             it.error?.message.orEmpty(),
             "Error occurred when generating"
           )
+          
           else -> {}
         }
       }.start()
@@ -520,11 +543,13 @@ class DevelopersToolView : BaseView() {
           displayRepository(saved.repo, saved.version)
           lbProcessState.text = "Saved"
         }
+        
         ResultType.ERROR -> DialogUtils.textAreaDialog(
           "Details",
           it.error?.message.orEmpty(),
           "Error occurred when saving"
         )
+        
         else -> {}
       }
     }.start()
@@ -644,7 +669,7 @@ class DevelopersToolView : BaseView() {
             "\nDo you want to continue deleting following files:\n${toDelete.joinToString("\n") { it.name }}",
         buttons = arrayOf(ButtonType.YES, ButtonType.CANCEL)
       ).ifPresent {
-        if (it == ButtonType.YES) {
+        if (it.first == ButtonType.YES) {
           toDelete.forEach { it.delete() }
         }
       }

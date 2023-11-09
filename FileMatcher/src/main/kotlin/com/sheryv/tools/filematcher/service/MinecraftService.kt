@@ -3,14 +3,12 @@ package com.sheryv.tools.filematcher.service
 import com.sheryv.tools.filematcher.model.BundleVersion
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.Matching
-import com.sheryv.tools.filematcher.model.Repository
 import com.sheryv.tools.filematcher.model.minecraft.Addon
 import com.sheryv.tools.filematcher.model.minecraft.InstanceConfig
 import com.sheryv.tools.filematcher.utils.DataUtils
-import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.util.logging.log
 import java.io.File
-import java.nio.file.Paths
 
 private val URL_REGEX = Regex("curseforge\\.com/minecraft.+download/(\\d{5,})")
 private val MOD_FULL_REGEX = Regex("([+A-Za-z\\d_-]+(\\d+)?)[_-]([\\w.]+[_-])?(.*)\\.jar")
@@ -26,21 +24,21 @@ class MinecraftService {
     val instance = DataUtils.jsonMapper().readValue(curseForgeSource, InstanceConfig::class.java)
 //    repository.bundles.forEach { b ->
 //      b.versions.forEach { v ->
-        version.entries = version.entries.map { e ->
-          findAddon(e.name, instance)?.let { a ->
-            val map = e.additionalFields + mapOf(
-              "projectId" to a.addonID.toString(),
-              "fileId" to a.installedFile.id.toString(),
-              "fileFingerPrint" to a.installedFile.packageFingerprint,
-              "fileLength" to a.installedFile.fileLength.toString()
-            )
-            e.copy(
-              src = a.installedFile.downloadUrl,
-              itemDate = a.installedFile.fileDate,
-              additionalFields = map,
-              fileSize = a.installedFile.fileLength
-            )
-          } ?: e
+    version.entries = version.entries.map { e ->
+      findAddon(e.name, instance)?.let { a ->
+        val map = e.additionalFields + mapOf(
+          "projectId" to a.addonID.toString(),
+          "fileId" to a.installedFile.id.toString(),
+          "fileFingerPrint" to a.installedFile.packageFingerprint,
+          "fileLength" to a.installedFile.fileLength.toString()
+        )
+        e.copy(
+          src = a.installedFile.downloadUrl,
+          itemDate = a.installedFile.fileDate,
+          additionalFields = map,
+          fileSize = a.installedFile.fileLength
+        )
+      } ?: e
 //        }
 //      }
     }
@@ -70,6 +68,16 @@ class MinecraftService {
       e
     }
     return errors
+  }
+  
+  public fun updateUrlsFromText(text: String, version: BundleVersion) {
+    text.lines().map { it.trim() }.forEach { url ->
+      for (entry in version.entries) {
+        if (url.contains(SystemUtils.encodeNameForWeb(entry.name))) {
+          entry.src = url
+        }
+      }
+    }
   }
   
   

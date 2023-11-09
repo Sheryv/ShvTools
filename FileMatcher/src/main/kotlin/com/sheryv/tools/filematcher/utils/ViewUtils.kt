@@ -3,6 +3,8 @@ package com.sheryv.tools.filematcher.utils
 import com.sheryv.tools.filematcher.model.Entry
 import com.sheryv.tools.filematcher.model.TargetPath
 import com.sheryv.tools.filematcher.view.BaseView
+import com.sheryv.util.fx.core.view.SimpleView
+import com.sheryv.util.fx.lib.onChange
 import com.sheryv.util.logging.log
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ObservableValue
@@ -10,10 +12,7 @@ import javafx.beans.value.ObservableValueBase
 import javafx.fxml.FXMLLoader
 import javafx.scene.Parent
 import javafx.scene.Scene
-import javafx.scene.control.Alert
-import javafx.scene.control.TreeItem
-import javafx.scene.control.TreeTableCell
-import javafx.scene.control.TreeTableColumn
+import javafx.scene.control.*
 import javafx.scene.image.Image
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Region
@@ -21,6 +20,8 @@ import javafx.stage.Stage
 import javafx.util.Callback
 
 object ViewUtils {
+  
+  const val title = "ShvFileMatcher"
   
   fun createTreeColumn(
     name: String,
@@ -207,6 +208,42 @@ object ViewUtils {
     }
   }
   
+  fun <Item, Column> tableCellFactoryWithCustomCss(
+    allCssClasses: Set<String>,
+    cssClassMapper: (Item) -> List<String>
+  ): Callback<TableColumn<Item, Column>, TableCell<Item, Column>> {
+    return Callback<TableColumn<Item, Column>, TableCell<Item, Column>> {
+      object : TableCell<Item, Column>() {
+        
+        override fun updateItem(item: Column?, empty: Boolean) {
+          super.updateItem(item, empty)
+          
+          updateCss(empty)
+//            text = valueMapper.invoke(treeTableRow.treeItem.value)
+          text = item?.toString()
+          graphic = null
+        }
+        
+        private fun updateCss(empty: Boolean) {
+          if (empty || tableRow.isEmpty || tableRow.item == null) {
+            graphic = null
+            text = null
+            styleClass.removeAll(allCssClasses)
+          } else {
+            val current = cssClassMapper.invoke(tableRow.item)
+            if (current.all { styleClass.contains(it) }) {
+              styleClass.removeAll(allCssClasses.filter { !current.contains(it) })
+            } else {
+              styleClass.removeAll(allCssClasses)
+              styleClass.addAll(current)
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  
   fun <T : BaseView> createWindow(fxml: String, title: String, stage: Stage = Stage()): T {
     val loader = FXMLLoader(javaClass.classLoader.getResource(fxml))
     stage.icons.add(Image(javaClass.classLoader.getResourceAsStream("icons/app.png")))
@@ -219,6 +256,22 @@ object ViewUtils {
     appendStyleSheets(stage.scene)
     stage.show()
     return controller
+  }
+  
+  fun <T : SimpleView> createWindow(view: T, stage: Stage = Stage()): T {
+    val scene = Scene(view.root,1300.0, 600.0)
+    stage.scene = scene
+    appendStyleSheets(stage.scene)
+    stage.titleProperty().bind(view.titleProperty)
+    view.iconProperty.onChange {
+      stage.icons.clear()
+      stage.icons.add(it)
+    }
+    view.onViewCreated(stage)
+    view.onViewReady()
+    stage.show()
+    view.onViewShown()
+    return view
   }
   
   fun <T> withErrorHandler(block: () -> T): T? {

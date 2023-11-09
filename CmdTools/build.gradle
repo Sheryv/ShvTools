@@ -19,5 +19,7 @@ dependencies {
     kapt libs.picocli.codegen
 
     implementation project(':web-util')
+
+    implementation 'black.ninia:jep:4.1.1'
 }
 

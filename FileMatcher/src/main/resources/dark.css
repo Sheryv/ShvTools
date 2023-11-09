@@ -141,9 +141,9 @@
 /*    -fx-dark-text-color: rgb(67, 193, 102);*/
 /*}*/
 
-.tree-table-row-cell:odd {
-    -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background, 4%);
-}
+/*.tree-table-row-cell:odd {*/
+/*    -fx-background-color: -fx-table-cell-border-color, derive(-fx-control-inner-background, 4%);*/
+/*}*/
 
 .tree-table-row-cell:selected, .table-row-cell:selected {
     -fx-background-color: derive(-fx-control-inner-background, 17%);
@@ -165,7 +165,7 @@
     -fx-background-color: transparent;
 }*/
 
-.tree-table-view {
+.tree-table-view, .table-view  {
     -fx-table-cell-border-color: transparent;
 }
 

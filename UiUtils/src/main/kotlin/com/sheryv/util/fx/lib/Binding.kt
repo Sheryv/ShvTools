@@ -166,16 +166,18 @@ fun <T, N> ObservableValue<T>.toList(nested: (T) -> List<N>?): ObservableList<N>
   val list = FXCollections.observableArrayList<N>()
   
   onChange {
-    list.setAll(it?.let(nested) ?: emptyList())
+    it?.let(nested)?.also {
+      list.setAll(it)
+    }
   }
   return list
 }
 
-fun <T, N> ObservableList<T>.mapObservable(nested: (T) -> N): ObservableList<N> {
+fun <T, N> ObservableList<T>.mapObservableItem(nested: (T) -> N): ObservableList<N> {
   return EasyBind.map(this, nested)
 }
 
-fun <T, N> ObservableValue<T>.map(nested: (T) -> N): Binding<N> {
+fun <T, N> ObservableValue<T>.mapObservable(nested: (T) -> N): Binding<N> {
   return EasyBind.map(this, nested)
 }
 

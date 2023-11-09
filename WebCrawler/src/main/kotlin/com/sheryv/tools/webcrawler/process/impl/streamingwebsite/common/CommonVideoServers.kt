@@ -27,6 +27,12 @@ enum class CommonVideoServers(
     "voe.sx",
     null, "document.querySelector('button[data-plyr=play]')?.click()"
   ),
+  VTUBE(
+    "VTube",
+    "vtube",
+    "vtbe.to",
+    "#pframe", "document.querySelector('.jw-controls .jw-button-color')?.click()"
+  ),
   VIDOZA(
     "Vidoza",
     "vidoza",

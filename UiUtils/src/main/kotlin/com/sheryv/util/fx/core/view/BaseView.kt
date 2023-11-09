@@ -38,7 +38,7 @@ abstract class FxmlView(val fxmlPath: String) : BaseView() {
 }
 
 abstract class BaseView : KoinComponent {
-  protected open val config: AppConfiguration = get()
+  protected open val config: AppConfiguration by lazy { get() }
   protected lateinit var stage: Stage
   
   open fun onViewCreated(stage: Stage) {

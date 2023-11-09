@@ -58,7 +58,7 @@ class MainView : BaseView() {
     } catch (e: Exception) {
       DialogUtils.textAreaDialog(
         "Details", e.stackTraceToString(),
-        "Error occurred while starting application", Alert.AlertType.ERROR, false, ButtonType.OK
+        "Error occurred while starting application", Alert.AlertType.ERROR, false, false, ButtonType.OK
       )
       throw e;
     }
@@ -235,8 +235,8 @@ class MainView : BaseView() {
           "The old files exist in selected directory",
           buttons = arrayOf(ButtonType.CANCEL, ButtonType.YES, ButtonType.NO)
         )
-        deleteOld = dialog.isPresent && dialog.get() == ButtonType.YES
-        allow = deleteOld || dialog.isPresent && dialog.get() == ButtonType.NO
+        deleteOld = dialog.isPresent && dialog.get().first == ButtonType.YES
+        allow = deleteOld || dialog.isPresent && dialog.get().first == ButtonType.NO
       }
       
       if (allow) {
@@ -439,6 +439,9 @@ class MainView : BaseView() {
             setOnAction { createDevToolsWindow() }
             accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.SHIFT_DOWN, KeyCombination.CONTROL_DOWN)
           },
+          MenuItem("Directory compare tools").apply {
+            setOnAction { ViewUtils.createWindow(DirCompareView(Configuration.get())) }
+          },
           SeparatorMenuItem(),
           MenuItem("Load repository from file").apply {
             accelerator = KeyCodeCombination(KeyCode.R, KeyCombination.CONTROL_DOWN)
@@ -458,7 +461,7 @@ class MainView : BaseView() {
                     }
                     ResultType.ERROR -> DialogUtils.textAreaDialog(
                       "Details", it.error?.stackTraceToString().orEmpty(),
-                      "Error occurred while loading repository", Alert.AlertType.ERROR, false, ButtonType.OK
+                      "Error occurred while loading repository", Alert.AlertType.ERROR, false, false, ButtonType.OK
                     )
                     else -> {}
                   }

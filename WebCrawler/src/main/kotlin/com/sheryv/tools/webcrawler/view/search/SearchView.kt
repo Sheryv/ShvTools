@@ -101,7 +101,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
         isFillWidth = true
         
         button("Remove selected") {
-          disableProperty().bind(selectedEpisodes.sizeProperty.map { it == 0 })
+          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
           setOnAction {
             updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) })
           }
@@ -245,7 +245,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
           }
         }
         button("Show file list") {
-          disableProperty().bind(series.map { it == null })
+          disableProperty().bind(series.mapObservable { it == null })
           setOnAction {
             val s = series.value!!
             val list = s.episodes.joinToString("\n") { it.generateFileName(s, settings) }
@@ -291,7 +291,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
         isFillWidth = true
         isEditable = true
         column("#", 30) { it.number }
-        columnBound("Size") { it.lastSize.map { if (it == 0L) "" else BinarySize.format(it) } }
+        columnBound("Size") { it.lastSize.mapObservable { if (it == 0L) "" else BinarySize.format(it) } }
         column("Name", 300) { it.title }
         columnBound("URL", 1600) { it.url }.apply {
           cellFactory = TextFieldTableCell.forTableColumn()

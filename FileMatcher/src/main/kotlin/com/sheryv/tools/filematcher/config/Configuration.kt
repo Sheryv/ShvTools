@@ -3,17 +3,23 @@ package com.sheryv.tools.filematcher.config
 import com.sheryv.tools.filematcher.model.SaveOptions
 import com.sheryv.tools.filematcher.model.ValidationError
 import com.sheryv.tools.filematcher.utils.BundleUtils
+import com.sheryv.tools.filematcher.utils.ViewUtils
 import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.fx.core.app.AppConfiguration
 import java.io.File
-import java.lang.RuntimeException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 
-class Configuration {
+class Configuration : AppConfiguration() {
   var recentRepositories: MutableList<String> = LinkedList()
   var lastLoadedRepoFile: String? = null
   var devTools: DevToolConfig = DevToolConfig()
+  
+  @Transient
+  override val name: String = ViewUtils.title
+  @Transient
+  override val iconPath: String = "icons/app.png"
   
   fun save() {
     SerialisationUtils.toJson(File(FILE), this)

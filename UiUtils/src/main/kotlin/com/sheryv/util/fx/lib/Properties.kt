@@ -1,6 +1,7 @@
 package com.sheryv.util.fx.lib
 
 import com.sheryv.util.EditableValue
+import javafx.beans.InvalidationListener
 import javafx.beans.Observable
 import javafx.beans.binding.*
 import javafx.beans.property.*
@@ -740,3 +741,14 @@ fun <K, V> mapProperty(value: ObservableMap<K, V>? = null): MapProperty<K, V> = 
 fun <T> objectProperty(value: T? = null): ObjectProperty<T> = SimpleObjectProperty(value)
 fun <V> setProperty(value: ObservableSet<V>? = null): SetProperty<V> = SimpleSetProperty(value)
 fun stringProperty(value: String? = null): StringProperty = SimpleStringProperty(value)
+
+
+class TriggerObservableValue internal constructor() : ObservableValueBase<Unit>() {
+  override fun getValue() {
+  
+  }
+  
+  fun fire() = fireValueChangedEvent()
+}
+
+fun triggerObs():TriggerObservableValue  = TriggerObservableValue()
