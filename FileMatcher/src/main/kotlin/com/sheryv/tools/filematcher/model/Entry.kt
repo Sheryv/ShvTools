@@ -54,6 +54,9 @@ class Entry(
   @JsonIgnore
   var enabledProperty = SimpleBooleanProperty(enabled)
   
+  @JsonIgnore
+  var previousUpdateDate = updateDate
+  
   init {
     enabledProperty.addListener { o, _, n ->
       val e = this
@@ -162,8 +165,9 @@ class Entry(
       linkedItemBundleId,
       linkedItemBundleVersionId,
       linkedItemId,
-    ).apply {
-      this.state = state
+    ).also {
+      it.state = state
+      it.previousUpdateDate = this.updateDate
     }
   }
   

@@ -18,7 +18,9 @@ class BundleVersion(
   val experimental: Boolean = false,
   val includeVersions: List<Long> = emptyList(),
   @JsonIgnore
-  var specSource: String? = null
+  var specSource: String? = null,
+  @JsonIgnore
+  var sourceLink: BundleVersionLink? = null
 ) : BundleVersionBase(versionId, versionName) {
   
   @JsonIgnore

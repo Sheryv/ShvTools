@@ -1,13 +1,14 @@
 package com.sheryv.tools.filematcher.service
 
-import com.sheryv.tools.filematcher.model.*
+import com.sheryv.tools.filematcher.model.DevContext
+import com.sheryv.tools.filematcher.model.Entry
+import com.sheryv.tools.filematcher.model.Hash
+import com.sheryv.tools.filematcher.model.ProcessResult
 import com.sheryv.tools.filematcher.utils.BundleUtils
 import com.sheryv.tools.filematcher.utils.Hashing
 import com.sheryv.tools.filematcher.utils.SystemUtils
 import com.sheryv.tools.filematcher.utils.Utils
-import com.sheryv.util.Strings
 import java.io.File
-import java.nio.file.Path
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -73,12 +74,20 @@ class EntryGenerator(
           
           val additional = e.additionalFields.toMutableMap()
           nn.additionalFields.forEach { additional.putIfAbsent(it.key, it.value) }
+          val date = if (e.group) {
+            null
+          } else if (e.fileSize != nn.fileSize || e.hashes?.hasAnySameHash(nn.hashes) != true || e.additionalFields != additional) {
+            nn.updateDate
+          } else {
+            e.updateDate
+          }
+          
           return@mapNotNull e.copy(
 //            id = nn.id,
 //            parent = nn.parent,
             fileSize = nn.fileSize,
             hashes = nn.hashes,
-            updateDate = nn.updateDate,
+            updateDate = date,
             additionalFields = additional
           )
         }

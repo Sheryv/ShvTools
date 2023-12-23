@@ -1,5 +1,6 @@
 package com.sheryv.util
 
+import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature
@@ -93,6 +94,7 @@ object SerialisationUtils {
     map.configure(SerializationFeature.INDENT_OUTPUT, true)
     map.registerModule(KotlinModule.Builder().build())
     map.registerModule(JavaTimeModule())
+    map.setSerializationInclusion(JsonInclude.Include.NON_NULL)
     map.dateFormat = StdDateFormat()
     map.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)

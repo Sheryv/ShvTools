@@ -41,6 +41,7 @@ data class BundleTemplate(
     return name
   }
   
+  @JsonIgnore
   fun isLink() = link != null
   
   fun toBundle(versionsFilled: List<BundleVersion>): Bundle {

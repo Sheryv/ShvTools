@@ -1,6 +1,7 @@
 package com.sheryv.tools.filematcher.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.sheryv.tools.filematcher.utils.SystemUtils
 
 class SaveOptions(
   val bundleId: String = "bundle1",
@@ -35,6 +36,19 @@ class SaveOptions(
   
   @JsonIgnore
   fun isJson() = "JSON" == format.uppercase()
+  
+  fun differsWithBundle(bundle: Bundle): Boolean {
+    return bundle.id != bundleId
+        || bundle.name != bundleName
+        || bundle.baseItemUrl != bundleUrl
+        || bundle.preferredBasePath != BasePath(bundleBasePath)
+  }
+  
+  fun differsWithVersion(version: BundleVersion): Boolean {
+    return version.versionId != versionId
+        || version.versionName != versionName
+        || version.versionUrlPart != SystemUtils.encodeNameForWeb(versionName)
+  }
   
   companion object {
     @JvmStatic

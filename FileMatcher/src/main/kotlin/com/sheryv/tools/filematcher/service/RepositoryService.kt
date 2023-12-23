@@ -48,8 +48,16 @@ class RepositoryService {
       
       val versions = base.versions?.map { ver ->
         if (ver is BundleVersionLink) {
-          val path = baseDir?.parent?.resolve(ver.link) ?: Path.of(ver.link)
-          if (Files.exists(path)) {
+          var path: Path? = null
+          if (!DataUtils.isAbsoluteUrl(ver.link)) {
+            path = if (!DataUtils.isAbsoluteUrl(base.baseItemUrl.orEmpty())) {
+              baseDir?.parent?.resolve(base.baseItemUrl.orEmpty())?.resolve(ver.link)
+            } else {
+              baseDir?.parent?.resolve(ver.link)
+            } ?: Path.of(ver.link)
+          }
+          
+          if (path != null && Files.exists(path)) {
             DataUtils.yamlMapper().readValue(path.toFile(), BundleVersion::class.java)
           } else {
             val url = buildUrl(ver.link, DataUtils.buildUrlFromBase(base.baseItemUrl, repoBaseUrl))
@@ -179,24 +187,42 @@ class RepositoryService {
     context: DevContext,
     overrides: SaveOptions,
     versions: List<BundleVersion>
-  ) = context.bundle.copy(
-    id = overrides.bundleId,
-    name = overrides.bundleName,
-    baseItemUrl = overrides.bundleUrl,
-    preferredBasePath = BasePath(overrides.bundleBasePath),
-    updateDate = Utils.now(),
-    versions = versions,
-  )
+  ): Bundle {
+    val changed = context.bundle.versions.any { c -> c.updateDate != versions.firstOrNull { it.versionId == c.versionId }?.updateDate }
+    val date = if (overrides.differsWithBundle(context.bundle) || changed) {
+      Utils.now()
+    } else {
+      context.bundle.updateDate
+    }
+    
+    return context.bundle.copy(
+      id = overrides.bundleId,
+      name = overrides.bundleName,
+      baseItemUrl = overrides.bundleUrl,
+      preferredBasePath = BasePath(overrides.bundleBasePath),
+      updateDate = date,
+      versions = versions,
+    )
+  }
   
   private fun createVersion(
     context: DevContext,
     overrides: SaveOptions
   ): BundleVersion {
+    val date = if (overrides.differsWithVersion(context.version)
+      || context.version.entries.filter { !it.group }.any { it.updateDate != it.previousUpdateDate }
+    ) {
+      Utils.now()
+    } else {
+      context.bundle.updateDate
+    }
+    
+    
     return context.version.copy(
       versionId = overrides.versionId,
       versionName = overrides.versionName,
       versionUrlPart = SystemUtils.encodeNameForWeb(overrides.versionName),
-      updateDate = Utils.now()
+      updateDate = date
     ).apply {
       val noDisabled = entries.filter { it.group || (!it.group && it.enabled) }
       
@@ -217,22 +243,45 @@ class RepositoryService {
       val versions = mutableListOf<BundleVersionLink>()
       
       b.versions?.forEach { v ->
-        var name = SystemUtils.removeForbiddenFileChars(b.id)
-        
-        if (name.isBlank()) {
-          name = "Bundle-" + b.id
+        val l = when (v) {
+          is BundleVersion -> {
+            var name: String
+            
+            var path = File(repoFile.parent)
+            
+            if (!DataUtils.isAbsoluteUrl(b.baseItemUrl.orEmpty()))
+              path = path.resolve(b.baseItemUrl.orEmpty())
+            
+            if (v.sourceLink != null
+              && !DataUtils.isAbsoluteUrl(v.sourceLink!!.link)
+              && v.sourceLink!!.versionId == v.versionId
+              && v.sourceLink!!.versionName == v.versionName
+            ) {
+              name = v.sourceLink!!.link
+            } else {
+              name = SystemUtils.removeForbiddenFileChars(b.id)
+              if (name.isBlank()) {
+                name = "Bundle-" + b.id
+              }
+              name += "_${v.versionName}.${repoFile.extension}"
+              name = SystemUtils.removeForbiddenFileChars(name.replace(' ', '_'))
+              name = SystemUtils.encodeNameForWeb(name)
+              //        if (b.baseItemUrl != null && !DataUtils.isAbsoluteUrl(b.baseItemUrl!!)) {
+              //          name = Path.of(b.baseItemUrl!!).joinToString("/") + name
+              //        }
+            }
+            
+            path = path.resolve(name)
+            path.parentFile.mkdirs()
+            
+            mapper.writeValue(path, v)
+            
+            BundleVersionLink(v.versionId, name, v.versionName)
+          }
+          
+          is BundleVersionLink -> v
+          else -> throw RuntimeException("unknown version")
         }
-        name += "_${v.versionName}.${repoFile.extension}"
-        name = SystemUtils.removeForbiddenFileChars(name.replace(' ', '_'))
-        name = SystemUtils.encodeNameForWeb(name)
-//        if (b.baseItemUrl != null && !DataUtils.isAbsoluteUrl(b.baseItemUrl!!)) {
-//          name = Path.of(b.baseItemUrl!!).joinToString("/") + name
-//        }
-        val parent = File(repoFile.parent)
-        parent.mkdirs()
-        mapper.writeValue(File(parent, name), v)
-        
-        val l = BundleVersionLink(v.versionId, name, v.versionName)
         versions.add(l)
       }
       
