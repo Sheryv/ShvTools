@@ -151,6 +151,9 @@ subprojects {
 
     jar {
         duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        beforeEvaluate {
+            project.version = project.ext.getVersionName(project.name, false, true)
+        }
         afterEvaluate { p ->
             manifest {
                 attributes 'Implementation-Title': p.longName,
@@ -233,7 +236,7 @@ subprojects {
         java.srcDirs("build/generated/ksp/main/kotlin")
     }
 
-    version ext.getVersionName(name)
+//    version ext.getVersionName(name)
 }
 
 repositories {

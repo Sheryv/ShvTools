@@ -9,7 +9,6 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
-import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +60,9 @@ abstract class StreamingWebsiteBase(
     driver.get(getSeriesLink())
 //    driver.get("https://bot.sannysoft.com/")
     driver.waitForVisibility(By.tagName("body"))
+    if (series.title.isBlank()) {
+      series = series.copy(title = getSeriesName())
+    }
     title = driver.title
     waitIfPaused()
     
@@ -186,7 +188,7 @@ abstract class StreamingWebsiteBase(
       found = serverHandler.findVideoSrcUrl()
     }
     if (found?.startsWith("blob:") == true) {
-      var s = 18
+      var s = 25
       var streamUrl = getM3U8UrlFromEvents(serverHandler)
       while (streamUrl == null && s > 0) {
         delay(500)
@@ -254,29 +256,30 @@ abstract class StreamingWebsiteBase(
     val url = try {
       val events = getNetworkResponseEventsFromBrowserTools().filter { it.response.mimeType == "application/vnd.apple.mpegurl" }
       val m3u8events = events.filter { it.response.url.contains(".m3u8") }
-      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response.url) }
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response.url, series) }
       if (events.isNotEmpty()) {
         log.debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
           (if (i == index) "[#] " else "[ ] ") + e.response.url
         }.joinToString("\n"))
       }
-      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.response.url) }?.also {
-        log.debug("Found alternative url from browser tools: $it")
-      }
+      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.response.url, series) }
+        ?.also {
+          log.debug("Found alternative url from browser tools: $it")
+        }
     } catch (e: InvalidArgumentException) {
       null
     }
     if (url == null) {
       val events = getNetworkResponseEventsFromJS()
       val m3u8events = events.filter { it.name.contains(".m3u8") }
-      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.name) }
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.name, series) }
       if (events.isNotEmpty()) {
         log.debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
           (if (i == index) "[#] " else "[ ] ") + e.name
         }.joinToString("\n"))
       }
       
-      return m3u8events.getOrNull(index)?.name ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name) }?.also {
+      return m3u8events.getOrNull(index)?.name ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }?.also {
         log.debug("Found alternative url from JavaScript performance objects: $it")
       }
     }
@@ -301,7 +304,7 @@ abstract class StreamingWebsiteBase(
     val overwritten = object : VideoServerHandler(handler, driver, this) {
       private val streamRegex = regex
       
-      override fun checkIfM3U8UrlCorrect(url: String): Boolean {
+      override fun checkIfM3U8UrlCorrect(url: String, series: Series): Boolean {
         return url.matches(streamRegex)
       }
     }
@@ -322,9 +325,12 @@ abstract class StreamingWebsiteBase(
     return map
   }
   
+  protected open suspend fun getSeriesName(): String = ""
+  
   protected abstract suspend fun getMainLang(): String
   
   protected abstract suspend fun findEpisodeItems(serverIndex: String? = null): List<VideoData>
   
   protected abstract suspend fun loadItemDataFromSummaryPageAndGetServers(data: VideoData): List<VideoServer>
+  
 }

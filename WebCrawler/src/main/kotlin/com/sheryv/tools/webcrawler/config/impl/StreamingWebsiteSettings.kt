@@ -137,7 +137,7 @@ class StreamingWebsiteSettings(
     require(episodeCodeFormatter.isNotBlank()) { "EpisodeCodeFormatter cannot be empty" }
     require(downloadDir.isNotBlank()) { "Download directory path cannot be empty" }
     require(seriesUrl.isNotBlank()) { "Series URL cannot be empty" }
-    require(seriesName.isNotBlank()) { "Series Name cannot be empty" }
+//    require(seriesName.isNotBlank()) { "Series Name cannot be empty" }
   }
   
   private fun <T : ApplicableEntry> buildListAndAddNew(userEntries: List<T>, all: List<T>): List<T> {

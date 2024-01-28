@@ -95,4 +95,9 @@ class FilmanCrawler(
     }
   }
   
+  override suspend fun getSeriesName(): String {
+    val result = Regex("""(.* / )?(.*) - Filman\.cc.*""").matchEntire(driver.title)!!
+    return result.groups[2]!!.value
+  }
+  
 }

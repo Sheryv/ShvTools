@@ -11,7 +11,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.Streamin
 class FMoviesCrawlerDef : StreamingCrawlerBase(
   "fmovies",
   "FMovies",
-  "https://fmovies.to",
+  "https://fmoviesz.to",
 ) {
   
   override fun build(

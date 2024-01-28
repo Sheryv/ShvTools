@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.FileFormats
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
@@ -46,9 +47,9 @@ open class VideoServerHandler(
     return null
   }
   
-  open fun checkIfM3U8UrlCorrect(url: String): Boolean = true
+  open fun checkIfM3U8UrlCorrect(url: String, series: Series): Boolean = series.episodes.none { url == it.downloadUrl?.base.orEmpty() }
   
-  open fun tryToGetCorrectM3U8Url(incorrectUrl: String): String? {
+  open fun tryToGetCorrectM3U8Url(incorrectUrl: String, series: Series): String? {
     if (incorrectUrl.contains("master.m3u8")) {
       val prefix = incorrectUrl.substringBefore("master.m3u8")
       
@@ -64,7 +65,7 @@ open class VideoServerHandler(
 
 //      val file = HttpSupport(false).sendGet(incorrectUrl).body()
       if (file.startsWith("#EXTM3U")) {
-        return file.lines().firstOrNull { it.startsWith("index") && checkIfM3U8UrlCorrect(prefix + it) }?.let { prefix + it }
+        return file.lines().firstOrNull { it.startsWith("index") && checkIfM3U8UrlCorrect(prefix + it, series) }?.let { prefix + it }
       }
     }
     return null
