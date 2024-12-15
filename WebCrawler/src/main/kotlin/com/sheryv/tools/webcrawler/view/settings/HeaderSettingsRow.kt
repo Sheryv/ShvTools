@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.view.settings
 
+import javafx.beans.property.ObjectProperty
 import javafx.scene.control.Label
 import javafx.scene.control.Separator
 import javafx.scene.layout.Region

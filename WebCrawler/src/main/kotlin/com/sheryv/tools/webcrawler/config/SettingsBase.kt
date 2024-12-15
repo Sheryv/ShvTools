@@ -4,34 +4,19 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.service.Registry
-import com.sheryv.tools.webcrawler.service.SystemSupport
-import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
-import com.sheryv.util.DateUtils
 import java.nio.file.Path
-import java.time.format.DateTimeFormatter
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 abstract class SettingsBase(
-  val crawlerId: String,
-  outputPath: Path? = null,
 ) {
-  protected val crawlerAttr: CrawlerAttributes = Registry.get().crawlers().first { it.id() == crawlerId }.attributes
+  abstract val crawlerId: String
+  abstract val outputPath: Path
   
-  open val outputPath: Path = outputPath ?: defaultOutputPath()
+  protected val crawlerAttr: CrawlerAttributes by lazy { Registry.get().crawlers().first { it.id() == crawlerId }.attributes }
   
-  abstract fun copy(
-    crawlerId: String = this.crawlerId,
-    outputPath: Path = this.outputPath,
-  ): SettingsBase
-  
-  protected fun defaultOutputPath(): Path {
-    return SystemSupport.get.userDownloadDir.resolve(
-      "${SystemSupport.get.removeForbiddenFileChars(crawlerAttr.id)}-" +
-          "${DateUtils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${crawlerAttr.outputFileFormat.extension}"
-    ).toAbsolutePath()
-  }
+  abstract fun copyAll(): SettingsBase
   
   abstract fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader>
   

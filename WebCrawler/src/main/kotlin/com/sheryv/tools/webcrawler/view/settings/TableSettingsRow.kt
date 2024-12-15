@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.view.settings
 
 import com.sheryv.tools.webcrawler.utils.ViewUtils
+import javafx.beans.property.ObjectProperty
 import javafx.beans.property.ReadOnlyStringWrapper
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.scene.control.TableColumn
@@ -13,9 +14,10 @@ class TableSettingsRow(
   name: String,
   val items: List<RowDefinition>,
   val columns: List<String> = emptyList(),
-  val orderable: Boolean = true
+  val orderable: Boolean = true,
+  listener: ObjectProperty<List<TableSettingsRow.RowDefinition>>? = null
 ) :
-  SettingsViewRow<List<TableSettingsRow.RowDefinition>>(name) {
+  SettingsViewRow<List<TableSettingsRow.RowDefinition>>(name, listener = listener) {
   
   private lateinit var table: TableView<RowDefinition>
   
@@ -42,6 +44,7 @@ class TableSettingsRow(
         }
       }
     })
+    listener?.bind(table.itemsProperty())
     table.minHeight = 25 + 25.0 * (items.size.coerceAtMost(8))
     table.isEditable = true
     return table

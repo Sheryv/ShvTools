@@ -2,16 +2,21 @@ package com.sheryv.tools.webcrawler.config.impl
 
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.EpisodeType
+import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.HistoryItem
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.StreamQuality
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
-import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.DownloaderConfig
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
+import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.view.settings.*
+import com.sheryv.util.fx.lib.onChangeNotNull
+import javafx.beans.property.SimpleStringProperty
 import java.nio.file.Path
+import java.time.Duration
 
-class StreamingWebsiteSettings(
-  crawlerId: String,
-  outputPath: Path? = null,
+data class StreamingWebsiteSettings(
+  override val crawlerId: String,
+  override val outputPath: Path,
   val downloadDir: String,
   val seriesName: String = "",
   val seasonNumber: Int = 1,
@@ -27,8 +32,11 @@ class StreamingWebsiteSettings(
   val numOfTopStreamingProvidersUsedSimultaneously: Int = 3,
   val allowedEpisodeTypes: List<EpisodeType> = EpisodeType.all(),
   val allowedQualities: List<StreamQuality> = StreamQuality.all(),
-  val videoServerConfigs: List<VideoServerConfig> = VideoServerConfig.all()
-) : SettingsBase(crawlerId, outputPath) {
+  val videoServerConfigs: List<VideoServerConfig> = VideoServerConfig.all(),
+  val skippedEpisodes: List<Int> = emptyList(),
+  var history: List<HistoryItem> = emptyList(),
+  val linkExpirationDuration: Duration = Duration.ofDays(1),
+) : SettingsBase() {
   
   override fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
     val savePathRow = TextInputSettingsRow("Intermediate file path", outputPath.toString())
@@ -78,8 +86,20 @@ class StreamingWebsiteSettings(
       listOf("Name"),
       false
     )
+    val skippedEpisodes = TableSettingsRow(
+      "Skipped episodes indices",
+      (1 until 31).map {
+        TableSettingsRow.RowDefinition(
+          listOf(it.toString()),
+          this.skippedEpisodes.contains(it)
+        )
+      },
+      listOf("Episode number"),
+      false
+    )
     return Pair(
       listOf(
+        prepareHistoryDropdown(),
         seriesNameRow,
         seriesNumberRow,
         seriesUrlRow,
@@ -95,12 +115,14 @@ class StreamingWebsiteSettings(
         nameTemplate,
         providers,
         episodeAudioTypes,
-        qualitiesRow
+        qualitiesRow,
+        skippedEpisodes,
       )
     ) {
       val types = episodeAudioTypes.readValue()
       val qualities = qualitiesRow.readValue()
       val provs = providers.readValue()
+      val skipped = skippedEpisodes.readValue()
       StreamingWebsiteSettings(
         crawlerId,
         Path.of(savePathRow.readValue()),
@@ -126,6 +148,8 @@ class StreamingWebsiteSettings(
         buildListAndAddNew(videoServerConfigs, VideoServerConfig.all()).map { s ->
           s.changeActivation(provs.first { it.cells[2] == s.id }.isEnabled()) as VideoServerConfig
         },
+        skipped.filter { it.isEnabled() }.map { it.cells.first().toInt() },
+        history
       )
     }
   }
@@ -140,35 +164,37 @@ class StreamingWebsiteSettings(
 //    require(seriesName.isNotBlank()) { "Series Name cannot be empty" }
   }
   
+  fun appendHistory(item: HistoryItem) {
+    history = listOf(item) + history
+    if (history.size > 30) {
+      history = history.dropLast(1)
+    }
+  }
+  
   private fun <T : ApplicableEntry> buildListAndAddNew(userEntries: List<T>, all: List<T>): List<T> {
     val res = userEntries.toMutableList()
     res.addAll(all.filterNot { userEntries.contains(it) }.onEach { it.changeActivation(false) })
     return res
   }
   
-  override fun copy(
-    crawlerId: String,
-    outputPath: Path
-  ): SettingsBase {
-    return StreamingWebsiteSettings(
-      crawlerId,
-      outputPath,
-      downloadDir,
-      seriesName,
-      seasonNumber,
-      seriesUrl,
-      tmdbKey,
-      idmExePath,
-      jDownloaderWatchedDir,
-      searchStartIndex,
-      searchStopIndex,
-      episodeCodeFormatter,
-      episodeNameFormatter,
-      triesBeforeStreamingProviderChange,
-      numOfTopStreamingProvidersUsedSimultaneously,
-      allowedEpisodeTypes,
-      allowedQualities,
-      videoServerConfigs
-    )
+  private fun prepareHistoryDropdown(): ChoiceSettingsRow {
+    val historyItems = history.map { it.toString() }
+    val historyProp = SimpleStringProperty().also {
+      it.onChangeNotNull { chosen ->
+        if (chosen.isNotEmpty() && "-" != chosen && historyItems.indexOf(chosen) >= 0) {
+          val item = history[historyItems.indexOf(chosen)]
+          Registry.get().crawlers().filterIsInstance<StreamingCrawlerBase>().firstOrNull { it.id() == crawlerId }?.onLoadFromHistory(item)
+        }
+      }
+    }
+    return ChoiceSettingsRow("Load from history", "-", history.map { it.toString() } + "-", historyProp)
   }
+  
+  override fun copyAll(): SettingsBase = copy()
+  
+  @Suppress("RedundantOverride")
+  override fun equals(other: Any?) = super.equals(other)
+  
+  @Suppress("RedundantOverride")
+  override fun hashCode() = super.hashCode()
 }

@@ -30,7 +30,7 @@ class FilserCrawler(
   
   override suspend fun findEpisodeItems(serverIndex: String?): List<VideoData> {
     val id = urlPattern.matchEntire(series.seriesUrl)!!.groupValues[3]
-    driver.navigate().to("${def.attributes.websiteUrl}/title/$id/${settings.seasonNumber}")
+    driver.navigate().to("${def.attributes.websiteUrl}/title/$id/${series.season}")
     delay(300)
     
     wait.until<List<WebElement>>(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("#episode_list .episode-box a")))

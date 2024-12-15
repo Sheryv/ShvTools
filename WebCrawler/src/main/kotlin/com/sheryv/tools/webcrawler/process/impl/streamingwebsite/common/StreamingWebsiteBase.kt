@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
+import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.HistoryItem
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfig
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
@@ -15,9 +16,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
-import org.openqa.selenium.InvalidArgumentException
 import java.nio.file.Files
+import java.time.Duration
+import java.time.OffsetDateTime
 import java.util.*
+import kotlin.io.path.exists
+import kotlin.io.path.fileSize
 
 abstract class StreamingWebsiteBase(
   configuration: Configuration,
@@ -43,13 +47,19 @@ abstract class StreamingWebsiteBase(
   }
   
   protected suspend fun start() {
-    series = (if (Files.exists(settings.outputPath)) {
+    series = (if (Files.exists(settings.outputPath) && params.runPreconfiguredFromLastResult) {
       try {
         val current = SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
-        if (current.season == settings.seasonNumber && settings.seriesName.equals(current.title, true)) {
-          current.copy(title = settings.seriesName, seriesUrl = getSeriesLink())
+//        if (current.season == settings.seasonNumber && settings.seriesName.equals(current.title, true)) {
+//          current.copy(title = settings.seriesName, seriesUrl = getSeriesLink())
+//        } else {
+//          null
+//        }
+        
+        if (current.seriesUrl.isBlank()) {
+          current.copy(seriesUrl = getSeriesLink())
         } else {
-          null
+          current
         }
       } catch (e: Exception) {
         log.error("Error while trying to deserialize current series", e)
@@ -57,25 +67,56 @@ abstract class StreamingWebsiteBase(
       }
     } else null) ?: Series(0, settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
     
+    
+    
     driver.get(getSeriesLink())
 //    driver.get("https://bot.sannysoft.com/")
     driver.waitForVisibility(By.tagName("body"))
     if (series.title.isBlank()) {
       series = series.copy(title = getSeriesName())
     }
+    settings.appendHistory(HistoryItem(series.title, series.seriesUrl, series.tvdbId?.toLongOrNull(), series.season))
+    Configuration.get().save()
     title = driver.title
     waitIfPaused()
     
+    
     val items: List<VideoData> = findEpisodeItems()
     waitIfPaused()
-    var i = settings.searchStartIndex
-    while (i <= items.size && (i <= settings.searchStopIndex || settings.searchStopIndex < 0)) {
-      if (params.runOnlyForFailedEpisodes && series.episodes.size > i && series.episodes[i].downloadUrl?.base?.isNotBlank() == true) {
-        i++
+    var index = settings.searchStartIndex
+    while (index <= items.size && (index <= settings.searchStopIndex || settings.searchStopIndex < 0)) {
+      
+      val previous = series.episodes.firstOrNull { it.number == index }
+      if (previous != null) {
+        
+        if (configuration.common.runOnlyForFailedOrAbsentEpisodes) {
+          if (configuration.common.verifyDownloadedFilesBeforeRetrying) {
+            val path = previous.generateDefaultFilePath(series, settings)
+            if (path.exists() && path.fileSize() > 100) {
+              log.info("Skipping episode $index as file '${path}' already exists")
+              index++
+              continue
+            }
+          } else {
+            if (previous.errors.isEmpty() && previous.downloadUrl != null &&
+              Duration.between(previous.updated, OffsetDateTime.now()) < settings.linkExpirationDuration
+            ) {
+              log.info("Skipping episode $index as its url is up-to-date")
+              index++
+              continue
+            }
+          }
+        }
+      }
+      
+      if (settings.skippedEpisodes.contains(index)) {
+        log.info("Episode $index is skipped")
+        index++
         continue
       }
       
-      val item: VideoData = items[i - 1]
+      
+      val item: VideoData = items[index - 1]
       
       var downloadUrl: VideoUrl? = null
       try {
@@ -111,7 +152,7 @@ abstract class StreamingWebsiteBase(
           log.info("Servers found for E${item.number.toString().padStart(2, '0')}: "
               + allServers.joinToString(" | ") { "(${it.index}) ${it.serverName} - ${it.type} - ${it.format}" })
           
-          val priorities = getPriorities(i, allServers, serverHandlers)
+          val priorities = getPriorities(index, allServers, serverHandlers)
           log.info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
             val indexes = v.joinToString(",") { it.index.toString() }
             "${k.definition.label()}=($indexes)"
@@ -122,7 +163,7 @@ abstract class StreamingWebsiteBase(
               try {
                 item.server = server
                 waitIfPaused()
-                downloadUrl = goToExternalServerVideoPage(item) {
+                downloadUrl = goToExternalServerVideoPage(item, server) {
                   waitIfPaused()
                   findLoadedVideoDownloadUrl(item, streamingServersHandlers()[server.matchedServerDef]!!)
                 }
@@ -153,14 +194,20 @@ abstract class StreamingWebsiteBase(
       if (downloadUrl == null) {
         err.add(ErrorEntry(2, "Download url not found"))
       }
-      val ep = Episode(
+      val ep = previous?.copy(
+        downloadUrl = downloadUrl,
+        sourcePageUrl = item.episodePageUrl,
+        type = item.server?.type,
+        format = item.server?.format?.toEpisodeFormat(),
+        errors = err
+      ) ?: Episode(
         0,
         item.title,
         item.number,
         downloadUrl,
         item.episodePageUrl,
-        item.server.type,
-        item.server.format.toEpisodeFormat(),
+        item.server?.type,
+        item.server?.format?.toEpisodeFormat(),
         err
       )
       val episodes = series.episodes.toMutableList()
@@ -171,7 +218,13 @@ abstract class StreamingWebsiteBase(
       waitIfPaused()
       SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), series)
       log.info("\n$ep\n")
-      i++
+      index++
+    }
+    if (index - 1 < series.episodes.size) {
+      val e = series.episodes.take(index - 1) +
+          series.episodes.drop(index - 1).map { it.copy(errors = listOf(ErrorEntry(3, "Record not processed"))) }
+      series = series.copy(episodes = e)
+      SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), series)
     }
   }
   
@@ -204,9 +257,18 @@ abstract class StreamingWebsiteBase(
   
   protected open suspend fun getSeriesLink() = getFullUrl(settings.seriesUrl)
   
-  protected open suspend fun <T> goToExternalServerVideoPage(data: VideoData, blockExecutedOnPage: (suspend () -> T)? = null): T? {
-    driver.navigate().to(getFullUrl(data.server.videoPageExternalUrl!!))
-    return blockExecutedOnPage?.invoke()
+  protected open suspend fun <T> goToExternalServerVideoPage(
+    data: VideoData,
+    server: VideoServer,
+    blockExecutedOnPage: (suspend () -> T)? = null
+  ): T? {
+    return data.server?.let {
+      driver.navigate().to(getFullUrl(it.videoPageExternalUrl!!))
+      blockExecutedOnPage?.invoke()
+    } ?: run {
+      log.error("Server details are empty for episode ${data.number}")
+      null
+    }
   }
   
   protected open suspend fun goToEpisodePage(data: VideoData) {
@@ -262,11 +324,16 @@ abstract class StreamingWebsiteBase(
           (if (i == index) "[#] " else "[ ] ") + e.response.url
         }.joinToString("\n"))
       }
-      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.response.url, series) }
+      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull {
+        handler.tryToGetCorrectM3U8Url(
+          it.response.url,
+          series
+        )
+      }
         ?.also {
           log.debug("Found alternative url from browser tools: $it")
         }
-    } catch (e: InvalidArgumentException) {
+    } catch (e: IllegalArgumentException) {
       null
     }
     if (url == null) {
@@ -279,9 +346,10 @@ abstract class StreamingWebsiteBase(
         }.joinToString("\n"))
       }
       
-      return m3u8events.getOrNull(index)?.name ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }?.also {
-        log.debug("Found alternative url from JavaScript performance objects: $it")
-      }
+      return m3u8events.getOrNull(index)?.name ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }
+        ?.also {
+          log.debug("Found alternative url from JavaScript performance objects: $it")
+        }
     }
     return url
   }
@@ -321,6 +389,7 @@ abstract class StreamingWebsiteBase(
     createHandlerWithCustomRegexCheck(CommonVideoServers.VOE, Regex(""".*index.*.m3u8.*"""), map)
     createHandlerWithCustomRegexCheck(CommonVideoServers.VTUBE, Regex(""".*index.*.m3u8.*"""), map)
     createHandlerWithCustomRegexCheck(CommonVideoServers.UPSTREAM, Regex(""".*index.*.m3u8.*"""), map)
+    createHandlerWithCustomRegexCheck(CommonVideoServers.VIDGUARD, Regex(""".*index.*.m3u8.*"""), map)
     createHandlerWithCustomRegexCheck(CommonVideoServers.VIDSTREAM, Regex(""".*v.m3u8.*"""), map)
     return map
   }

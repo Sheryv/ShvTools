@@ -2,14 +2,21 @@ package com.sheryv.tools.webcrawler.view.settings
 
 import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
+import javafx.beans.property.ObjectProperty
 import javafx.scene.control.*
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.Region
 
 
-class TextInputSettingsRow(name: String, val text: String, val lines: Int = 1, val characterLimitPerLine: Int = 250) :
-  SettingsViewRow<String>(name) {
+class TextInputSettingsRow(
+  name: String,
+  val text: String,
+  val lines: Int = 1,
+  val characterLimitPerLine: Int = 250,
+  listener: ObjectProperty<String>? = null
+) :
+  SettingsViewRow<String>(name, listener = listener) {
   
   private lateinit var textField: TextInputControl
   
@@ -27,6 +34,8 @@ class TextInputSettingsRow(name: String, val text: String, val lines: Int = 1, v
     else
       TextField(text)
     textField.textFormatter = TextFormatter<String> { if (it.controlNewText.length <= characterLimitPerLine * lines) it else null }
+    
+    listener?.bind(textField.textProperty())
     
     val menu = ContextMenu(
       MenuItem("Copy").apply { setOnAction { ViewUtils.saveToClipboard(textField.text) } },

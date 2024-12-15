@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.utils
 import com.sheryv.tools.webcrawler.MainApplication
 import javafx.scene.control.*
 import javafx.scene.layout.GridPane
+import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javafx.stage.DirectoryChooser
@@ -48,6 +49,7 @@ object DialogUtils {
     title: String = ViewUtils.TITLE,
     header: String? = null,
     type: Alert.AlertType = Alert.AlertType.WARNING,
+    components: Pane? = null,
     owner: Window? = null,
     vararg buttons: ButtonType = arrayOf(ButtonType.YES, ButtonType.NO, ButtonType.CANCEL)
   ): ButtonType? {
@@ -62,6 +64,8 @@ object DialogUtils {
       }
       this.title = title
       MainApplication.appendStyleSheets(dialogPane.scene)
+      components?.also { dialogPane.content = it }
+      isResizable = true
     }.showAndWait().orElse(null)
   }
   

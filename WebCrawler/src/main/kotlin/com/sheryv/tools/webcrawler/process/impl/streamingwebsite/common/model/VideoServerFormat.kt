@@ -33,4 +33,6 @@ enum class Qualities(val label: String, val priority: Int) {
   UNKNOWN("Unknown", 100);
   
   override fun toString() = label
+  
+  fun asSimpleFormat() =  EpisodeFormat("", this)
 }

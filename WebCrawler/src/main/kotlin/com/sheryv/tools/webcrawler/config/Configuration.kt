@@ -13,9 +13,9 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.Downloade
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.emitEvent
 import com.sheryv.util.fx.core.app.AppConfiguration
 import com.sheryv.util.logging.log
-import com.sheryv.util.emitEvent
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
@@ -24,6 +24,7 @@ import java.util.*
 import kotlin.system.measureTimeMillis
 
 class Configuration(
+  val common: CommonConfiguration = CommonConfiguration(),
   val browserSettings: BrowserSettings = BrowserSettings(),
   var crawler: String? = null,
   var lastUserScript: String = "",
@@ -116,13 +117,14 @@ class Configuration(
   
   
   fun copy(
+    common: CommonConfiguration = this.common.copy(),
     browserSettings: BrowserSettings = this.browserSettings.copy(),
     scrapper: String? = this.crawler,
     lastUserScript: String = this.lastUserScript,
     downloaderConfig: DownloaderConfig = this.downloaderConfig,
     settings: MutableSet<SettingsBase> = this.settings.toMutableSet()
   ): Configuration {
-    return Configuration(browserSettings, scrapper, lastUserScript, downloaderConfig, settings)
+    return Configuration(common, browserSettings, scrapper, lastUserScript, downloaderConfig, settings)
   }
 }
 
@@ -134,6 +136,8 @@ data class BrowserSettings(
 ) {
   fun currentBrowser() = configs.first { it.type == selected }
 }
+
+data class CommonConfiguration(var runOnlyForFailedOrAbsentEpisodes: Boolean = true, var verifyDownloadedFilesBeforeRetrying: Boolean = true)
 
 private class SettingsSetDeserializer : StdDeserializer<Set<SettingsBase>>(Set::class.java) {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Set<SettingsBase> {

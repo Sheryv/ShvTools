@@ -1,6 +1,8 @@
 package com.sheryv.tools.webcrawler.view.settings
 
 import com.sheryv.tools.webcrawler.utils.ViewUtils
+import com.sheryv.util.fx.lib.mapObservable
+import javafx.beans.property.ObjectProperty
 import javafx.scene.control.*
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
@@ -12,8 +14,9 @@ class NumberRangeSettingRow(
   val min: Int,
   val max: Int,
   val step: Int = 1,
-  val showSlider: Boolean = (max - min) / step <= 100
-) : SettingsViewRow<Int>(name) {
+  val showSlider: Boolean = (max - min) / step <= 100,
+  listener: ObjectProperty<Int>? = null
+) : SettingsViewRow<Int>(name, listener = listener) {
   private lateinit var spinner: Spinner<Long>
   
   override fun buildPart(): Region {
@@ -54,6 +57,7 @@ class NumberRangeSettingRow(
       HBox.setHgrow(spinner, Priority.ALWAYS)
     }
     
+    listener?.bind(spinner.valueProperty().mapObservable { it.toInt() })
     
     val menu = ContextMenu(
       MenuItem("Copy").apply { setOnAction { ViewUtils.saveToClipboard(spinner.value.toString()) } },

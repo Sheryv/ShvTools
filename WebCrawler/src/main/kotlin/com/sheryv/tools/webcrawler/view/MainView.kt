@@ -13,6 +13,7 @@ import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
 import com.sheryv.tools.webcrawler.process.base.event.FetchedDataStatusChangedEvent
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
@@ -31,6 +32,7 @@ import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.util.*
 import com.sheryv.util.fx.core.view.FxmlView
 import com.sheryv.util.fx.core.view.ViewFactory
+import com.sheryv.util.fx.lib.onChange
 import com.sheryv.util.io.FileUtils
 import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
@@ -145,6 +147,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       tvScrapers.selectionModel.select(ViewUtils.findFirstLeafInTree(tvScrapers.root))
     }
     btnStart.setOnAction { startOrPauseProcess() }
+    btnStartPreconfigured.setOnAction { startOrPauseProcess(useInitial = true) }
     btnPause.setOnAction { startOrPauseProcess() }
     btnStop.setOnAction { GlobalState.processingState.value = ProcessingStates.STOPPING }
     btnStop.isVisible = false
@@ -160,6 +163,8 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             btnStart.text = "Pause"
             btnStart.styleClass.add("btn-info")
             btnStart.styleClass.remove("btn-success")
+            btnStartPreconfigured.isDisable = true
+            btnStartPreconfigured.isVisible = false
           }
           
           ProcessingStates.PAUSED -> {
@@ -182,6 +187,8 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             btnStop.isVisible = false
             progressProcess.isVisible = false
             btnStart.isDisable = false
+            btnStartPreconfigured.isDisable = false
+            btnStartPreconfigured.isVisible = true
             btnStart.text = "Start"
             btnStart.styleClass.add("btn-success")
             btnStart.styleClass.remove("btn-info")
@@ -280,8 +287,17 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               accelerator = KeyCodeCombination(KeyCode.E, KeyCombination.CONTROL_DOWN)
               setOnAction { startOrPauseProcess() }
             },
-            MenuItem("Start for failed episodes only").apply {
-              setOnAction { startOrPauseProcess(true) }
+            CheckMenuItem("Skip correctly downloaded episodes").apply {
+              this.isSelected = config.common.runOnlyForFailedOrAbsentEpisodes
+              this.selectedProperty().onChange {
+                config.common.runOnlyForFailedOrAbsentEpisodes = it
+              }
+            },
+            CheckMenuItem("Check filesystem while verifying episodes").apply {
+              this.isSelected = config.common.verifyDownloadedFilesBeforeRetrying
+              this.selectedProperty().onChange {
+                config.common.verifyDownloadedFilesBeforeRetrying = it
+              }
             },
             MenuItem("Terminate").apply {
               accelerator = KeyCodeCombination(KeyCode.T, KeyCombination.CONTROL_DOWN)
@@ -308,7 +324,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                 val type = selected!!.settingsClass
                 val source = config.settings.filter { it.crawlerId != selected!!.id() && type.isInstance(it) }
                 DialogUtils.choiceDialog("Copy options from other scraper", source, "Choose source scraper")?.also {
-                  config.updateSettings(it.copy())
+                  config.updateSettings(it.copyAll())
                   showSettingsForSelectedScraper()
                 }
               }
@@ -356,14 +372,14 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     
   }
   
-  private fun startOrPauseProcess(runOnlyForFailedEpisodes: Boolean = false) {
+  private fun startOrPauseProcess(useInitial: Boolean = false) {
     if (selected != null) {
       when (GlobalState.processingState.value) {
         ProcessingStates.IDLE -> {
           GlobalState.processingState.value = (ProcessingStates.RUNNING)
           
           val browser = config.browserSettings.currentBrowser()
-          val runner = Runner(config, browser, selected!!, ProcessParams(runOnlyForFailedEpisodes))
+          val runner = Runner(config, browser, selected!!, ProcessParams(useInitial))
           val settings = settingsReader.invoke()
           inBackground {
             try {
@@ -594,6 +610,40 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               }
             }
           }
+        },
+        MenuItem("Find next season for series from history").apply {
+          setOnAction {
+            try {
+              val settings = selected!!.findSettings(config) as StreamingWebsiteSettings
+              val crawler = selected
+              if (crawler is StreamingCrawlerBase) {
+                inMainThread {
+                  val rows = settings.history.map { it.toString() }
+                  DialogUtils.choiceDialog("Select tv series from history", rows)?.also { seriesCode ->
+                    val item = settings.history[rows.indexOf(seriesCode)]
+                    
+                    DialogUtils.inputDialog("Select season for ${item.title}", header = "", rows = listOf(Pair("Season", ""))).firstOrNull()
+                      ?.toIntOrNull()
+                      ?.also {
+                        val updated = item.copy(seasonNumber = it)
+                        crawler.onLoadFromHistory(updated)
+                        DialogUtils.messageDialog("Series $updated loaded")
+                      } ?: {
+                      DialogUtils.messageDialog("Cannot search episodes because season number is incorrect")
+                    }
+                  }
+                }
+              }
+            } catch (e: Exception) {
+              log.error("Error while searching", e)
+              inMainThread {
+                DialogUtils.textAreaDialog(
+                  "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
+                  "Error while searching", Alert.AlertType.ERROR, true, false, ButtonType.OK
+                )
+              }
+            }
+          }
         }
       )
       
@@ -739,6 +789,9 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   
   @FXML
   private lateinit var btnStart: Button
+  
+  @FXML
+  private lateinit var btnStartPreconfigured: Button
   
   @FXML
   private lateinit var btnPause: Button

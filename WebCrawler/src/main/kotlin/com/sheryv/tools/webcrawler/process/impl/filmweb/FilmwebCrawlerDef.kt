@@ -28,6 +28,6 @@ class FilmwebCrawlerDef : CrawlerDefinition<SeleniumDriver, FilmwebSettings>(
   }
   
   override fun createDefaultSettings(): FilmwebSettings {
-    return FilmwebSettings(id())
+    return FilmwebSettings(id(), defaultOutputPath())
   }
 }

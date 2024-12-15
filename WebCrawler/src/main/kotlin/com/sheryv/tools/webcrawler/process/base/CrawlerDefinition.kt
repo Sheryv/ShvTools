@@ -6,9 +6,13 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.Format
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
+import com.sheryv.tools.webcrawler.service.SystemSupport
+import com.sheryv.util.DateUtils
 import com.sheryv.util.event.AsyncEvent
 import com.sheryv.util.event.AsyncEventHandler
 import java.net.URL
+import java.nio.file.Path
+import java.time.format.DateTimeFormatter
 
 typealias CrawlerDef = CrawlerDefinition<in SDriver, SettingsBase>
 
@@ -35,6 +39,13 @@ abstract class CrawlerDefinition<T : SDriver, S : SettingsBase>(
   }
   
   protected open fun currentStatusToText(config: Configuration): String = ""
+  
+  protected fun defaultOutputPath(): Path {
+    return SystemSupport.get.userDownloadDir.resolve(
+      "${SystemSupport.get.removeForbiddenFileChars(id())}-" +
+          "${DateUtils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${attributes.outputFileFormat.extension}"
+    ).toAbsolutePath()
+  }
   
   override fun handleEvent(e: AsyncEvent) {
   

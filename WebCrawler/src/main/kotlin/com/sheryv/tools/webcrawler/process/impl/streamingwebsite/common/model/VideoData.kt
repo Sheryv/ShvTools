@@ -6,5 +6,5 @@ data class VideoData(
   val number: Int
 ) {
   
-  lateinit var server: VideoServer
+  var server: VideoServer? = null
 }

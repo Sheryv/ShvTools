@@ -8,6 +8,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Di
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
+import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGenerator
 import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
@@ -15,6 +16,7 @@ import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.emitEvent
+import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.lib.*
 import com.sheryv.util.inBackground
@@ -29,12 +31,16 @@ import javafx.scene.Parent
 import javafx.scene.control.*
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.layout.Priority
+import javafx.scene.paint.Color
 import javafx.stage.Stage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.LocalDate
+import kotlin.io.path.listDirectoryEntries
+import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
 class SearchView(override val config: Configuration) : SimpleView() {
@@ -47,7 +53,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
   
   private val results = FXCollections.observableArrayList<SearchItem>()
   private val selectedItem = objectProperty<SearchItem?>()
-  private var sourceSeries: Series? by singleAssign()
+  private var sourceSeries: Series? = null
   private val series = objectProperty<Series?>(null)
   private val episodes = series.toList { it?.episodes }
   private val selectedEpisodes = FXCollections.observableArrayList<Episode>()
@@ -128,6 +134,22 @@ class SearchView(override val config: Configuration) : SimpleView() {
             }
           }
         }
+        button("Load from file").setOnAction {
+          inBackground {
+            val s = try {
+              SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
+            } catch (e: Exception) {
+              log.error("Cannot load series from file", e)
+              null
+            }
+            sourceSeries = s
+            series.set(s)
+            if (s != null) {
+              name.set(s.title)
+              season.set(s.season)
+            }
+          }
+        }
         button("Edit as text").setOnAction {
           
           val text = series.value!!.episodes.joinToString("\n") { "%2d | %-40s | %s".format(it.number, it.title, it.url.value) }
@@ -186,8 +208,13 @@ class SearchView(override val config: Configuration) : SimpleView() {
             }
           }
         }
-        button("Clear list").setOnAction {
-          log.debug("Search")
+        button("Clear list") {
+          disableProperty().bind(series.isNull)
+          setOnAction {
+            if (series.value != null) {
+              series.set(series.value!!.copy(episodes = emptyList()))
+            }
+          }
         }
         button("Save to file").setOnAction {
           if (series.value != null) {
@@ -198,6 +225,8 @@ class SearchView(override val config: Configuration) : SimpleView() {
           }
         }
         button("Update file names").setOnAction {
+          disableProperty().bind(series.isNull)
+          
           if (series.value != null) {
             inBackground(inProgress.asEditable()) {
               val s = series.value!!
@@ -245,28 +274,29 @@ class SearchView(override val config: Configuration) : SimpleView() {
           }
         }
         button("Show file list") {
-          disableProperty().bind(series.mapObservable { it == null })
+          disableProperty().bind(series.isNull)
           setOnAction {
+            openFilesListDialog()
+          }
+        }
+        button("Generate metadata") {
+          disableProperty().bind(series.isNull)
+          setOnAction {
+            
             val s = series.value!!
-            val list = s.episodes.joinToString("\n") { it.generateFileName(s, settings) }
-            if (DialogUtils.textAreaDialog(
-                "Files",
-                list,
-                wrapText = false,
-                buttons = arrayOf(ButtonType.OK, ButtonType.CANCEL),
-                type = Alert.AlertType.NONE
-              ).first == ButtonType.OK
-            ) {
-              DialogUtils.openDirectoryDialog(stage)?.run {
-                val dir = toAbsolutePath().resolve(s.generateDirectoryPathForSeason())
-                Files.createDirectories(dir)
-                s.episodes
-                  .map { it.generateFileName(s, settings) }
-                  .forEach { Files.createFile(dir.resolve(it)) }
-                
-                log.info("Files generated in $dir")
+            MetadataGenerator(settings).generateNfoMetadata(s)
+            val seriesDir = Path.of(settings.downloadDir).resolve(s.generateDirectoryPathForSeason())
+            
+            if (seriesDir.parent.listDirectoryEntries().none { it.name == "poster.jpg" || it.name == "poster.png" }) {
+              val http = HttpSupport()
+              s.posterUrl?.also {
+                val format = it.substringAfterLast('.', "jpg")
+                http.stream(HttpSupport.getRequest(s.posterUrl)).body().use {
+                  Files.copy(it, seriesDir.parent.resolve("poster.$format"), StandardCopyOption.REPLACE_EXISTING)
+                }
               }
             }
+            log.info("Metadata generated")
           }
         }
       }
@@ -309,20 +339,6 @@ class SearchView(override val config: Configuration) : SimpleView() {
   
   override fun onViewCreated(stage: Stage) {
     super.onViewCreated(stage)
-    inBackground {
-      val s = try {
-        SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
-      } catch (e: Exception) {
-        log.error("Cannot load series from file", e)
-        null
-      }
-      sourceSeries = s
-      series.set(s)
-      if (s != null) {
-        name.set(s.title)
-        season.set(s.season)
-      }
-    }
     selectedItem.onChangeNotNull { i ->
       fetchEpisodes(i)
     }
@@ -387,5 +403,51 @@ class SearchView(override val config: Configuration) : SimpleView() {
         inProgress.set(false)
       }
     }
+  }
+  
+  private fun openFilesListDialog() {
+    val s = series.value!!
+    val ext = stringProperty("ts")
+    val list = ext.mapObservable { s.episodes.joinToString("\n") { it.generateFileName(s, settings, ext.value) } }
+    
+    val pane = createRoot(500.0, 350.0) {
+      paddingAll = 5
+      hbox {
+        textfield("ts") {
+          ext.bind(textProperty())
+          promptText = "Extension"
+          hgrow = Priority.ALWAYS
+        }
+        button("Generate") {
+          setOnAction {
+            DialogUtils.openDirectoryDialog(stage)?.run {
+              val dir = toAbsolutePath().resolve(s.generateDirectoryPathForSeason())
+              Files.createDirectories(dir)
+              s.episodes
+                .map { it.generateFileName(s, settings) }
+                .forEach { Files.createFile(dir.resolve(it)) }
+              
+              log.info("Files generated in $dir")
+            }
+          }
+        }
+        
+      }
+      textarea(list) {
+        isEditable = false
+        isWrapText = false
+        vgrow = Priority.ALWAYS
+        styleClass.add("mono")
+      }
+    }
+    
+    
+    DialogUtils.dialog(
+      "",
+      "Files",
+      type = Alert.AlertType.NONE,
+      components = pane,
+      buttons = arrayOf(ButtonType.OK)
+    )
   }
 }

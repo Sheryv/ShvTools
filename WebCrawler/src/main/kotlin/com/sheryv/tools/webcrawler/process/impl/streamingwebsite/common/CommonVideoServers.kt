@@ -25,7 +25,7 @@ enum class CommonVideoServers(
     "Voe",
     "voe",
     "voe.sx",
-    null, "document.querySelector('button[data-plyr=play]')?.click()"
+    null, "document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
   ),
   VTUBE(
     "VTube",
@@ -58,6 +58,13 @@ enum class CommonVideoServers(
     "streamtape.com",
     null,
     "document.querySelector('.play-overlay')?.click();document.querySelector('.play-overlay')?.click();document.querySelector('.play-overlay')?.click()"
+  ),
+  VIDGUARD(
+    "Vidguard",
+    "vidguard",
+    "embedv.net",
+    null,
+    "document.querySelector('.jw-controls .jw-button-color')?.click()"
   ),
   VIDSTREAM(
     "Vidstream",

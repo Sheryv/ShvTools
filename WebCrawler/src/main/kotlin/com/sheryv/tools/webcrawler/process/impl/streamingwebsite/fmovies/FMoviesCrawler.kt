@@ -52,15 +52,15 @@ class FMoviesCrawler(
     } ?: emptyList()
   }
   
-  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, blockExecutedOnPage: (suspend () -> T)?): T? {
+  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
     
-    val js = "document.querySelectorAll('#servers .server')[" + data.server.index + "].click()"
+    val js = "document.querySelectorAll('#servers .server')[" + server.index + "].click()"
     driver.executeScript(js)
     
     delay(1000)
     
     val iframe = waitForAttributeCheckBy(By.cssSelector("#player iframe"), "src", 10) {
-      it?.getAttribute("src")?.contains(data.server.matchedServerDef!!.domain()) == true
+      it?.getAttribute("src")?.contains(server.matchedServerDef!!.domain()) == true
     }
     driver.switchTo().frame(iframe)
     return blockExecutedOnPage?.invoke()

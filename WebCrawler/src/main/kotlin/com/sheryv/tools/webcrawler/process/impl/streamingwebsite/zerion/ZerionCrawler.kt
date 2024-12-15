@@ -32,7 +32,7 @@ class ZerionCrawler(
   override suspend fun findEpisodeItems(serverIndex: String?): List<VideoData> {
     wait.until<List<WebElement>>(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("#series-page .season")))
     val js =
-      "return [...document.querySelector('#series-page .season:nth-child(${settings.seasonNumber}) > ul').childNodes.values()]" +
+      "return [...document.querySelector('#series-page .season:nth-child(${series.season}) > ul').childNodes.values()]" +
           ".map(v=>v.querySelector('.title-date-block a'))" +
           ".filter(v=>!!v)" +
           ".map(v=>{return {e: v.childNodes[0].textContent, u:v.attributes['href'].value}});"
@@ -64,8 +64,8 @@ class ZerionCrawler(
       ?: emptyList()
   }
   
-  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, blockExecutedOnPage: (suspend () -> T)?): T? {
-    val js = "document.querySelectorAll('.video-list tr .btn.watch-btn')[" + data.server.index + "].click()"
+  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
+    val js = "document.querySelectorAll('.video-list tr .btn.watch-btn')[" + server.index + "].click()"
     driver.executeScript(js)
     return blockExecutedOnPage?.invoke()
   }

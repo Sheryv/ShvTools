@@ -29,7 +29,7 @@ class FilmanCrawler(
   override suspend fun findEpisodeItems(serverIndex: String?): List<VideoData> {
     wait.until<List<WebElement>>(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("#episode-list")))
     val js =
-      "return \$('#episode-list > li:nth(-${settings.seasonNumber}) > ul a').get().map(n=>({e: n.textContent, u:n.getAttribute('href')}))"
+      "return \$('#episode-list > li:nth(-${series.season}) > ul a').get().map(n=>({e: n.textContent, u:n.getAttribute('href')}))"
     
     val incorrectEpisodesRegex = Regex(""".*[eE](\d{4,}|99\d+).*""")
     val fixNameRegex = Regex("""\[[sS]\d+[eE]\d+]""")
@@ -65,11 +65,11 @@ class FilmanCrawler(
     } ?: emptyList()
   }
   
-  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, blockExecutedOnPage: (suspend () -> T)?): T? {
+  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
     val tabs = driver.windowHandles.toList()
     val current = driver.windowHandle
     
-    val js = "\$('#links > tbody > tr').get()[${data.server.index}].children[0].children[0].click()"
+    val js = "\$('#links > tbody > tr').get()[${server.index}].children[0].children[0].click()"
     driver.executeScript(js)
     wait(By.cssSelector("#player-container #frame"))
     

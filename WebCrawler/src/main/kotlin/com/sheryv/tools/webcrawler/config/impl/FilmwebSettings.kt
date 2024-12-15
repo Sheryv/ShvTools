@@ -7,17 +7,11 @@ import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
 import com.sheryv.tools.webcrawler.view.settings.TextInputSettingsRow
 import java.nio.file.Path
 
-class FilmwebSettings(
-  crawlerId: String,
-  outputPath: Path? = null,
-) : SettingsBase(crawlerId, outputPath) {
-  
-  override fun copy(
-    crawlerId: String,
-    outputPath: Path,
-  ): SettingsBase {
-    return FilmwebSettings(crawlerId, outputPath)
-  }
+data class FilmwebSettings(
+  override val crawlerId: String,
+  override val outputPath: Path,
+) : SettingsBase() {
+  override fun copyAll(): SettingsBase = copy()
   
   override fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
     val savePathRow = TextInputSettingsRow("Save path", outputPath.toString())
@@ -30,4 +24,9 @@ class FilmwebSettings(
     }
   }
   
+  @Suppress("RedundantOverride")
+  override fun equals(other: Any?) = super.equals(other)
+  
+  @Suppress("RedundantOverride")
+  override fun hashCode() = super.hashCode()
 }

@@ -21,6 +21,13 @@ class TmdbApi {
     return items
   }
   
+  fun getTvSeries(id: Long): SearchItem {
+    val support = HttpSupport()
+    val settings = GlobalState.settingsForCurrentScraper() as StreamingWebsiteSettings
+    val json = support.sendString("https://api.themoviedb.org/3/tv/$id?api_key=${settings.tmdbKey}&language=en-US&append_to_response=external_ids")
+    return SerialisationUtils.fromJson(json)
+  }
+  
   fun getTvEpisodes(id: Long, season: Int): TmdbSeason {
     val support = HttpSupport()
     val settings = GlobalState.settingsForCurrentScraper() as StreamingWebsiteSettings

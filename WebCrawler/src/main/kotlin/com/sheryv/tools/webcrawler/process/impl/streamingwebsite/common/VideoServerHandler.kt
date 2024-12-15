@@ -34,11 +34,14 @@ open class VideoServerHandler(
       }
     } ?: server.scriptToActivatePlayer()?.also { driver.executeScript(it) }
     
-    val byVideo = By.cssSelector("video:not(.hidden)")
+    var byVideo = By.cssSelector("video:not(.hidden)")
     
     if (scraper.wait(byVideo, 5) == null) {
-      log.error("video container not found on page (Did link expired?)")
-      return null
+      byVideo = By.cssSelector("video:not(.hidden) > source")
+      if(scraper.wait(byVideo, 5) == null) {
+        log.error("video container not found on page (Did link expired?)")
+        return null
+      }
     }
     val found = scraper.waitForNonEmptyAttribute(byVideo, "src", timeout)
     if (found != null) {

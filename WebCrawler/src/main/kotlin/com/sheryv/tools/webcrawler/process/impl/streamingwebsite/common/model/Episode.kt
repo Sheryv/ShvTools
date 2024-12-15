@@ -3,10 +3,11 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.util.DateUtils
-import com.sheryv.util.io.FileUtils
 import com.sheryv.util.Strings
 import com.sheryv.util.fx.lib.objectProperty
 import com.sheryv.util.fx.lib.stringProperty
+import com.sheryv.util.io.FileUtils
+import java.nio.file.Path
 import java.time.OffsetDateTime
 
 data class Episode(
@@ -45,5 +46,12 @@ data class Episode(
         values
       )
     )
+  }
+  
+  fun generateDefaultFilePath(
+    series: Series,
+    settings: StreamingWebsiteSettings
+  ): Path {
+    return Path.of(settings.downloadDir).resolve(series.generateDirectoryPathForSeason()).resolve(generateFileName(series, settings))
   }
 }

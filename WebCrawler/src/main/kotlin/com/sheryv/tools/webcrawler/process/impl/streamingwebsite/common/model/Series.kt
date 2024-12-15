@@ -22,7 +22,10 @@ data class Series(
   }
   
   fun formattedString(): String {
-    var output = """Series title: $title
+    var output = """
+      |Last configuration:
+      |
+      |Series title: $title
       |Season: $season, ID: $id
       |
       |Episodes: ${episodes.size}

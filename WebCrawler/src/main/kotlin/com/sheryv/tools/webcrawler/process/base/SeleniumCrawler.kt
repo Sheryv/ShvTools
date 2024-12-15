@@ -10,7 +10,6 @@ import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.TerminationException
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.BrowserResponseEvent
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.JSNetworkEvent
-import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.delay
@@ -54,7 +53,12 @@ abstract class SeleniumCrawler<S : SettingsBase>(
       element = wait.withTimeout(Duration.ofSeconds(timeoutSeconds.toLong())).until(ExpectedConditions.presenceOfElementLocated(selector))
       
     } catch (e: TimeoutException) {
-      com.sheryv.util.logging.log.warn("ERROR: Selector '{}' not found during {} seconds | {}", selector.toString(), timeoutSeconds, e.message)
+      com.sheryv.util.logging.log.warn(
+        "ERROR: Selector '{}' not found during {} seconds | {}",
+        selector.toString(),
+        timeoutSeconds,
+        e.message
+      )
       if (throwEx) {
         throw e
       }
@@ -109,8 +113,13 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   fun getNetworkResponseEventsFromBrowserTools(): List<BrowserResponseEvent> {
     return driver.manage().logs().get(LogType.PERFORMANCE).all.asSequence()
       .map { SerialisationUtils.jsonMapper.readTree(it.message).get("message") }
-      .filter { it.get("method").asText() == "Network.responseReceived" }
-      .map { SerialisationUtils.jsonMapper.convertValue(it.get("params"), BrowserResponseEvent::class.java) }
+      .filter {
+        log.debug("Network response event:\n{}", it.toPrettyString())
+        it.get("method").asText() == "Network.responseReceived"
+      }
+      .map {
+        SerialisationUtils.jsonMapper.convertValue(it.get("params"), BrowserResponseEvent::class.java)
+      }
       .toList()
   }
   
