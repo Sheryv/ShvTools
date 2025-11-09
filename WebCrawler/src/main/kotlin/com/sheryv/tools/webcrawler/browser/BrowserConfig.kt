@@ -9,6 +9,7 @@ class BrowserConfig(
   @JsonDeserialize(`as` = LinkedHashSet::class)
   val drivers: Set<DriverConfig>,
   var binaryPath: Path? = null,
+  var userProfilePath: Path? = null,
   var selectedDriver: DriverTypes = drivers.first().type,
 ) {
   

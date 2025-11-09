@@ -40,7 +40,7 @@ class FilmwebCrawler(
 //    driver.findElements(By.tagName("didomi-notice-agree-button")).firstOrNull()?.click()
     logText("Wait for logging")
     val link = driver.waitFor(By.cssSelector("header .userAvatar > a"), 60 * 5L)
-    val linkHref = link.getAttribute("href")
+    val linkHref = link.getAttribute("href").orEmpty()
     user = linkHref.substring(linkHref.lastIndexOf("/") + 1)
     logText("User {}", user)
     

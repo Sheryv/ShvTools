@@ -1,16 +1,13 @@
 package com.sheryv.util.fx.lib
 
+import com.sheryv.util.inBackground
+import com.sheryv.util.inMainThread
 import javafx.beans.binding.Binding
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.BooleanBinding
-import javafx.beans.binding.BooleanExpression
-import javafx.beans.binding.ListBinding
 import javafx.beans.property.Property
-import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.StringProperty
 import javafx.beans.value.ObservableValue
-import javafx.beans.value.WritableValue
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.scene.control.*
@@ -166,8 +163,24 @@ fun <T, N> ObservableValue<T>.toList(nested: (T) -> List<N>?): ObservableList<N>
   val list = FXCollections.observableArrayList<N>()
   
   onChange {
-    it?.let(nested)?.also {
-      list.setAll(it)
+    it
+      ?.let(nested)
+      ?.also(list::setAll)
+  }
+  return list
+}
+
+fun <T, N> ObservableValue<T>.toListAsync(nested: suspend (T) -> Sequence<N>?): ObservableList<N> {
+  val list = FXCollections.synchronizedObservableList<N>(FXCollections.observableArrayList<N>())
+  
+  onChange { value ->
+    list.clear()
+    inBackground {
+      value?.let { nested(it) }?.forEach {
+        inMainThread {
+          list.add(it)
+        }
+      }
     }
   }
   return list
@@ -177,8 +190,12 @@ fun <T, N> ObservableList<T>.mapObservableItem(nested: (T) -> N): ObservableList
   return EasyBind.map(this, nested)
 }
 
-fun <T, N> ObservableValue<T>.mapObservable(nested: (T) -> N): Binding<N> {
+fun <T : Any, N> ObservableValue<T>.mapObservable(nested: (T) -> N): Binding<N> {
   return EasyBind.map(this, nested)
+}
+
+fun <T : Any, N : Any> ObservableValue<T>.mapObservableOrDefault(default: N, nested: (T?) -> N?): Binding<N> {
+  return EasyBind.map(this) { value -> nested(value) ?: default }
 }
 
 fun <T> ObservableValue<T>.selectChain(): SelectBuilder<T> {

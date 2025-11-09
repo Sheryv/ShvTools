@@ -95,8 +95,8 @@ abstract class SystemSupport {
   }
   
   fun findExecutablePath(name: String): Path? {
-    val found = System.getenv("PATH").split(File.pathSeparatorChar).flatMap {
-      Path.of(it).listDirectoryEntries("$name*").filter { it.isExecutable() }
+    val found = System.getenv("PATH").split(File.pathSeparatorChar).map { Path.of(it) }.filter { it.exists() }.flatMap {
+      it.listDirectoryEntries("$name*").filter { it.isExecutable() }
     }
     if (found.size > 1) {
       log.warn("Found many executables on path for name '$name'\n", found.joinToString("\n"))

@@ -21,5 +21,6 @@ dependencies {
     implementation project(':web-util')
 
     implementation 'black.ninia:jep:4.1.1'
+    implementation 'org.java-websocket:Java-WebSocket:1.6.0'
 }
 

@@ -61,8 +61,9 @@ class FMoviesCrawler(
     
     val iframe = waitForAttributeCheckBy(By.cssSelector("#player iframe"), "src", 10) {
       it?.getAttribute("src")?.contains(server.matchedServerDef!!.domain()) == true
+    }?.also {
+      driver.switchTo().frame(it)
     }
-    driver.switchTo().frame(iframe)
     return blockExecutedOnPage?.invoke()
   }
   

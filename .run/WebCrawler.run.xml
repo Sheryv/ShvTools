@@ -3,6 +3,7 @@
     <option name="MAIN_CLASS_NAME" value="com.sheryv.tools.webcrawler.MainLauncher" />
     <module name="shvtools.web-crawler.main" />
     <shortenClasspath name="NONE" />
+    <option name="VM_PARAMETERS" value="--enable-native-access=ALL-UNNAMED" />
     <option name="WORKING_DIRECTORY" value="webcrawler" />
     <method v="2">
       <option name="Make" enabled="true" />

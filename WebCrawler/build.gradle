@@ -12,11 +12,13 @@ ext.addJavafx()
 ext.addLaunch4j()
 
 dependencies {
-//    implementation('org.seleniumhq.selenium:selenium-devtools:4.0.0-rc-1')
     implementation libs.selenium
+    implementation libs.selenium.cdp
     implementation libs.apache.http
 
     implementation libs.jsoup
+    implementation 'org.java-websocket:Java-WebSocket:1.6.0'
     implementation project(':ui-util')
     implementation project(':web-util')
+    testImplementation libs.trakt
 }

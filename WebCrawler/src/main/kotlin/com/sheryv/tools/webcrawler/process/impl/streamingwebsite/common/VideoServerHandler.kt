@@ -45,12 +45,12 @@ open class VideoServerHandler(
     }
     val found = scraper.waitForNonEmptyAttribute(byVideo, "src", timeout)
     if (found != null) {
-      return found.getAttribute("src").takeIf { it.isNotBlank() }
+      return found.getAttribute("src")?.takeIf { it.isNotBlank() }
     }
     return null
   }
   
-  open fun checkIfM3U8UrlCorrect(url: String, series: Series): Boolean = series.episodes.none { url == it.downloadUrl?.base.orEmpty() }
+  open fun checkIfM3U8UrlCorrect(url: String, series: Series): Boolean = series.episodes.none { it.downloadUrl?.isSameUrl(url) == true }
   
   open fun tryToGetCorrectM3U8Url(incorrectUrl: String, series: Series): String? {
     if (incorrectUrl.contains("master.m3u8")) {

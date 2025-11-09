@@ -104,7 +104,9 @@ abstract class App(protected val primaryViewClass: KClass<out BaseView>, val sta
             single(createdAtStart = true) { deps.koin }
             singleOf(::ViewFactory)
           },
-        ) + this.modules
+        ) + this.modules,
+        true,
+        true
       )
       deps.createEagerInstances()
       

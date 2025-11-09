@@ -39,7 +39,7 @@ object SystemUtils {
   fun isWindowsOS(): Boolean = System.getProperty("os.name").lowercase().contains("windows")
   
   fun currentSystem(): SystemType {
-    val s = System.getProperty("os.name").toLowerCase()
+    val s = System.getProperty("os.name").lowercase()
     return when {
       s.contains("windows") -> SystemType.WINDOWS
       s.startsWith("mac os") -> SystemType.MAC

@@ -25,7 +25,7 @@ enum class CommonVideoServers(
     "Voe",
     "voe",
     "voe.sx",
-    null, "document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
+    null, "document.querySelector('.jw-controls .jw-button-color')?.click();document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
   ),
   VTUBE(
     "VTube",
@@ -87,7 +87,12 @@ enum class CommonVideoServers(
 //    "#player iframe",
 //    "document.querySelector('.play-overlay')?.click();document.querySelector('.play-overlay')?.click();document.querySelector('.play-overlay')?.click()"
   ),
-  
+  LULUVDO(
+    "Luluvdo",
+    "luluvdo",
+    "luluvdo.com",
+    null, "document.querySelector('.jw-controls .jw-button-color')?.click()"
+  ),
   ;
   
   override fun id() = name.lowercase()

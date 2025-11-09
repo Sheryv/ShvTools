@@ -4,12 +4,16 @@ import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
+import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.*
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.util.logging.log
 import org.openqa.selenium.SessionNotCreatedException
+import org.openqa.selenium.manager.SeleniumManager
 import kotlin.io.path.exists
 import kotlin.io.path.isExecutable
 
@@ -66,6 +70,48 @@ class Runner(
     } finally {
       GlobalState.runningProcess.value = null
       (driver as? SeleniumDriver)?.quit()
+    }
+  }
+  
+  suspend fun startStreamingWebsiteSingleRun() {
+    if (crawlerDef !is StreamingCrawlerBase){
+      throw AppError("This function works only for video streaming websites")
+    }
+    require(params.streamingUrlOverride != null)
+    
+    val config = configuration.copy()
+    val driverPath = browser.currentDriver().path
+    if (!driverPath.exists() || !driverPath.isExecutable()) {
+      log.info("Browser configuration '${browser.type.name}' was rejected because driver was not found at '${driverPath}' or it is not correct executable")
+      throw AppError("Cannot start browser because driver was not found at '${driverPath}' or it is not correct executable file")
+    }
+    
+    System.setProperty(browser.selectedDriver.propertyNameForSeleniumDriver, driverPath.toAbsolutePath().toString())
+    
+    var driver: SeleniumDriver? = null
+    try {
+      driver = browser.selectedDriver.webDriverBuilder.build(config, browser) as SeleniumDriver
+      val crawler = (crawlerDef as StreamingCrawlerBase).build(config, browser, driver, params) as StreamingWebsiteBase
+      
+      driver.initialize(crawler as Crawler<out SDriver, SettingsBase>)
+      GlobalState.runningProcess.value = crawler as SeleniumCrawler<SettingsBase>
+      log.info("Crawler '${crawler.def}' built")
+      
+      driver.enableDevToolsWithNetworkModule()
+      
+      val downloadUrl = crawler.openStandaloneStreamingPage(params.streamingUrlOverride)
+//      if (downloadUrl)
+      
+      log.info("Crawler '${crawler.def}' finished successfully")
+    } catch (e: SessionNotCreatedException) {
+      throw AppError("Cannot start browser: " + e.message, e)
+    } catch (e: TerminationException) {
+      log.info(e.message)
+    } catch (e: Exception) {
+      throw e
+    } finally {
+      GlobalState.runningProcess.value = null
+      driver?.quit()
     }
   }
 }

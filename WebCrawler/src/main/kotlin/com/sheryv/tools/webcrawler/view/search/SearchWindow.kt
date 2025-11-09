@@ -220,7 +220,7 @@ class SearchWindow {
           return@map found.copy(title = ep.name).apply { lastSize.set(found.lastSize.value) }
         }
         Episode(0, ep.name, ep.episodeNumber, null, "")
-      } to api.getImdbId(i.id)
+      } to api.getImdbIdForTv(i.id)
     },
       { (episodeList, imdb) ->
         if (episodeList.isNotEmpty()) {

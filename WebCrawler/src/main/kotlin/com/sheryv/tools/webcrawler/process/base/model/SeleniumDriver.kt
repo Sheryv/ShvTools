@@ -14,10 +14,17 @@ import org.openqa.selenium.JavascriptExecutor
 import org.openqa.selenium.WebDriver
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.chromium.ChromiumDriver
+import org.openqa.selenium.devtools.v131.network.Network
+import org.openqa.selenium.devtools.v131.network.model.RequestId
 import org.openqa.selenium.edge.EdgeDriver
+import org.openqa.selenium.remote.http.HttpHandler
+import org.openqa.selenium.remote.http.HttpRequest
+import org.openqa.selenium.remote.http.HttpResponse
 import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.WebDriverWait
 import java.time.Duration
+import java.util.*
+import java.util.logging.Level
 
 
 open class SeleniumDriver(
@@ -31,40 +38,20 @@ open class SeleniumDriver(
     script
   }
   
+  private val initScript: String by lazy {
+    BrowserSupport.get.loadScriptFromClassPath("_init")
+  }
+  
   init {
     wrappedDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(implicitWait))
     
-    val searchPrefix = """^\\""" + "\$?cdc_a.*"
     val cmd = mapOf(
-      "source" to """
-      Object.defineProperty(Navigator.prototype, 'webdriver', {
-          set: undefined,
-          enumerable: true,
-          configurable: true,
-          get: new Proxy(
-              Object.getOwnPropertyDescriptor(Navigator.prototype, 'webdriver').get,
-              { apply: (target, thisArg, args) => {
-                  // emulate getter call validation
-                  Reflect.apply(target, thisArg, args);
-                  return undefined;
-              }}
-          )
-      });
-      Object.defineProperty(navigator, 'webdriver', {
-        configurable: true,
-        get: () => undefined
-      });
-      Object.keys(window).filter(k=>k.match('$searchPrefix')).forEach(k=>{ delete window[k]})
-      Object.keys(document).filter(k=>k.match('$searchPrefix')).forEach(k=>{ delete document[k]})
-      delete Navigator.prototype.webdriver;
-      delete navigator.webdriver;
-      delete navigator.webdriver;
-      console.log('${ViewUtils.TITLE} initialised');
-    """
+      "source" to initScript + "\n\nconsole.log('${ViewUtils.TITLE} initialised');"
     )
     when (wrappedDriver) {
-      is ChromiumDriver -> wrappedDriver.executeCdpCommand("Page.addScriptToEvaluateOnNewDocument", cmd)
-      is EdgeDriver -> wrappedDriver.executeCdpCommand("Page.addScriptToEvaluateOnNewDocument", cmd)
+      is ChromiumDriver -> {
+        wrappedDriver.executeCdpCommand("Page.addScriptToEvaluateOnNewDocument", cmd)
+      }
     }
   }
   
@@ -90,23 +77,23 @@ open class SeleniumDriver(
     return cachedDocument
   }
   
-  override fun findElements(by: By?): MutableList<WebElement> {
+  override fun findElements(by: By): MutableList<WebElement> {
     return wrappedDriver.findElements(by)
   }
-  
-  override fun findElement(by: By?): WebElement {
+
+  override fun findElement(by: By): WebElement {
     return wrappedDriver.findElement(by)
   }
-  
-  override fun getCurrentUrl(): String {
+
+  override fun getCurrentUrl(): String? {
     return wrappedDriver.currentUrl
   }
   
-  override fun getTitle(): String {
+  override fun getTitle(): String? {
     return wrappedDriver.title
   }
   
-  override fun getPageSource(): String {
+  override fun getPageSource(): String? {
     return wrappedDriver.pageSource
   }
   
@@ -186,6 +173,40 @@ open class SeleniumDriver(
     return if (o is List<*>) {
       return o as List<Map<String, *>>
     } else null
+  }
+  
+  fun enableDevToolsWithNetworkModule() {
+    when (wrappedDriver) {
+      is ChromiumDriver -> {
+        wrappedDriver.setLogLevel(Level.OFF)
+        wrappedDriver.devTools.createSessionIfThereIsNotOne()
+        wrappedDriver.devTools.send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()))
+        wrappedDriver.devTools.domains.network().interceptTrafficWith { next ->
+          HttpHandler { req: HttpRequest ->
+//            req.addHeader("cheese", "brie");
+            val res: HttpResponse = next.execute(req);
+            log.debug("Intercept: ${req.method} ${res.status} | size: ${res.content.length()} B | ${req.uri}")
+            res
+          }
+        }
+        wrappedDriver.devTools.addListener(Network.responseReceived()) { id, e ->
+          log.debug("EVENT responseReceived {} | {} | size: {} B | {}", e.type, e.requestId, e.response.encodedDataLength, e.response.url)
+        }
+      }
+    }
+  }
+  
+  fun getNetworkResponse(requestId: String): Network.GetResponseBodyResponse? {
+    return when (wrappedDriver) {
+      is ChromiumDriver ->
+//        try {
+//        wrappedDriver.executeCdpCommand("Network.getResponseBody", mapOf("requestId" to requestId))
+//      } catch (e: Exception) {
+        wrappedDriver.devTools.send(Network.getResponseBody(RequestId(requestId)))
+//      }
+      
+      else -> null
+    }
   }
   
   private fun getFunctionExpressionWithCheck(function: String, params: Array<out String>): String {

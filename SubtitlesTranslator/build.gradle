@@ -4,7 +4,6 @@ ext.longName = "Subtitles translator"
 //apply plugin: 'kotlin'
 apply plugin: 'application'
 ext.className = "com.sheryv.tools.subtitlestranslator.Main"
-mainClassName = ext.className
 
 dependencies {
     implementation project(':web-util')
@@ -16,7 +15,7 @@ dependencies {
     implementation 'org.seleniumhq.selenium:selenium-java:4.5.3'
 //    compile 'com.google.code.gson:gson:2.8.5'
 
-    annotationProcessor 'org.projectlombok:lombok:1.18.24'
-    compileOnly 'org.projectlombok:lombok:1.18.24'
+    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+    compileOnly 'org.projectlombok:lombok:1.18.42'
 
 }

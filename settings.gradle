@@ -1,3 +1,6 @@
+plugins {
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '0.9.0'
+}
 rootProject.name = 'shvtools'
 
 
@@ -25,24 +28,24 @@ findProject(':WebCrawler')?.name = 'web-crawler'
 //findProject(':CloudServerManager')?.name = 'cloud-server-manager'
 
 
-String kotlin_version = '1.9.0'
+String kotlin_version = '2.2.21'
 String kotlin_plugin_version = kotlin_version
 
 dependencyResolutionManagement {
     versionCatalogs {
         libs {
             def kotlinVer = version('kotlin', kotlin_version)
-            def jacksonVer = version('jackson', '2.15.2')
+            def jacksonVer = version('jackson', '2.19.4')
             def kotlinPluginVer = version('kotlin-plugin', kotlin_plugin_version)
-            def kotlinLibVer = version('kotlin-lib', '1.7.2')
-            def koinVer = version('koin', '3.4.3')
+            def kotlinLibVer = version('kotlin-lib', '1.10.2')
+            def koinVer = version('koin', '4.1.1')
 
             plugin('kotlin-jvm', 'org.jetbrains.kotlin.jvm').versionRef(kotlinPluginVer)
             plugin('kotlin-allopen', 'org.jetbrains.kotlin.plugin.allopen').versionRef(kotlinPluginVer)
             plugin('kotlin-kapt', 'org.jetbrains.kotlin.kapt').versionRef(kotlinPluginVer)
-            plugin('javafx', 'org.openjfx.javafxplugin').version('0.0.13')
-            plugin('launch4j', 'edu.sc.seis.launch4j').version('3.0.4')
-            plugin('ksp', 'com.google.devtools.ksp').version('1.9.0-1.0.13')
+            plugin('javafx', 'org.openjfx.javafxplugin').version('0.1.0')
+            plugin('launch4j', 'edu.sc.seis.launch4j').version('4.0.0')
+            plugin('ksp', 'com.google.devtools.ksp').version('2.2.21-2.0.4')
             plugin('kotlin-serialization', 'org.jetbrains.kotlin.plugin.serialization').versionRef(kotlinPluginVer)
 
             library('kotlin', "org.jetbrains.kotlin", "kotlin-stdlib-jdk8").versionRef(kotlinVer)
@@ -55,7 +58,7 @@ dependencyResolutionManagement {
             library('jackson.databind', 'com.fasterxml.jackson.core', 'jackson-databind').versionRef(jacksonVer)
             library('jackson.jsr310', 'com.fasterxml.jackson.datatype', 'jackson-datatype-jsr310').versionRef(jacksonVer)
             library('jackson.kotlin', 'com.fasterxml.jackson.module', 'jackson-module-kotlin').versionRef(jacksonVer)
-            library('kotlin-json', 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.5.1')
+            library('kotlin-json', 'org.jetbrains.kotlinx:kotlinx-serialization-json-jvm:1.9.0')
             library('kaml', 'com.charleskorn.kaml:kaml:0.55.0')
 
             library('slf4j', 'org.slf4j:slf4j-api:1.7.25')
@@ -74,7 +77,8 @@ dependencyResolutionManagement {
 
             library('mustache', 'com.github.spullara.mustache.java:compiler:0.9.10')
             library('flatlaf', 'com.formdev:flatlaf:3.1.1')
-            library('selenium', 'org.seleniumhq.selenium:selenium-java:4.10.0')
+            library('selenium', 'org.seleniumhq.selenium:selenium-java:4.27.0')
+            library('selenium-cdp', 'org.seleniumhq.selenium:selenium-devtools-v131:4.27.0')
             library('apache-http', 'org.apache.httpcomponents:httpclient:4.5.14')
 
             library('jsoup', 'org.jsoup:jsoup:1.16.1')
@@ -86,8 +90,8 @@ dependencyResolutionManagement {
             library('koin-coroutines', "io.insert-koin", "koin-core-coroutines").versionRef(koinVer)
             library('koin-logger', "io.insert-koin", "koin-logger-slf4j").versionRef(koinVer)
 
-            library('koin-ksp', "io.insert-koin", "koin-ksp-compiler").version('1.2.2')
-            library('koin-annotations', "io.insert-koin", "koin-annotations").version('1.2.2')
+            library('koin-ksp', "io.insert-koin", "koin-ksp-compiler").version('2.1.0')
+            library('koin-annotations', "io.insert-koin", "koin-annotations").version('2.1.0')
 
             library('koin-test', "io.insert-koin", "koin-test").versionRef(koinVer)
             library('koin-test-junit5', "io.insert-koin", "koin-test-junit5").versionRef(koinVer)
@@ -98,6 +102,8 @@ dependencyResolutionManagement {
 
             library('junit-api', "org.junit.jupiter:junit-jupiter-api:5.9.0")
             library('junit-engine', "org.junit.jupiter:junit-jupiter-engine:5.9.0")
+
+            library("trakt", "com.uwetrottmann.trakt5:trakt-java:6.16.0")
 
             bundle('kotlin', ['kotlin', 'kotlin-coroutines'])
             bundle('tests', ['junit-api', 'junit-engine'])

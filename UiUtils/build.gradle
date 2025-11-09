@@ -22,7 +22,7 @@ dependencies {
 
     api libs.easybind
 
-    testApi 'com.github.YetiHafen:javafx-customcaption:v1.0.0'
+//    testApi 'com.github.YetiHafen:javafx-customcaption:v1.0.0'
     testImplementation 'net.java.dev.jna:jna:5.13.0'
     testImplementation 'net.java.dev.jna:jna-platform:5.13.0'
 }

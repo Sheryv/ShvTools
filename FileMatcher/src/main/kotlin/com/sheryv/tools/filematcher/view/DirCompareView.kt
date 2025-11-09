@@ -3,16 +3,14 @@ package com.sheryv.tools.filematcher.view
 
 import com.sheryv.tools.filematcher.config.Configuration
 import com.sheryv.tools.filematcher.utils.DialogUtils
+import com.sheryv.tools.filematcher.utils.Hashing
 import com.sheryv.tools.filematcher.utils.ViewUtils
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.lib.*
 import com.sheryv.util.logging.log
 import com.sheryv.util.unit.BinarySize
 import javafx.beans.binding.Bindings
-import javafx.beans.property.SimpleListProperty
-import javafx.beans.property.SimpleSetProperty
 import javafx.beans.property.StringProperty
-import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
@@ -22,7 +20,6 @@ import javafx.scene.control.*
 import javafx.scene.control.TableView.TableViewSelectionModel
 import javafx.scene.layout.Priority
 import javafx.stage.Stage
-import org.fxmisc.easybind.EasyBind
 import java.awt.Toolkit
 import java.awt.datatransfer.DataFlavor
 import java.awt.datatransfer.Transferable
@@ -41,14 +38,14 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
   private val pattern = stringProperty("([ +A-Za-z\\d_-]+)([ ._-]\\w*\\d*)*.*")
   private val left = DirPane("Left")
   private val right = DirPane("Right")
-  private val trigger = triggerObs()
+//  private val trigger = triggerObs()
   
   fun dirPane(data: DirPane, parent: Parent) = parent.hbox(10) {
     hgrow = Priority.ALWAYS
     vgrow = Priority.ALWAYS
     
     data.path.onChangeNotNull {
-      updateMatchers()
+//      updateMatchers()
     }
     
     vbox(alignment = Pos.CENTER_LEFT) {
@@ -73,29 +70,33 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
         
         column("Name", 450) { it.path.fileName }
         column("Size", alignRight = true) { BinarySize.format(it.size) }
-        columnBound("Status", 100) { it.status }.also {
-          it.cellFactory = ViewUtils.tableCellFactoryWithCustomCss<FileRecord, FileRecordCmpSatus>(
+        columnBound("Status", 100) { it.match.mapObservableOrDefault(FileRecordCmpStatus.NOT_MATCHED) { it?.status } }.also {
+          it.cellFactory = ViewUtils.tableCellFactoryWithCustomCss<FileRecord, FileRecordCmpStatus>(
             setOf(
 //              "bg-purple",
 //              "bg-yellow",
               "bg-green",
 //              "bg-red",
               "bg-grey",
-//              "bg-blue",
+              "bg-blue",
               "bg-orange"
             )
           ) {
             listOf(
-              when (it.status.value) {
-                FileRecordCmpSatus.MATCHED -> "bg-green"
-                FileRecordCmpSatus.NOT_MATCHED -> "bg-orange"
+              when (it.match.value?.status) {
+                FileRecordCmpStatus.IDENTICAL -> "bg-blue"
+                FileRecordCmpStatus.MATCHED -> "bg-green"
+                FileRecordCmpStatus.NOT_MATCHED -> "bg-orange"
                 else -> "bg-grey"
               }
             )
           }
         }
         columnBound("Matched fragments") { f ->
-          setProperty(f.phrases).mapObservable { it.joinToString("|") }
+          f.match.mapObservable { it?.phrases?.let { if (data == left) it.first.orEmpty() else it.second.orEmpty() } ?: "" }
+        }
+        columnBound("Same size") { f ->
+          f.match.mapObservable { if (it?.sameSize == true) "Yes" else "No" }
         }
       }
       hbox {
@@ -108,7 +109,7 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
             val size = BinarySize.format(data.files.sumOf { it.size })
             val count = data.files.size
             val selected = data.selectedFiles.size
-            val matched = data.files.count { it.status.value == FileRecordCmpSatus.MATCHED }
+            val matched = data.files.count { it.match.value?.status == FileRecordCmpStatus.MATCHED }
             "Selected $selected/$count, Matched $matched, Total $size"
           }, data.files, data.selectedFiles))
         }
@@ -116,8 +117,10 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
           "", null,
           item("Select all") { data.selectAll() },
           item("Select none") { data.selectNone() },
-          item("Select matched") { data.select { it.status.value == FileRecordCmpSatus.MATCHED } },
-          item("Select not matched") { data.select { it.status.value == FileRecordCmpSatus.NOT_MATCHED } },
+          item("Select matched") { data.select { it.match.value?.status == FileRecordCmpStatus.MATCHED } },
+          item("Select identical") { data.select { it.match.value?.status == FileRecordCmpStatus.MATCHED } },
+          item("Select matched & identical") { data.select { it.match.value?.status?.hasMatch == true } },
+          item("Select not matched") { data.select { it.match.value?.status == FileRecordCmpStatus.NOT_MATCHED } },
           item("Invert selection") { data.invertSelect() },
           SeparatorMenuItem(),
           item("Copy selected to clipboard") {
@@ -126,6 +129,23 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
               FileTransferable(selected.map { it.path.toFile() })
             ) { _, _ -> }
             log.info("Copied {}:\n{}", selected.size, selected.joinToString("\n\t") { it.path.fileName.toString() })
+          },
+          item("Delete selected") {
+            val selected = data.selectedFiles.toList()
+            DialogUtils.dialog(
+              "Do yot really want to delete ${selected.size} files from ${
+                selected.firstOrNull()?.path?.parent?.toAbsolutePath()?.toString().orEmpty()
+              }",
+              type = Alert.AlertType.NONE,
+              buttons = arrayOf(ButtonType.YES, ButtonType.CANCEL)
+            )
+              .filter { it == ButtonType.YES }
+              .ifPresent {
+                for (file in selected) {
+                  Files.deleteIfExists(file.path)
+                }
+                log.info("Deleted {}:\n{}", selected.size, selected.joinToString("\n\t") { it.path.fileName.toString() })
+              }
           },
         ).attachTo(this).also {
           it.minHeight = 25.0
@@ -154,8 +174,11 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
             hgrow = Priority.ALWAYS
             styleClass.add("mono")
           }
-          button("Update").setOnAction {
+          button("Update pattern").setOnAction {
           
+          }
+          button("Run compare").setOnAction {
+            updateMatchers()
           }
         }
       }
@@ -181,37 +204,37 @@ class DirCompareView(override val config: Configuration) : SimpleView() {
     if (left.path.value == null || right.path.value == null) {
       return
     }
-    for (l in left.files) {
-      l.status.value = FileRecordCmpSatus.NOT_MATCHED
+    for (f in left.files) {
+      f.match.value = null
     }
-    for (r in right.files) {
-      r.status.value = FileRecordCmpSatus.NOT_MATCHED
+    for (f in right.files) {
+      f.match.value = null
     }
     
+    log.info("Updating lists")
     val regex = Regex(pattern.value)
     for (l in left.files) {
-      val resR = regex.matchEntire(l.path.fileName.toString())
-      if (resR?.groups?.isNotEmpty() == true) {
-        for (r in right.files) {
-          val resL = regex.matchEntire(r.path.fileName.toString())
-          if (resL?.groups?.isNotEmpty() == true) {
-            if (resR.groups[1]?.value?.equals(resL.groups[1]?.value, true) == true) {
-              r.status.value = FileRecordCmpSatus.MATCHED
-              l.status.value = FileRecordCmpSatus.MATCHED
-              r.phrases.add(resR.groups[1]?.value)
-              l.phrases.add(resL.groups[1]?.value)
-            }
-          }
+      for (r in right.files) {
+        if (r.match.value?.status?.hasMatch == true && l.match.value?.status?.hasMatch == true) {
+          continue
+        }
+        
+        val match = l.matches(regex, r)
+        if (l.match.value?.status?.hasMatch != true) {
+          l.match.value = match
+        }
+        if (r.match.value?.status?.hasMatch != true) {
+          r.match.value = match
         }
       }
     }
-    trigger.fire()
   }
-  
-  
-  private fun item(text: String, action: EventHandler<ActionEvent>): MenuItem {
-    return MenuItem(text).also { it.onAction = action }
-  }
+//    trigger.fire()
+}
+
+
+private fun item(text: String, action: EventHandler<ActionEvent>): MenuItem {
+  return MenuItem(text).also { it.onAction = action }
 }
 
 
@@ -221,10 +244,10 @@ class DirPane(
 ) {
   val path: StringProperty = stringProperty(pathArg?.toAbsolutePath()?.toString())
   
-  var files: ObservableList<FileRecord> = path.toList {
+  var files: ObservableList<FileRecord> = path.toListAsync {
     if (Path.of(it).isDirectory()) {
-      Path.of(it).listDirectoryEntries().filter { it.isRegularFile() }
-        .map { FileRecord(it, Files.size(it)) }
+      Path.of(it).listDirectoryEntries().asSequence().filter { it.isRegularFile() }
+        .map { FileRecord(it, Files.size(it), Hashing.crc32(it)) }
     } else {
       null
     }
@@ -268,15 +291,60 @@ class DirPane(
   }
 }
 
-data class FileRecord(val path: Path, val size: Long) {
+data class FileRecord(val path: Path, val size: Long, val crc: String) {
   //  val selected = booleanProperty()
-  val status = objectProperty(FileRecordCmpSatus.NOT_MATCHED)
-  val phrases = FXCollections.observableSet<String>()
+  val match = objectProperty<FileRecordMatch>(null)
+//  val status = objectProperty(FileRecordCmpStatus.NOT_MATCHED)
+//  val phrases = FXCollections.observableSet<String>()
+//  val sameSize = booleanProperty(false)
+//  val sameHash = booleanProperty(false)
+//  val sameMod = booleanProperty(false)
+  
+  
+  fun matches(regex: Regex, other: FileRecord): FileRecordMatch {
+    val currentMatch = regex.matchEntire(path.fileName.toString())
+    
+    if (currentMatch?.groups?.isNotEmpty() == true) {
+      val otherMatch = regex.matchEntire(other.path.fileName.toString())
+      
+      if (otherMatch?.groups?.isNotEmpty() == true) {
+        if (currentMatch.groups[1]?.value?.equals(otherMatch.groups[1]?.value, true) == true) {
+          return FileRecordMatch(
+            currentMatch.groups[1]?.value to otherMatch.groups[1]?.value,
+            size == other.size,
+            crc == other.crc
+          )
+        }
+      }
+    }
+    
+    
+    return FileRecordMatch()
+  }
 }
 
-enum class FileRecordCmpSatus {
-  MATCHED,
-  NOT_MATCHED
+class FileRecordMatch(
+  val phrases: Pair<String?, String?>? = null,
+  val sameSize: Boolean = false,
+  val sameHash: Boolean = false
+) {
+  
+  val status: FileRecordCmpStatus = let {
+    if (sameHash)
+      return@let FileRecordCmpStatus.IDENTICAL
+    
+    if (phrases?.first?.equals(phrases.second, true) == true)
+      FileRecordCmpStatus.MATCHED
+    else
+      FileRecordCmpStatus.NOT_MATCHED
+  }
+  
+}
+
+enum class FileRecordCmpStatus(val hasMatch: Boolean) {
+  IDENTICAL(true),
+  MATCHED(true),
+  NOT_MATCHED(false)
 }
 
 

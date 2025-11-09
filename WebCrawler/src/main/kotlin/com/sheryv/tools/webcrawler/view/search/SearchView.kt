@@ -16,13 +16,11 @@ import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.emitEvent
-import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.lib.*
 import com.sheryv.util.inBackground
 import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
-import com.sheryv.util.singleAssign
 import com.sheryv.util.unit.BinarySize
 import javafx.beans.binding.Bindings
 import javafx.collections.FXCollections
@@ -31,7 +29,6 @@ import javafx.scene.Parent
 import javafx.scene.control.*
 import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.layout.Priority
-import javafx.scene.paint.Color
 import javafx.stage.Stage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -381,7 +378,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
           }
           Episode(ep.id, ep.name, ep.episodeNumber, null, "")
         }
-        val imdb = api.getImdbId(i.id)
+        val imdb = api.getImdbIdForTv(i.id)
         
         series.set(
           Series(

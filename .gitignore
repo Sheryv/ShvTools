@@ -1,5 +1,6 @@
 .idea
 .gradle
+secrets.properties
 /build/
 */build/
 /out/
@@ -21,3 +22,4 @@ config_*.json
 /*/config.json
 /*/drivers
 logs
+*.log

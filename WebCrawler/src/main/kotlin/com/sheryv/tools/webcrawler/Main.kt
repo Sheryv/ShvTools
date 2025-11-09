@@ -7,22 +7,10 @@ import com.sheryv.tools.webcrawler.view.MainView
 import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
 import com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView
 import com.sheryv.tools.webcrawler.view.search.SearchView
+import com.sheryv.tools.webcrawler.view.remoteclient.HttpServerView
 import com.sheryv.util.fx.core.app.App
-import com.sheryv.util.fx.lib.*
-import com.sheryv.util.logging.log
-import item
-import javafx.application.Application
-import javafx.application.Platform
-import javafx.geometry.Insets
-import javafx.scene.Scene
-import javafx.scene.layout.*
-import javafx.scene.paint.Color
-import javafx.stage.Stage
-import javafx.stage.StageStyle
-import menu
 import org.koin.core.module.dsl.factoryOf
 import java.lang.management.ManagementFactory
-import javax.swing.SwingUtilities
 
 
 fun main(args: Array<String>) {
@@ -41,6 +29,7 @@ fun main(args: Array<String>) {
       factoryOf(::DownloaderView)
       factoryOf(::JDownloaderView)
       factoryOf(::SearchView)
+      factoryOf(::HttpServerView)
       single(createdAtStart = true) { Configuration.get() }
     }
   }

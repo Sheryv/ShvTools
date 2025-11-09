@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman
 
+import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
@@ -11,7 +12,9 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Ep
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServerFormat
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.support.ui.ExpectedConditions
@@ -96,8 +99,19 @@ class FilmanCrawler(
   }
   
   override suspend fun getSeriesName(): String {
-    val result = Regex("""(.* / )?(.*) - Filman\.cc.*""").matchEntire(driver.title)!!
+    val result = Regex("""(.* / )?(.*) - Filman\.cc.*""").matchEntire(driver.title.orEmpty())!!
     return result.groups[2]!!.value
   }
   
+  
+  protected override suspend fun forceSeriesPageLoaded() {
+    val loginForm = driver.executeScript("return document.querySelectorAll('#signin-form').length > 0;") == true
+    if (loginForm){
+      runBlocking(Dispatchers.Main) {
+        GlobalState.view.showMessageDialog("Login form detected. Click OK when logged in to continue.")
+      }
+    }
+    
+    driver.navigate().to(getSeriesLink())
+  }
 }

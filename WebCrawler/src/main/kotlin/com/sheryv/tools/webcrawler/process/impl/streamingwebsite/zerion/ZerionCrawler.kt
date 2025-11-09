@@ -31,11 +31,11 @@ class ZerionCrawler(
   
   override suspend fun findEpisodeItems(serverIndex: String?): List<VideoData> {
     wait.until<List<WebElement>>(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("#series-page .season")))
-    val js =
-      "return [...document.querySelector('#series-page .season:nth-child(${series.season}) > ul').childNodes.values()]" +
-          ".map(v=>v.querySelector('.title-date-block a'))" +
-          ".filter(v=>!!v)" +
-          ".map(v=>{return {e: v.childNodes[0].textContent, u:v.attributes['href'].value}});"
+    // language=js
+    val js = """
+        return shv.findIn('#series-page .season:nth-child(${series.season}) > ul')
+        .map(v=>v.querySelector('.title-date-block a')).filter(v=>!!v)
+        .map(v=>{return {e: v.childNodes[0].textContent, u:v.attributes['href'].value}});""".trimIndent()
     
     return driver.executeScriptFetchList(js)?.mapIndexed { i, t ->
       val name = t["e"].toString().trim { it <= ' ' }.replace(Regex("""[sS]\d+[eE]\d+"""), "").trim()
@@ -46,26 +46,35 @@ class ZerionCrawler(
   }
   
   override suspend fun loadItemDataFromSummaryPageAndGetServers(data: VideoData): List<VideoServer> {
-    val js =
-      "return [...document.querySelectorAll('.video-list tr')]" +
-          ".filter(v=>v.childNodes[0].nodeName == 'TD')" +
-          ".map(v=>{return {h: v.childNodes[0].textContent, q: v.childNodes[1].textContent}})"
+    // language=js
+    val js ="""
+      return shv.find('.video-list > table')
+      .map(v => [shv.findIn(v, 'tr').filter(v=>v.childNodes[0].nodeName === 'TD'), v.getAttribute('data-key')])
+      .flatMap(a => a[0].map(v=>{return {h: v.childNodes[0].textContent, q: v.childNodes[1].textContent, a: a[1]}}));
+      """.trimIndent()
     
     return driver.executeScriptFetchList(js)
       ?.map { map ->
         val name = map["h"]!!.toString().trim { it <= ' ' }.lowercase()
         val format = map["q"]!!.toString().trim { it <= ' ' }.lowercase()
-        Pair(name, format)
+        val audio = map["a"]!!.toString().trim().uppercase()
+        Triple(name, format, audio)
       }
       ?.filter { it.first != "premium" }
-      ?.mapIndexed { i, (name, format) ->
-        VideoServer(name, i, EpisodeAudioTypes.UNKNOWN, VideoServerFormat(format))
+      ?.mapIndexed { i, (name, format, audio) ->
+        val audioType = when(audio){
+          "PL" -> EpisodeAudioTypes.LECTOR
+          "DUB" -> EpisodeAudioTypes.DUBBING
+          "SUBPL" -> EpisodeAudioTypes.SUBS
+          else -> EpisodeAudioTypes.UNKNOWN
+        }
+        VideoServer(name, i, audioType, VideoServerFormat(format))
       }
       ?: emptyList()
   }
   
   override suspend fun <T> goToExternalServerVideoPage(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
-    val js = "document.querySelectorAll('.video-list tr .btn.watch-btn')[" + server.index + "].click()"
+    val js = "shv.click_fast(shv.find('.video-list tr .btn.watch-btn')[" + server.index + "])"
     driver.executeScript(js)
     return blockExecutedOnPage?.invoke()
   }

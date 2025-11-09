@@ -6,8 +6,9 @@ import com.fasterxml.jackson.annotation.JsonProperty
 @JsonIgnoreProperties(ignoreUnknown = true)
 class TmdbSeason(
   val id: Long,
-  val _id: String,
-  val episodes: List<TmdbEpisode>,
+  val episodes: List<TmdbEpisode> = emptyList(),
+  @JsonProperty("episode_count")
+  val episodesCount: Int,
   val name: String,
   @JsonProperty("season_number")
   val season: Int,

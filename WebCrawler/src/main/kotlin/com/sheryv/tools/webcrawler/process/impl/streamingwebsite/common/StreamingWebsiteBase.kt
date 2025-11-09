@@ -10,6 +10,7 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
+import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
@@ -72,6 +73,9 @@ abstract class StreamingWebsiteBase(
     driver.get(getSeriesLink())
 //    driver.get("https://bot.sannysoft.com/")
     driver.waitForVisibility(By.tagName("body"))
+    
+    forceSeriesPageLoaded()
+    
     if (series.title.isBlank()) {
       series = series.copy(title = getSeriesName())
     }
@@ -228,6 +232,23 @@ abstract class StreamingWebsiteBase(
     }
   }
   
+  open suspend fun openStandaloneStreamingPage(url: String): VideoUrl? {
+    driver.navigate().to(url)
+    waitIfPaused()
+    driver.waitForVisibility(By.tagName("body"))
+    series = try {
+      SerialisationUtils.jsonMapper.readValue(settings.outputPath.toFile(), Series::class.java)
+    } catch (e: Exception) {
+      log.error("Error", e)
+      Series(0, driver.title.orEmpty(), 0, getMainLang(), url)
+    }
+    val handlers = streamingServersHandlers()
+    val handler = handlers.filterKeys { url.contains(it.domain()) }.firstNotNullOfOrNull { it.value }
+      ?: throw AppError("There is handler defined for hosting provider at $url")
+    val result = findLoadedVideoDownloadUrl(VideoData(url, driver.title.orEmpty(), 1), handler)
+    
+    return result
+  }
   
   protected open suspend fun findLoadedVideoDownloadUrl(data: VideoData, serverHandler: VideoServerHandler? = null): VideoUrl? {
     delay(200)
@@ -269,6 +290,10 @@ abstract class StreamingWebsiteBase(
       log.error("Server details are empty for episode ${data.number}")
       null
     }
+  }
+  
+  protected open suspend fun forceSeriesPageLoaded() {
+  
   }
   
   protected open suspend fun goToEpisodePage(data: VideoData) {
@@ -316,23 +341,23 @@ abstract class StreamingWebsiteBase(
   
   protected open fun getM3U8UrlFromEvents(handler: VideoServerHandler): String? {
     val url = try {
-      val events = getNetworkResponseEventsFromBrowserTools().filter { it.response.mimeType == "application/vnd.apple.mpegurl" }
-      val m3u8events = events.filter { it.response.url.contains(".m3u8") }
-      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response.url, series) }
+      val events = getNetworkResponseEventsFromBrowserTools().filter { it.response?.mimeType == "application/vnd.apple.mpegurl" }
+      val m3u8events = events.filter { it.response!!.url.contains(".m3u8") }
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response!!.url, series) }
       if (events.isNotEmpty()) {
         log.debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
-          (if (i == index) "[#] " else "[ ] ") + e.response.url
+          (if (i == index) "[#] " else "[ ] ") + e.response!!.url
         }.joinToString("\n"))
       }
+      
       m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull {
         handler.tryToGetCorrectM3U8Url(
-          it.response.url,
+          it.response?.url!!,
           series
         )
+      }?.also {
+        log.debug("Found alternative url from browser tools: $it")
       }
-        ?.also {
-          log.debug("Found alternative url from browser tools: $it")
-        }
     } catch (e: IllegalArgumentException) {
       null
     }
@@ -346,7 +371,8 @@ abstract class StreamingWebsiteBase(
         }.joinToString("\n"))
       }
       
-      return m3u8events.getOrNull(index)?.name ?: m3u8events.firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }
+      return m3u8events.getOrNull(index)?.name ?: m3u8events
+        .firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }
         ?.also {
           log.debug("Found alternative url from JavaScript performance objects: $it")
         }
@@ -373,7 +399,7 @@ abstract class StreamingWebsiteBase(
       private val streamRegex = regex
       
       override fun checkIfM3U8UrlCorrect(url: String, series: Series): Boolean {
-        return url.matches(streamRegex)
+        return url.matches(streamRegex) && super.checkIfM3U8UrlCorrect(url, series)
       }
     }
     if (map != null) {

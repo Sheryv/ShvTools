@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
 import com.sheryv.tools.webcrawler.service.Registry
+import com.sheryv.tools.webcrawler.service.remoteclient.RemoteClientConfig
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.DownloaderConfig
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
@@ -18,6 +19,7 @@ import com.sheryv.util.fx.core.app.AppConfiguration
 import com.sheryv.util.logging.log
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.*
@@ -29,6 +31,7 @@ class Configuration(
   var crawler: String? = null,
   var lastUserScript: String = "",
   var downloaderConfig: DownloaderConfig = DownloaderConfig(),
+  var remoteClient: RemoteClientConfig = RemoteClientConfig(Path.of("")),
   @JsonDeserialize(using = SettingsSetDeserializer::class)
   val settings: MutableSet<SettingsBase>
 ) : AppConfiguration() {
@@ -122,9 +125,10 @@ class Configuration(
     scrapper: String? = this.crawler,
     lastUserScript: String = this.lastUserScript,
     downloaderConfig: DownloaderConfig = this.downloaderConfig,
+    remoteClient: RemoteClientConfig = this.remoteClient,
     settings: MutableSet<SettingsBase> = this.settings.toMutableSet()
   ): Configuration {
-    return Configuration(common, browserSettings, scrapper, lastUserScript, downloaderConfig, settings)
+    return Configuration(common, browserSettings, scrapper, lastUserScript, downloaderConfig, remoteClient, settings)
   }
 }
 

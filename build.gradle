@@ -1,5 +1,6 @@
 import org.gradle.api.plugins.internal.DefaultJavaApplication
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.KaptExtension
 
 import java.nio.file.Paths
@@ -54,7 +55,7 @@ subprojects {
 
         javafx {
             modules = ["javafx.controls", "javafx.fxml"]
-            version = "17"
+            version = "25"
 //            configuration = "implementation"
 //            platform = "linux"
         }
@@ -84,8 +85,9 @@ subprojects {
             textVersion = project.ext.shortVersion
             version = project.version
             bundledJrePath = jre
-            jvmOptions = ["-Xms32m", "-Xmx256m"]
+            jvmOptions = ["-Xms32m", "-Xmx256m", "--enable-native-access=ALL-UNNAMED", "-XX:-UseJVMCICompiler"]
             headerType = 'console'
+//            dontWrapJar = true
             stayAlive = true
             //    splashFileName = '..\\..\\..\\res\\splash.bmp'
             //    splashTimeout = 15
@@ -121,8 +123,8 @@ subprojects {
                         'Implementation-Vendor': p.author + ', ' + p.site,
                         'Main-Class': p.className
             }
-            baseName = project.name + '-all-java11'
-            archiveName = "${baseName}-${p.ext.shortVersion}.${extension}"
+            archiveBaseName.set(project.name + '-all-java17')
+            archiveFileName.set("${archiveBaseName}-${p.ext.shortVersion}.${archiveExtension.get()}")
             from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
             with jar
         }
@@ -131,7 +133,7 @@ subprojects {
 
     tasks.register('nativeImage', Exec) {
         //requires VS native tools command prompt context
-        def p = Paths.get(project.buildDir.absolutePath, 'libs', project.name + '-all-java11' + "-${project.ext.shortVersion}.jar").toAbsolutePath().toString()
+        def p = Paths.get(project.buildDir.absolutePath, 'libs', project.name + '-all-java17' + "-${project.ext.shortVersion}.jar").toAbsolutePath().toString()
         println(p)
         commandLine("native-image -dsa -jar \"$p\" ${project.name}-${project.ext.shortVersion}")
     }
@@ -146,7 +148,7 @@ subprojects {
 
 
     extensions.findByType(DefaultJavaApplication)?.with {
-        mainClassName = ext.className
+        mainClass.set(ext.className)
     }
 
     jar {
@@ -161,8 +163,7 @@ subprojects {
                         'Implementation-Vendor': p.author + ', ' + p.site,
                         'Main-Class': p.className
             }
-
-            archiveName = "${project.ext['jarPrefix']}${baseName}-${project.ext['shortVersion']}.${extension}"
+            archiveFileName.set("${project.ext['jarPrefix']}${archiveBaseName.get()}-${project.ext['shortVersion']}.${archiveExtension.get()}")
         }
     }
 
@@ -221,15 +222,17 @@ subprojects {
     }
 
     java {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_24
+        targetCompatibility = JavaVersion.VERSION_24
+//        jvmToolchain {
+//            languageVersion = JavaLanguageVersion.of(17)
+//        }
     }
 
-    compileKotlin {
-        kotlinOptions.jvmTarget = "17"
-    }
-    compileTestKotlin {
-        kotlinOptions.jvmTarget = "17"
+    kotlin {
+        compilerOptions{
+            jvmTarget = JvmTarget.JVM_24
+        }
     }
 
     sourceSets.main {

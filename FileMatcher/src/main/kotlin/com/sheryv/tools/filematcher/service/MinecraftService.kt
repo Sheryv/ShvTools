@@ -48,7 +48,7 @@ class MinecraftService {
   private fun findAddon(name: String, instanceConfig: InstanceConfig): Addon? {
     return instanceConfig.installedAddons
       .firstOrNull {
-        (it.installedFile.FileNameOnDisk ?: it.installedFile.fileName).toLowerCase() == name.toLowerCase()
+        (it.installedFile.FileNameOnDisk ?: it.installedFile.fileName).lowercase() == name.lowercase()
       }
   }
   

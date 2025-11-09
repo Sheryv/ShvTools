@@ -6,6 +6,7 @@ import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.util.logging.log
 import org.openqa.selenium.MutableCapabilities
 import org.openqa.selenium.chrome.ChromeDriver
+import org.openqa.selenium.chrome.ChromeDriverService
 import org.openqa.selenium.chrome.ChromeOptions
 import org.openqa.selenium.edge.EdgeDriver
 import org.openqa.selenium.edge.EdgeOptions
@@ -14,14 +15,20 @@ import org.openqa.selenium.firefox.FirefoxOptions
 import org.openqa.selenium.firefox.FirefoxProfile
 import org.openqa.selenium.logging.LogType
 import org.openqa.selenium.logging.LoggingPreferences
+import org.openqa.selenium.remote.service.DriverService
+import java.io.FileOutputStream
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.util.logging.Level
+
 
 abstract class DriverBuilder {
   abstract fun build(config: Configuration, browser: BrowserConfig): SDriver
   
   protected fun setDefaults(options: MutableCapabilities, config: Configuration, browser: BrowserConfig) {
     if (config.browserSettings.useUserProfile == true) {
-      val userDataPath = browser.type.getPathForUserProfileInBrowser(browser)
+      val userDataPath = browser.userProfilePath ?: browser.type.getPathForUserProfileInBrowser(browser)
       if (userDataPath != null) {
         when (options) {
           is ChromeOptions -> {
@@ -76,9 +83,11 @@ class FirefoxDriverBuilder : DriverBuilder() {
 class ChromeDriverBuilder : DriverBuilder() {
   override fun build(config: Configuration, browser: BrowserConfig): SDriver {
     val options = ChromeOptions()
-  
+    val service = ChromeDriverService.Builder().withSilent(true).build()
+    service.sendOutputTo(Files.newOutputStream(Path.of("driver-logs.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE))
+    
     val logPrefs = LoggingPreferences()
-    logPrefs.enable(LogType.PERFORMANCE, Level.ALL)
+    logPrefs.enable(LogType.PERFORMANCE, Level.FINE)
     options.setCapability(ChromeOptions.LOGGING_PREFS, logPrefs)
   
     options.addArguments("--disable-blink-features")
@@ -86,7 +95,7 @@ class ChromeDriverBuilder : DriverBuilder() {
     
     setDefaults(options, config, browser)
     options.setBinary(browser.binaryPath!!.toAbsolutePath().toString())
-    return SeleniumDriver(ChromeDriver(options))
+    return SeleniumDriver(ChromeDriver(service, options))
   }
   
 }

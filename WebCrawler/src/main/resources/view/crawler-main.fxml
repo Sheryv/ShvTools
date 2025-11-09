@@ -171,7 +171,7 @@
                                           </VBox>
                                           <VBox>
                                              <children>
-                                                <CheckBox fx:id="chkUseUserProfile" mnemonicParsing="false" text="Use current user browser profile/session (if available)." wrapText="true" />
+                                                <CheckBox fx:id="chkUseUserProfile" mnemonicParsing="false" text="Use custom user browser profile instead of the generated one." wrapText="true" />
                                                 <Label text="Requires that selected browser is closed (No window is open in system)">
                                                    <padding>
                                                       <Insets left="22.0" />
@@ -196,6 +196,27 @@
                                                    <children>
                                                       <Label />
                                                       <Button fx:id="btnSelectBrowserExec" mnemonicParsing="false" text="..." />
+                                                   </children>
+                                                </VBox>
+                                             </children>
+                                          </HBox>
+                                          <HBox spacing="10.0">
+                                             <children>
+                                                <VBox HBox.hgrow="ALWAYS">
+                                                   <children>
+                                                      <Label text="User profile path (if not provided current user profile is used)" />
+                                                      <TextField fx:id="tfUserProfilePath" />
+                                                      <Label fx:id="lbStatusOfSelectedBrowser1">
+                                                         <font>
+                                                            <Font name="System Italic" size="12.0" />
+                                                         </font>
+                                                      </Label>
+                                                   </children>
+                                                </VBox>
+                                                <VBox>
+                                                   <children>
+                                                      <Label />
+                                                      <Button fx:id="btnSelectUserProfileDir" mnemonicParsing="false" text="..." />
                                                    </children>
                                                 </VBox>
                                              </children>

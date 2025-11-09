@@ -24,6 +24,7 @@ import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
+import com.sheryv.tools.webcrawler.view.remoteclient.HttpServerView
 import com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView
 import com.sheryv.tools.webcrawler.view.search.SearchView
 import com.sheryv.tools.webcrawler.view.search.SearchWindow
@@ -56,11 +57,15 @@ import org.koin.core.component.inject
 import java.awt.EventQueue
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
+import java.io.PrintStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.logging.FileHandler
+import java.util.logging.Handler
+import java.util.logging.Level
 import javax.swing.JFrame
 import kotlin.io.path.*
 
@@ -79,7 +84,15 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   
   override fun onViewCreated(stage: Stage) {
     super.onViewCreated(stage)
+    val handler: Handler = FileHandler("selenium.xml")
+    val logger = java.util.logging.Logger.getLogger("")
+    logger.setLevel(Level.SEVERE)
+    logger.addHandler(handler)
+    
     try {
+//      System.setErr(PrintStream(Files.newOutputStream(Path.of("out-err.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE)))
+      System.setErr(PrintStream("out-err.log"))
+      
       registry = Registry.get().crawlers().associate { it.id() to it as CrawlerDef }
       prepareRegistry()
       init()
@@ -215,6 +228,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       val b = config.browserSettings.currentBrowser()
       if (b.binaryPath != null) {
         tfBrowserPath.text = b.binaryPath!!.toAbsolutePath().toString()
+        tfUserProfilePath.text = b.userProfilePath?.toAbsolutePath()?.toString() ?: b.type.getPathForUserProfileInBrowser(b)?.toString().orEmpty()
       } else {
         config.browserSettings.currentBrowser().binaryPath = prev.binaryPath
       }
@@ -230,6 +244,9 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
         findBrowserVersion(n)
       }
       pause.playFromStart()
+    }
+    tfUserProfilePath.textProperty().addListener { _, _, n ->
+      config.browserSettings.currentBrowser().userProfilePath = Path.of(n)
     }
     
     val pause2 = PauseTransition(Duration.seconds(1.0))
@@ -258,6 +275,11 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     btnSelectBrowserExec.setOnAction {
       DialogUtils.openFileDialog(stage, initialFile = tfBrowserPath.text.takeIf { it.isNotBlank() })?.also {
         tfBrowserPath.text = it.toAbsolutePath().toString()
+      }
+    }
+    btnSelectUserProfileDir.setOnAction {
+      DialogUtils.openDirectoryDialog(stage, initialDir = tfUserProfilePath.text.takeIf { it.isNotBlank() })?.also {
+        tfUserProfilePath.text = it.toAbsolutePath().toString()
       }
     }
     
@@ -310,6 +332,12 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             MenuItem("Run script in opened browser").apply {
               accelerator = KeyCodeCombination(KeyCode.G, KeyCombination.CONTROL_DOWN)
               setOnAction { openRunScriptWindow() }
+            },
+            MenuItem("Open http server to external tool").apply {
+              accelerator = KeyCodeCombination(KeyCode.B, KeyCombination.CONTROL_DOWN)
+              setOnAction {
+                viewFactory.createWindow<HttpServerView>()()
+              }
             },
             SeparatorMenuItem(),
             MenuItem("Logs"),
@@ -644,9 +672,39 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               }
             }
           }
-        }
-      )
-      
+        },
+        MenuItem("Find URL for single episode").apply {
+          setOnAction {
+            val results = DialogUtils.inputDialog(
+              "Find URL for single episode",
+              null,
+              listOf("URL" to "https://luluvdo.com/e/cvye57mqyx5g"),
+              Alert.AlertType.NONE
+            )
+            
+            GlobalState.processingState.value = (ProcessingStates.RUNNING)
+            
+            val browser = config.browserSettings.currentBrowser()
+            val runner = Runner(config, browser, selected!!, ProcessParams(false, results.first()))
+            val settings = settingsReader.invoke()
+            inBackground {
+              try {
+                runner.prepare(settings)
+                runner.startStreamingWebsiteSingleRun()
+              } catch (e: Exception) {
+                log.error("Running error", e)
+                inMainThread {
+                  DialogUtils.textAreaDialog(
+                    "Details", e.stackTraceToString(), TITLE,
+                    "Error occurred while scraping", Alert.AlertType.ERROR, false, false, ButtonType.OK
+                  )
+                }
+              } finally {
+                GlobalState.processingState.value = (ProcessingStates.IDLE)
+              }
+            }
+          }
+        })
     }
   }
   
@@ -783,6 +841,9 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   
   @FXML
   private lateinit var tfBrowserPath: TextField
+//  F:\Data\brave_profile_automat\User Data
+  @FXML
+  private lateinit var tfUserProfilePath: TextField
   
   @FXML
   private lateinit var tfBrowserDriverPath: TextField
@@ -804,6 +865,9 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   
   @FXML
   private lateinit var btnSelectBrowserExec: Button
+  
+  @FXML
+  private lateinit var btnSelectUserProfileDir: Button
   
   @FXML
   private lateinit var tvScrapers: TreeView<CrawlerListItem>

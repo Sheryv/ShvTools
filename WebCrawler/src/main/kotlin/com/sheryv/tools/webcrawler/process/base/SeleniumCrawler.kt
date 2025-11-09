@@ -31,7 +31,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   Crawler<SeleniumDriver, S>(configuration, browser, def, driver, params) {
   
   protected val wait: WebDriverWait by lazy { WebDriverWait(driver, Duration.ofSeconds(15)) }
-  protected lateinit var title: String
+  protected var title: String? = null
   
   protected fun loadInitPage() {
     driver.get(def.attributes.websiteUrl)
@@ -110,15 +110,70 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     return element
   }
   
+  internal suspend fun waitForFirstAttributeIf(selector: By, attribute: String, condition: ((WebElement) -> Boolean), timeoutSeconds: Int = 30): WebElement? {
+    var waitValue = 5
+    val repeats = if (timeoutSeconds > 10) {
+      timeoutSeconds / waitValue
+    } else {
+      waitValue = 1
+      timeoutSeconds
+    }
+    
+    for (i in (0 until repeats)) {
+      if (GlobalState.processingState.value == ProcessingStates.STOPPING) {
+        throw TerminationException()
+      }
+      try {
+        val start = System.currentTimeMillis()
+        val elements =
+          wait.withTimeout(Duration.ofSeconds(waitValue.toLong())).until(ExpectedConditions.presenceOfAllElementsLocatedBy(selector))
+        if (elements.any(condition)) {
+          return elements.first(condition)
+        }
+        if (GlobalState.processingState.value == ProcessingStates.STOPPING) {
+          throw TerminationException()
+        }
+        val end = System.currentTimeMillis()
+        if (end - start < waitValue * 1000) {
+          delay(waitValue * 1000 - (end - start))
+        }
+      } catch (ignored: TimeoutException) {
+      }
+    }
+    
+    return null
+  }
+  
   fun getNetworkResponseEventsFromBrowserTools(): List<BrowserResponseEvent> {
-    return driver.manage().logs().get(LogType.PERFORMANCE).all.asSequence()
+    val skipped = listOf("Script", "Image", "Stylesheet", "Font")
+    val logs = driver.manage().logs()
+    val all = logs.get(LogType.PERFORMANCE).all
+    return all.asSequence()
       .map { SerialisationUtils.jsonMapper.readTree(it.message).get("message") }
       .filter {
-        log.debug("Network response event:\n{}", it.toPrettyString())
-        it.get("method").asText() == "Network.responseReceived"
+        it.get("method").asText() == "Network.responseReceived" && !skipped.contains(it.get("params").get("type").asText())
       }
       .map {
-        SerialisationUtils.jsonMapper.convertValue(it.get("params"), BrowserResponseEvent::class.java)
+        
+        val params = SerialisationUtils.jsonMapper.convertValue(it.get("params"), BrowserResponseEvent::class.java)
+        if (this.params.streamingUrlOverride != null) {
+//        all.size
+//        logs.availableLogTypes
+          log.debug("Network response event: ${params.request?.url.orEmpty()} | ${params.mime()} ${params.type} | ${params.requestId}")
+          
+          try {
+            val resp = driver.getNetworkResponse(params.requestId!!)
+            val body = if (resp?.base64Encoded == true || (resp?.body?.length
+                ?: 0) > 200
+            ) " | Size: ${resp?.body?.length ?: 0}" else "\n" + resp?.body.orEmpty()
+            
+            log.debug("Response body ${params.requestId} ${body}")
+          } catch (e: Exception) {
+            log.error("No resource ${params.requestId} | ${e.message}")
+          }
+        }
+        
+        params
       }
       .toList()
   }

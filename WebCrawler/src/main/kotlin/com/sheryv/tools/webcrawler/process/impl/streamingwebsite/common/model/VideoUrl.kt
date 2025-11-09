@@ -27,6 +27,11 @@ sealed interface VideoUrl {
     
     return defaultFileFormat().extension
   }
+  
+  fun isSameUrl(other: String): Boolean {
+    return other.replaceAfter('?', "").removeSuffix("?")
+      .equals(this.base.replaceAfter('?', "").removeSuffix("?"), true)
+  }
 }
 
 data class M3U8Url(

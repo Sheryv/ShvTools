@@ -1,12 +1,11 @@
 plugins {
     id 'application'
 }
-
 group 'com.sheryv'
 version '0.1.0'
 ext.shortVersion = '0.1'
-mainClassName = "com.sheryv.tools.qrcode.QrCodeProcessor"
-ext.className = mainClassName
+ext.className =  "com.sheryv.tools.qrcode.QrCodeProcessor"
+
 
 repositories {
     mavenCentral()
