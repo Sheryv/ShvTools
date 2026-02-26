@@ -119,11 +119,11 @@ class SearchView(override val config: Configuration) : SimpleView() {
               e.downloadUrl?.let {
                 
                 val size = if (it.isStreaming) {
-                  Utils.getChunksOfM3U8Video(it.base).takeIf { it.isNotEmpty() }?.let { list ->
+                  Utils.getChunksOfM3U8Video(it.url).takeIf { it.isNotEmpty() }?.let { list ->
                     http.getContentSize(list.first())?.let { it * list.size }
                   }
                 } else {
-                  http.getContentSize(it.base)
+                  http.getContentSize(it.url)
                 }
                 
                 e.lastSize.set(size ?: 0)
@@ -183,7 +183,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
                     ?: existing.downloadUrl
                   
                   existing.copy(number = ind + 1, title = parts[1], downloadUrl = old?.let {
-                    if (url?.base == old.base) old
+                    if (url?.url == old.url) old
                     else url
                   } ?: url)
                 } else {
@@ -370,7 +370,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
               id = ep.id,
               title = ep.name,
               downloadUrl = found.url.takeIf { it.value.isNotBlank() }?.let {
-                if (it.value == found.downloadUrl?.base) found.downloadUrl
+                if (it.value == found.downloadUrl?.url) found.downloadUrl
                 else if (it.value.contains(".m3u8")) M3U8Url(it.value)
                 else DirectUrl(it.value)
               })
@@ -417,11 +417,11 @@ class SearchView(override val config: Configuration) : SimpleView() {
         }
         button("Generate") {
           setOnAction {
-            DialogUtils.openDirectoryDialog(stage)?.run {
+            DialogUtils.openDirectoryDialog(stage, initialDir = settings.downloadDir)?.run {
               val dir = toAbsolutePath().resolve(s.generateDirectoryPathForSeason())
               Files.createDirectories(dir)
               s.episodes
-                .map { it.generateFileName(s, settings) }
+                .map { it.generateFileName(s, settings, ext.value) }
                 .forEach { Files.createFile(dir.resolve(it)) }
               
               log.info("Files generated in $dir")

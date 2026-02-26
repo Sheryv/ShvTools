@@ -1,9 +1,14 @@
 package com.sheryv.util
 
 import org.apache.commons.text.StringSubstitutor
+import java.io.BufferedInputStream
+import java.io.FileInputStream
+import java.io.InputStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets
+import java.nio.file.Path
+import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.ceil
@@ -42,5 +47,22 @@ object Strings {
       hexChars[j * 2 + 1] = HEX_ARRAY[v and 0x0F]
     }
     return String(hexChars, StandardCharsets.UTF_8)
+  }
+  
+  fun buildInHash(inputStream: InputStream, algorithm: String = "MD5", bufferSize: Int = 4096): String {
+    val md: MessageDigest = MessageDigest.getInstance(algorithm)
+    
+    val result = BufferedInputStream(inputStream).use { bis ->
+      val buf = ByteArray(bufferSize)
+      var read: Int
+      read = bis.read(buf)
+      
+      while (read != -1) {
+        md.update(buf, 0, read)
+        read = bis.read(buf)
+      }
+      md.digest()
+    }
+    return bytesToHex(result)
   }
 }

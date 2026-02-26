@@ -12,6 +12,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Ep
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServerFormat
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -68,7 +69,11 @@ class FilmanCrawler(
     } ?: emptyList()
   }
   
-  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
+  override suspend fun <T> openStreamAndInitializePlayerThenRun(
+    data: VideoData,
+    server: VideoServer,
+    blockExecutedOnPage: (suspend () -> T)?
+  ): T? {
     val tabs = driver.windowHandles.toList()
     val current = driver.windowHandle
     
@@ -84,14 +89,14 @@ class FilmanCrawler(
       if (driver.windowHandles.size > tabs.size) {
         driver.switchTo().window(driver.windowHandles.first { !tabs.contains(it) })
       }
-      
-      val res = blockExecutedOnPage?.invoke()
-      
-      if (driver.windowHandle != current) {
-        driver.close()
+      try {
+        val res = blockExecutedOnPage?.invoke()
+        
+        return res
+      } finally {
+        closeOtherTabs(current)
+        driver.switchTo().window(current)
       }
-      driver.switchTo().window(current)
-      return res
     } else {
       driver.switchTo().frame(driver.findElement(By.cssSelector("#player-container #frame iframe")))
       return blockExecutedOnPage?.invoke()
@@ -106,7 +111,7 @@ class FilmanCrawler(
   
   protected override suspend fun forceSeriesPageLoaded() {
     val loginForm = driver.executeScript("return document.querySelectorAll('#signin-form').length > 0;") == true
-    if (loginForm){
+    if (loginForm) {
       runBlocking(Dispatchers.Main) {
         GlobalState.view.showMessageDialog("Login form detected. Click OK when logged in to continue.")
       }

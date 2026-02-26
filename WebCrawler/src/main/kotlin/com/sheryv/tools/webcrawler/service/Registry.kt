@@ -24,7 +24,7 @@ object Registry {
       )
     }
   
-    override fun serverDefinitions() = CommonVideoServers.values().toList()
+    override fun serverDefinitions() = CommonVideoServers.entries.toList()
   
   }
   

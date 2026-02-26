@@ -73,7 +73,7 @@ class ZerionCrawler(
       ?: emptyList()
   }
   
-  override suspend fun <T> goToExternalServerVideoPage(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
+  override suspend fun <T> openStreamAndInitializePlayerThenRun(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
     val js = "shv.click_fast(shv.find('.video-list tr .btn.watch-btn')[" + server.index + "])"
     driver.executeScript(js)
     return blockExecutedOnPage?.invoke()

@@ -8,12 +8,15 @@ import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.fx.core.app.AppConfiguration
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.*
 
 class Configuration : AppConfiguration() {
   var recentRepositories: MutableList<String> = LinkedList()
   var lastLoadedRepoFile: String? = null
+  var dirComparisonLeftPath: Path? = null
+  var dirComparisonRightPath: Path? = null
   var devTools: DevToolConfig = DevToolConfig()
   
   @Transient

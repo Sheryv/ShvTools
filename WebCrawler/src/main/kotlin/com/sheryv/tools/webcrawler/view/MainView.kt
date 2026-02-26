@@ -454,6 +454,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
         config.save()
       }
     } catch (e: Exception) {
+      log.error("Cannot save config", e)
       DialogUtils.textAreaDialog(
         "One or more values is incorrect", e.message + "\n\n" + e.stackTraceToString(), TITLE,
         "Error while saving configuration for ${selected!!.findSettings(config)}", Alert.AlertType.ERROR, true, false, ButtonType.OK
@@ -587,7 +588,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                 ).first) {
                   ButtonType.OK -> {
                     episodes.forEach { (e, path) ->
-                      Downloader.add(e.downloadUrl!!.base, path)
+                      Downloader.add(e.downloadUrl!!, path)
                     }
                     openDownloaderWindow()
                   }
@@ -678,7 +679,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             val results = DialogUtils.inputDialog(
               "Find URL for single episode",
               null,
-              listOf("URL" to "https://luluvdo.com/e/cvye57mqyx5g"),
+              listOf("URL" to "https://vidmoly.biz/embed-zdt5yr6mfjo8.html"),
               Alert.AlertType.NONE
             )
             

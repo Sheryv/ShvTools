@@ -18,19 +18,13 @@ import kotlin.math.log10
 import kotlin.math.pow
 
 
-fun inBackground(
-  start: CoroutineStart = CoroutineStart.DEFAULT,
-  block: suspend CoroutineScope.() -> Unit
-): Job {
-  return GlobalScope.launch(Dispatchers.IO, start, block)
-}
+//fun inBackground(
+//  start: CoroutineStart = CoroutineStart.DEFAULT,
+//  block: suspend CoroutineScope.() -> Unit
+//): Job {
+//  return GlobalScope.launch(Dispatchers.IO, start, block)
+//}
 
-fun inViewThread(
-  start: CoroutineStart = CoroutineStart.DEFAULT,
-  block: suspend CoroutineScope.() -> Unit
-): Job {
-  return GlobalScope.launch(Dispatchers.Main, start, block)
-}
 
 inline fun <reified T, R> T.timeLog(name: String, repeats: Int = 1, noinline b: () -> R): R {
   return Hashing.time(name, T::class.java, repeats, b)

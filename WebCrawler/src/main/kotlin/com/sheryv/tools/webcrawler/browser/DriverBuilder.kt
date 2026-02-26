@@ -13,10 +13,9 @@ import org.openqa.selenium.edge.EdgeOptions
 import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.firefox.FirefoxOptions
 import org.openqa.selenium.firefox.FirefoxProfile
+import org.openqa.selenium.io.TemporaryFilesystem
 import org.openqa.selenium.logging.LogType
 import org.openqa.selenium.logging.LoggingPreferences
-import org.openqa.selenium.remote.service.DriverService
-import java.io.FileOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
@@ -31,7 +30,7 @@ abstract class DriverBuilder {
       val userDataPath = browser.userProfilePath ?: browser.type.getPathForUserProfileInBrowser(browser)
       if (userDataPath != null) {
         when (options) {
-          is ChromeOptions -> {
+          is ChromeOptions, is EdgeOptions -> {
             options.addArguments("--user-data-dir=$userDataPath")
             log.info(
               "Using user profile from '{}'. Driver options class: {}, browser: {}",
@@ -40,6 +39,7 @@ abstract class DriverBuilder {
               browser.type
             )
           }
+          
           is FirefoxOptions -> {
             options.profile = FirefoxProfile(userDataPath.toFile())
             log.info(
@@ -49,6 +49,7 @@ abstract class DriverBuilder {
               browser.type
             )
           }
+          
           else -> {
             log.warn(
               "User data/profile directory not used because driver is not supported. Driver options class: {}, browser: {}",
@@ -65,14 +66,16 @@ abstract class DriverBuilder {
         )
       }
     }
-    
+
 //    options.setCapability("applicationCacheEnabled", true)
   }
 }
 
 class FirefoxDriverBuilder : DriverBuilder() {
   override fun build(config: Configuration, browser: BrowserConfig): SDriver {
+
     val options = FirefoxOptions()
+    options.enableBiDi()
     setDefaults(options, config, browser)
     options.setBinary(browser.binaryPath!!)
     return SeleniumDriver(FirefoxDriver(options))
@@ -83,19 +86,28 @@ class FirefoxDriverBuilder : DriverBuilder() {
 class ChromeDriverBuilder : DriverBuilder() {
   override fun build(config: Configuration, browser: BrowserConfig): SDriver {
     val options = ChromeOptions()
-    val service = ChromeDriverService.Builder().withSilent(true).build()
-    service.sendOutputTo(Files.newOutputStream(Path.of("driver-logs.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE))
-    
+//    val service = ChromeDriverService.Builder().build()
+//    service.sendOutputTo(Files.newOutputStream(Path.of("driver-logs.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE))
+//
     val logPrefs = LoggingPreferences()
     logPrefs.enable(LogType.PERFORMANCE, Level.FINE)
     options.setCapability(ChromeOptions.LOGGING_PREFS, logPrefs)
-  
     options.addArguments("--disable-blink-features")
     options.addArguments("--disable-blink-features=AutomationControlled")
+//    options.addArguments("--no-sandbox")
+    options.addArguments("--disable-dev-shm-usage")
+    options.addArguments("disable-infobars")
+    options.addArguments("--enable-logging")
+    options.addArguments("--enable-features=AllowLegacyMV2Extensions")
+    options.addArguments("--disable-features=ExtensionManifestV2Unsupported,ExtensionManifestV2Disabled,ExtensionsManifestV3Only")
+    options.addArguments("--v=1")
+    options.addArguments("--log-file=F:\\__Projekty\\_Repo\\ShvTools\\WebCrawler\\browser-logs.log")
+    options.enableBiDi()
+//    options.addArguments("--remote-debugging-pipe")
     
     setDefaults(options, config, browser)
     options.setBinary(browser.binaryPath!!.toAbsolutePath().toString())
-    return SeleniumDriver(ChromeDriver(service, options))
+    return SeleniumDriver(ChromeDriver(options))
   }
   
 }
@@ -103,7 +115,7 @@ class ChromeDriverBuilder : DriverBuilder() {
 class EdgeDriverBuilder : DriverBuilder() {
   override fun build(config: Configuration, browser: BrowserConfig): SDriver {
     val options = EdgeOptions()
-  
+    
     val logPrefs = LoggingPreferences()
     logPrefs.enable(LogType.PERFORMANCE, Level.ALL)
     options.setCapability(EdgeOptions.LOGGING_PREFS, logPrefs)

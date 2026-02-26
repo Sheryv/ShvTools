@@ -1,7 +1,7 @@
 package com.sheryv.tools.lasso.util
 
-import com.sheryv.tools.filematcher.utils.inBackground
 import com.sheryv.tools.filematcher.utils.lg
+import com.sheryv.util.inBackground
 import kotlinx.coroutines.*
 
 class OnChangeScheduledExecutor(private val name: String, private val delayMillis: Long = 400, private val onChange: suspend () -> Unit) {

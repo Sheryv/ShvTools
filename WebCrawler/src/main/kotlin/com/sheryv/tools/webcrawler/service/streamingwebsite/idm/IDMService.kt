@@ -37,7 +37,7 @@ class IDMService(val configuration: Configuration) {
       idmExePath,
       episode.generateFileName(series, settings),
       Path.of(settings.downloadDir).resolve(series.generateDirectoryPathForSeason()),
-      episode.downloadUrl!!.base
+      episode.downloadUrl!!.url
     )
     
     try {

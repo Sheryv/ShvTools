@@ -9,11 +9,11 @@ import java.time.temporal.ChronoField
 object DateUtils {
   private var DATE_TIME_FORMAT: DateTimeFormatter = DateTimeFormatterBuilder()
     .parseCaseInsensitive()
-    .appendValue(ChronoField.DAY_OF_MONTH, 2)
+    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
     .appendLiteral('-')
     .appendValue(ChronoField.MONTH_OF_YEAR, 2)
     .appendLiteral('-')
-    .appendValue(ChronoField.YEAR, 4, 10, SignStyle.EXCEEDS_PAD)
+    .appendValue(ChronoField.DAY_OF_MONTH, 2)
     .appendLiteral(' ')
     .appendValue(ChronoField.HOUR_OF_DAY, 2)
     .appendLiteral(':')

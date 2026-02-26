@@ -16,33 +16,47 @@ import org.openqa.selenium.By
 
 
 open class VideoServerHandler(
-  private val server: VideoServerDefinition,
+  val server: VideoServerDefinition,
   private val driver: SeleniumDriver,
   private val scraper: SeleniumCrawler<out SettingsBase>,
   private val overrideFileFormat: FileFormats? = null
 ) {
   
-  
-  open suspend fun findVideoSrcUrl(timeout: Int = 12): String? {
+  suspend fun findVideoContainer(): By? {
     server.innerIframeCssSelector()?.let {
       scraper.wait(it)?.also { frame ->
         driver.switchTo().frame(frame)
         delay(300)
-        server.scriptToActivatePlayer()?.also { driver.executeScript(it) }
+        activatePlayer()
       } ?: runBlocking(Dispatchers.Main) {
         GlobalState.view.showMessageDialog("Iframe not found")
       }
-    } ?: server.scriptToActivatePlayer()?.also { driver.executeScript(it) }
-    
+    } ?: activatePlayer()
     var byVideo = By.cssSelector("video:not(.hidden)")
     
     if (scraper.wait(byVideo, 5) == null) {
       byVideo = By.cssSelector("video:not(.hidden) > source")
-      if(scraper.wait(byVideo, 5) == null) {
+      if (scraper.wait(byVideo, 5) == null) {
         log.error("video container not found on page (Did link expired?)")
         return null
       }
     }
+    activatePlayer()
+    return byVideo
+  }
+  
+  private suspend fun activatePlayer() {
+    var result = server.activatePlayer(scraper)
+    var counter = 10
+    while (!result && counter > 0) {
+      delay(200)
+      result = server.activatePlayer(scraper)
+      counter--
+    }
+  }
+  
+  open suspend fun findVideoSrcUrl(timeout: Int = 12): String? {
+    val byVideo = findVideoContainer() ?: return null
     val found = scraper.waitForNonEmptyAttribute(byVideo, "src", timeout)
     if (found != null) {
       return found.getAttribute("src")?.takeIf { it.isNotBlank() }
@@ -57,7 +71,7 @@ open class VideoServerHandler(
       val prefix = incorrectUrl.substringBefore("master.m3u8")
       
       val file = Utils.httpClientExecute(RequestBuilder.get(incorrectUrl).build())
-      
+
 //      val file = HttpClients.createDefault().use { httpclient ->
 //        val httpGet = ClassicRequestBuilder.get(incorrectUrl).build()
 //

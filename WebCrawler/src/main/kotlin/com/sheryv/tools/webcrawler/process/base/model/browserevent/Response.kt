@@ -12,7 +12,7 @@ data class Response(
   val protocol: String? = null,
   val remoteIPAddress: String? = null,
   val remotePort: Int? = null,
-  val responseTime: Double? = null,
+  val responseTime: Long,
   val securityState: String? = null,
   val status: Int,
   val statusText: String,

@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.service.streamingwebsite.downloader
 
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoUrl
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.DownloadingState.*
 import com.sheryv.util.Strings
 import com.sheryv.util.io.DataTransferProgress
@@ -10,8 +11,8 @@ import java.time.Instant
 
 abstract class DownloadingTask(
   val output: Path,
-  val url: String,
-  val id: String = Strings.generateId(7),
+  val url: VideoUrl,
+  val id: String = url.toId().take(12),
   protected val config: DownloaderConfig,
 ) {
   

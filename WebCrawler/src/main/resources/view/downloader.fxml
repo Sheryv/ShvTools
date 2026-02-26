@@ -26,7 +26,7 @@
             <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
         </rowConstraints>
          <children>
-            <TitledPane text="Options">
+            <TitledPane expanded="false" text="Options">
                <content>
                   <VBox spacing="5.0">
                      <children>
@@ -103,6 +103,7 @@
                <children>
                   <Button fx:id="btnAdd" mnemonicParsing="false" text="Queue new download" GridPane.columnIndex="1" GridPane.halignment="RIGHT" GridPane.valignment="TOP" />
                   <Button fx:id="btnStart" mnemonicParsing="false" text="Start" GridPane.columnIndex="2" GridPane.halignment="RIGHT" GridPane.valignment="TOP" />
+                  <Button fx:id="btnRefresh" alignment="TOP_RIGHT" mnemonicParsing="false" text="Refresh" GridPane.halignment="RIGHT" GridPane.valignment="TOP" />
                </children>
             </GridPane>
          </children>

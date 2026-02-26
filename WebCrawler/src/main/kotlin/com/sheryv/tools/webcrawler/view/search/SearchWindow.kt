@@ -112,7 +112,7 @@ class SearchWindow {
           var prog = 0f
           for (episode in lastSeries!!.episodes) {
             try {
-              val size = getDownloadSize(episode.downloadUrl?.base.orEmpty())
+              val size = getDownloadSize(episode.downloadUrl?.url.orEmpty())
               episode.lastSize.set(size)
             } catch (e: Exception) {
               log.error("Cant get video size: " + episode.generateFileName(lastSeries!!, settings), e)
@@ -167,7 +167,7 @@ class SearchWindow {
       loadSizeBtn.addActionListener { loadSize(episode) }
       val sizeString = if (episode.lastSize.value == 0L) "" else FileUtils.sizeString(episode.lastSize.value)
       val row: JComponent = appendRow(
-        episodes, String.format("%02d [%s] %s", episode.number, sizeString, episode.title), episode.downloadUrl?.base,
+        episodes, String.format("%02d [%s] %s", episode.number, sizeString, episode.title), episode.downloadUrl?.url,
         String::class.java, {
           if (it.isNotBlank()) {
             seasonEpisodes[i] = episode.copy(downloadUrl = DirectUrl(it), errors = emptyList())
@@ -304,7 +304,7 @@ class SearchWindow {
     setProgress(-1)
     doInBackground(
       episode,
-      { getDownloadSize(it.downloadUrl!!.base) },
+      { getDownloadSize(it.downloadUrl!!.url) },
       {
         episode.lastSize.set(it)
         fillList(lastSeries)

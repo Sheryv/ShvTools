@@ -4,66 +4,58 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.util.Strings
+import java.io.ByteArrayInputStream
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "@type")
 @JsonSubTypes(
   JsonSubTypes.Type(value = M3U8Url::class, name = "m3u8"),
   JsonSubTypes.Type(value = DirectUrl::class, name = "direct")
 )
-sealed interface VideoUrl {
-  val base: String
-  val isDirect: Boolean
-  val isStreaming: Boolean
+sealed class VideoUrl(
+  val isStreaming: Boolean,
+  open val url: String,
+  open val metadata: UrlMetadata
+) {
   
-  fun defaultFileFormat() = FileFormats.MP4
+  init {
+    require(url.isNotBlank())
+  }
   
-  fun resolveFileExtension(): String {
+  open val isDirect: Boolean = !isStreaming
+  
+  open fun defaultFileFormat() = FileFormats.MP4
+  
+  open fun resolveFileExtension(): String {
     if (Configuration.property("crawler.streaming.episode.get-extension-from-url").toBoolean()) {
-      val indexOf = base.lastIndexOf(".")
-      if (indexOf > 0 && base.length - indexOf <= 5) {
-        return base.substring(indexOf + 1, base.length)
+      val indexOf = url.lastIndexOf(".")
+      if (indexOf > 0 && url.length - indexOf <= 5) {
+        return url.substring(indexOf + 1, url.length)
       }
     }
     
     return defaultFileFormat().extension
   }
   
+  @JsonIgnore
   fun isSameUrl(other: String): Boolean {
     return other.replaceAfter('?', "").removeSuffix("?")
-      .equals(this.base.replaceAfter('?', "").removeSuffix("?"), true)
+      .equals(this.url.replaceAfter('?', "").removeSuffix("?"), true)
   }
+  
+  fun toId(): String {
+    return Strings.buildInHash(ByteArrayInputStream(url.encodeToByteArray()), bufferSize = 128)
+  }
+  
+  override fun toString() = url
 }
 
-data class M3U8Url(
-  override val base: String,
-) : VideoUrl {
-  init {
-    require(base.isNotBlank())
-  }
-  
-  @JsonIgnore
-  override val isDirect: Boolean = false
-  
-  @JsonIgnore
-  override val isStreaming: Boolean = true
-  
+data class UrlMetadata(val headers: Map<String, String> = emptyMap())
+
+class M3U8Url(url: String, metadata: UrlMetadata = UrlMetadata()) : VideoUrl(true, url, metadata) {
   override fun defaultFileFormat() = FileFormats.TS
-  
-  override fun toString(): String = base
 }
 
-data class DirectUrl(
-  override val base: String,
-) : VideoUrl {
-  init {
-    require(base.isNotBlank())
-  }
-  
-  @JsonIgnore
-  override val isDirect: Boolean = true
-  
-  @JsonIgnore
-  override val isStreaming: Boolean = false
-  
-  override fun toString(): String = base
+class DirectUrl(url: String, metadata: UrlMetadata = UrlMetadata()) : VideoUrl(false, url, metadata) {
+  override fun defaultFileFormat() = FileFormats.MP4
 }

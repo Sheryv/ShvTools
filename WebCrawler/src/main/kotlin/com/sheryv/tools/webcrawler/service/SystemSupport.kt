@@ -60,7 +60,7 @@ abstract class SystemSupport {
         } else {
           f.parent
         }
-        log.debug("Directory parse result: [$f] -> [$res]")
+        log.debug("Directory parse result: [{}] -> [{}]", f, res)
         res
       } else {
         log.info("Directory parse with null result: [$f]")

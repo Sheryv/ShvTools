@@ -101,7 +101,7 @@ class Runner(
       
       val downloadUrl = crawler.openStandaloneStreamingPage(params.streamingUrlOverride)
 //      if (downloadUrl)
-      
+      log.info("URL: $downloadUrl")
       log.info("Crawler '${crawler.def}' finished successfully")
     } catch (e: SessionNotCreatedException) {
       throw AppError("Cannot start browser: " + e.message, e)

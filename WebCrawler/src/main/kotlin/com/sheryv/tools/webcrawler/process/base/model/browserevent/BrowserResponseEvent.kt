@@ -6,11 +6,11 @@ data class BrowserResponseEvent(
   val loaderId: String? = null,
   val requestId: String? = null,
   val request: BrowserRequest? = null,
-  val response: Response?,
+  val response: Response,
   val timestamp: Double,
   val type: String
 ) {
-  fun mime() = response?.mimeType ?: ""
+  fun toLine() = "$requestId [$type, ${response.mimeType}] ${response.url} [$frameId]"
 }
 
 data class BrowserRequest(

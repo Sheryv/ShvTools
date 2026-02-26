@@ -4,6 +4,8 @@ import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDef
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.*
 import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
@@ -19,7 +21,6 @@ import javafx.collections.FXCollections
 import javafx.fxml.FXML
 import javafx.scene.control.*
 import javafx.stage.Stage
-import org.greenrobot.eventbus.Subscribe
 import org.koin.core.component.get
 import java.awt.Desktop
 import java.awt.Toolkit
@@ -65,7 +66,7 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
           null,
           listOf(
             "URL" to "http://sample.vodobox.net/skate_phantom_flex_4k/veryhigh/skate_phantom_flex_4k_1056_480p.m3u8",
-            "File name" to Strings.generateId(6) + ".ts"
+            "File name" to "skate_phantom_flex_" + Strings.generateId(6) + ".ts"
           ),
           Alert.AlertType.NONE
         )
@@ -80,7 +81,8 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
             }
           }
           if (Files.exists(path.parent)) {
-            Downloader.add(result[0], path)
+            val url = if (result[0].contains(".m3u8")) M3U8Url(result[0]) else DirectUrl(result[0])
+            Downloader.add(url, path)
             updater.markChanged()
           } else {
             log.warn("Dir ${path.parent} does not exists")
@@ -113,7 +115,7 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
       column("%", 50.0, alignRight = true) { it.progress()?.formatRatioAsPercent() ?: "-" },
       column("Size", 150.0, true) { it.progress()?.let { "${it.currentSize.formatted} / ${it.totalSize?.formatted ?: "-"}" } ?: "-" },
       column("Speed", 100.0, true) { it.progress()?.avgSpeed?.formatted ?: "-" },
-      column("Parts", alignRight = true) { (it as? M3U8DownloadingTask)?.partsNumber() ?: "-" },
+      column("Parts", alignRight = true) { (it as? YtDlpDownloadingTask)?.partsNumber() ?: "-" },
       column("ID") { it.id },
       column("URL", 180.0) { it.url },
       column("Output directory", 270.0) { it.output.parent.toAbsolutePath().toString() },
@@ -129,7 +131,7 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
         val items = mutableListOf(
           MenuItem("Copy URL").apply {
             setOnAction {
-              val stringSelection = StringSelection(vn.url)
+              val stringSelection = StringSelection(vn.url.url)
               Toolkit.getDefaultToolkit().systemClipboard.setContents(stringSelection, stringSelection)
             }
           },
@@ -175,6 +177,9 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
         Downloader.startScheduler()
         btnStart.text = "Hold new downloads"
       }
+    }
+    btnRefresh.setOnAction {
+      update()
     }
     if (Downloader.isRunning()) {
       btnStart.text = "Hold new downloads"
@@ -230,6 +235,9 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
   
   @FXML
   lateinit var btnAdd: Button
+  
+  @FXML
+  lateinit var btnRefresh: Button
   
   @FXML
   lateinit var btnStart: Button

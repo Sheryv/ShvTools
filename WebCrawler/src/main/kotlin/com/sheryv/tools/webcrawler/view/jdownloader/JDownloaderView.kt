@@ -87,7 +87,7 @@ class JDownloaderView : FxmlView("view/jdownloader-generate.fxml") {
         else
           Path.of(settings.downloadDir)
         JDownloaderCrawlerEntry(
-          it.downloadUrl!!.base,
+          it.downloadUrl!!.url,
           it.generateFileName(lastSeries, settings),
           downloadDir.toAbsolutePath().toString(),
           FileUtils.fixFileNameWithColonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season)),
@@ -96,7 +96,7 @@ class JDownloaderView : FxmlView("view/jdownloader-generate.fxml") {
         )
       }.toList())
       taSimpleLinks.text =
-        filtered.joinToString("\n") { String.format("%s#S%02dE%02d", it.downloadUrl!!.base, lastSeries.season, it.number) }
+        filtered.joinToString("\n") { String.format("%s#S%02dE%02d", it.downloadUrl!!.url, lastSeries.season, it.number) }
     } catch (e: Exception) {
       throw RuntimeException("Cannot read file with fetched links at '${settings.outputPath}'", e)
     }

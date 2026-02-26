@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.view.remoteclient
 
+import com.fasterxml.jackson.module.kotlin.convertValue
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.util.SerialisationUtils
@@ -14,7 +15,6 @@ import javafx.scene.layout.Priority
 import org.java_websocket.WebSocket
 import org.java_websocket.handshake.ClientHandshake
 import org.java_websocket.server.WebSocketServer
-import java.lang.RuntimeException
 import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
@@ -119,7 +119,7 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
       throw RuntimeException("Script have to contain top level run function with signature:\nfunction run(shv)")
     }
     
-    val msg = Message(MsgType.EXECUTE_SCRIPT, script.trim(), Strings.generateId(6))
+    val msg = Message(MsgType.EXECUTE_SCRIPT, mapOf("code" to script.trim()), Strings.generateId(6))
     server!!.send(msg)
   }
   
@@ -133,6 +133,9 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
       
       output.value += "\n" + line
       log.debug(line)
+      if (m?.type == MsgType.INTERCEPT) {
+        log.info("intercept {}", SerialisationUtils.jsonMapper.convertValue<Intercepted>(m.data))
+      }
     }, { connected.set(!it) }
     ).also {
       it.connectionLostTimeout = 10
@@ -213,7 +216,7 @@ class WS(val handler: (Message?, String?) -> Unit, val connectionChanged: (Boole
 }
 
 
-data class Message(val type: MsgType, val data: String, val ref: String = "", val meta: Meta? = null) {
+data class Message(val type: MsgType, val data: Map<String, Any>, val ref: String = "", val meta: Meta? = null) {
 
 
 }
@@ -223,7 +226,19 @@ data class Meta(val website: String, val data: String)
 enum class MsgType {
   EXECUTE_SCRIPT,
   META,
-  LOG
+  LOG,
+  INTERCEPT,
+  RESULTS,
 }
 
 data class LogBody(val level: String, val msg: String, val args: Map<String, String>)
+
+data class Header(val name: String, val value: String)
+
+data class Intercepted(
+  val url: String,
+  val method: String,
+  val headers: List<Header>,
+  val body: String? = null,
+  val referrer: String? = null
+)

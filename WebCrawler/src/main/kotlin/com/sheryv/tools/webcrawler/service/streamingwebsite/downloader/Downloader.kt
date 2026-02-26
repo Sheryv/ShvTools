@@ -2,6 +2,7 @@ package com.sheryv.tools.webcrawler.service.streamingwebsite.downloader
 
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.ConfigurationChangedEvent
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoUrl
 import com.sheryv.util.*
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Job
@@ -22,8 +23,8 @@ object Downloader {
 //  val completed = ConcurrentLinkedQueue<M3U8Process>()
   
   
-  fun add(url: String, outputPath: Path) {
-    val process = M3U8DownloadingTask(outputPath, url, config = config.copy())
+  fun add(url: VideoUrl, outputPath: Path) {
+    val process = YtDlpDownloadingTask(outputPath, url, config = config.copy())
     synchronized(lock) {
       queue.addLast(process)
     }

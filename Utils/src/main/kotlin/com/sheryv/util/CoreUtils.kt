@@ -25,12 +25,48 @@ fun inBackground(
   block: suspend CoroutineScope.() -> Unit
 ): Job {
   toUpdate?.set(true)
-  return GlobalScope.launch(Dispatchers.IO, start, block).apply {
+  return GlobalScope.launch(Dispatchers.IO, start, {
+    try {
+      block()
+    } catch (e: CancellationException) {
+      log.trace("Coroutine canceled", e)
+    }
+  }).apply {
     invokeOnCompletion {
-      toUpdate?.set(false)
-      
-      if (it != null && it != CancellationException()) {
+      if (it != null && it !is CancellationException) {
         log.error("Error executing async block", it)
+      }
+      if (toUpdate != null) {
+        inMainThread {
+          toUpdate.set(false)
+        }
+      }
+    }
+  }
+}
+
+fun <T> inBackgroundAsync(
+  toUpdate: EditableValue<Boolean>? = null,
+  start: CoroutineStart = CoroutineStart.DEFAULT,
+  block: suspend CoroutineScope.() -> T
+): Deferred<T> {
+  toUpdate?.set(true)
+  return GlobalScope.async(Dispatchers.IO, start, {
+    try {
+      return@async block()
+    } catch (e: CancellationException) {
+      log.trace("Coroutine canceled", e)
+      throw e
+    }
+  }).apply {
+    invokeOnCompletion {
+      if (it != null && it !is CancellationException) {
+        log.error("Error executing async block", it)
+      }
+      if (toUpdate != null) {
+        inMainThread {
+          toUpdate.set(false)
+        }
       }
     }
   }
@@ -42,12 +78,43 @@ fun inMainThread(
   block: suspend CoroutineScope.() -> Unit
 ): Job {
   toUpdate?.set(true)
-  return GlobalScope.launch(Dispatchers.Main, start) {
+  return GlobalScope.launch(Dispatchers.Main, start, {
     try {
       block()
-    } catch (ignored: CancellationException) {
+    } catch (e: CancellationException) {
+      log.trace("Coroutine canceled", e)
+    }
+  }).apply {
+    invokeOnCompletion {
+      if (it != null && it !is CancellationException) {
+        log.error("Error executing async block", it)
+      }
+      toUpdate?.set(false)
+    }
+  }
+//  return GlobalScope.launch(Dispatchers.Main, start) {
+//    try {
+//      block()
+//    } catch (ignored: CancellationException) {
+//    } catch (e: Exception) {
+//      log.error("Error executing async block", e)
+//    } finally {
+//      toUpdate?.set(false)
+//    }
+//  }
+}
+
+suspend fun <T> inMainContext(
+  toUpdate: EditableValue<Boolean>? = null,
+  block: suspend CoroutineScope.() -> T
+): T {
+  toUpdate?.set(true)
+  return withContext(Dispatchers.Main) {
+    try {
+      return@withContext block()
     } catch (e: Exception) {
       log.error("Error executing async block", e)
+      throw e
     } finally {
       toUpdate?.set(false)
     }
@@ -67,6 +134,13 @@ fun inMainThread(
 //    log.trace("Trying to unregister event listener that was not registered")
 //  }
 //}
+
+/**
+ * If true return first value, otherwise second
+ */
+inline fun <reified T> Boolean.ie(ifTrue: T, ifFalse: T): T {
+  return if (this) ifTrue else ifFalse
+}
 
 inline fun <reified T : AsyncEvent> Any.subscribeEvent(noinline block: suspend (T) -> Unit): Any {
   EventBus.global.subscribe(this, T::class, block = block)

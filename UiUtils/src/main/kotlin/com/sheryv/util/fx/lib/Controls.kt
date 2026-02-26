@@ -5,6 +5,7 @@ import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.value.ObservableValue
+import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import javafx.event.EventTarget
 import javafx.geometry.Orientation
@@ -169,6 +170,12 @@ fun Parent.checkbox(text: String? = null, property: Property<Boolean>? = null, o
   CheckBox(text).attachTo(this, op) {
     if (property != null) it.bind(property)
   }
+
+fun <T> Parent.combo(entries: ObservableList<T>, property: Property<T>? = null, op: ComboBox<T>.() -> Unit = {}) =
+  ComboBox(entries).attachTo(this, op) {
+    if (property != null) it.bind(property)
+  }
+
 
 fun Parent.progressindicator(op: ProgressIndicator.() -> Unit = {}) = ProgressIndicator().attachTo(this, op)
 fun Parent.progressindicator(property: Property<Number>, op: ProgressIndicator.() -> Unit = {}) = progressindicator().apply {

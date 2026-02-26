@@ -4,7 +4,7 @@ import com.sheryv.tools.filematcher.model.ProcessResult
 import com.sheryv.tools.filematcher.model.ResultType
 import com.sheryv.tools.filematcher.utils.eventsAttach
 import com.sheryv.tools.filematcher.utils.eventsDetach
-import com.sheryv.tools.filematcher.utils.inBackground
+import com.sheryv.util.inBackground
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job

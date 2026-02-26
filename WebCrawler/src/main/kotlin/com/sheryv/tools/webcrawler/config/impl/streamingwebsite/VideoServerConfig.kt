@@ -10,8 +10,7 @@ data class VideoServerConfig(
   override val enabled: Boolean = true
 ) : ApplicableEntry {
   
-  @JsonIgnore
-  var definition: VideoServerDefinition = Registry.get().serverDefinitions().first { it.id() == id }
+  val definition: VideoServerDefinition by lazy { Registry.get().serverDefinitions().first { it.id() == id } }
   
   override fun changeActivation(isEnabled: Boolean): ApplicableEntry {
     return copy(enabled = isEnabled)

@@ -77,8 +77,8 @@ dependencyResolutionManagement {
 
             library('mustache', 'com.github.spullara.mustache.java:compiler:0.9.10')
             library('flatlaf', 'com.formdev:flatlaf:3.1.1')
-            library('selenium', 'org.seleniumhq.selenium:selenium-java:4.27.0')
-            library('selenium-cdp', 'org.seleniumhq.selenium:selenium-devtools-v131:4.27.0')
+            library('selenium', 'org.seleniumhq.selenium:selenium-java:4.40.0')
+            library('selenium-cdp', 'org.seleniumhq.selenium:selenium-devtools-v142:4.40.0')
             library('apache-http', 'org.apache.httpcomponents:httpclient:4.5.14')
 
             library('jsoup', 'org.jsoup:jsoup:1.16.1')

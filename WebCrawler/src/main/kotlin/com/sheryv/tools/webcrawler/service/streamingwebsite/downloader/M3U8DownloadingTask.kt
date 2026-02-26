@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.service.streamingwebsite.downloader
 
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoUrl
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.io.DataTransferProgress
 import com.sheryv.util.io.FileDownloader
@@ -21,7 +22,7 @@ import kotlin.io.path.nameWithoutExtension
 
 class M3U8DownloadingTask(
   output: Path,
-  url: String,
+  url: VideoUrl,
   config: DownloaderConfig,
 ) : DownloadingTask(output, url, config = config) {
   
@@ -34,7 +35,7 @@ class M3U8DownloadingTask(
   override suspend fun preProcess() {
     tempDir.createDirectories()
     
-    parts = Utils.getChunksOfM3U8Video(url).mapIndexed { index, url ->
+    parts = Utils.getChunksOfM3U8Video(url.url).mapIndexed { index, url ->
       val partPath = tempDir.resolve(index.toString().padStart(5, '0') + ".ts.part")
       M3U8Part(index, partPath, FileDownloader(url, partPath))
     }

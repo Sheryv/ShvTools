@@ -151,7 +151,11 @@ open class DataTransferProgress(
     val ratio = max(0.0, min(currentRatio!! * 100, 100.0))
     return if (withDecimal) String.format("%3.1f", ratio) else String.format("%3d", Math.round(ratio))
   }
-
+  
+  override fun toString(): String {
+    return "${formatRatioAsPercent()}, ${currentSize.formatted}/${totalSize?.formatted ?: ""} at ${avgSpeed.formatted}"
+  }
+  
 //  fun sum(other: DownloadProgress): DownloadProgress {
 //    val allSize = size + other.size
 //    val progress = DownloadProgress(allSize)

@@ -9,23 +9,32 @@ import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
-import org.openqa.selenium.By
-import org.openqa.selenium.JavascriptExecutor
-import org.openqa.selenium.WebDriver
-import org.openqa.selenium.WebElement
+import org.openqa.selenium.*
+import org.openqa.selenium.bidi.network.AddInterceptParameters
+import org.openqa.selenium.bidi.network.ContinueRequestParameters
+import org.openqa.selenium.bidi.network.InterceptPhase
+import org.openqa.selenium.bidi.network.RequestData
 import org.openqa.selenium.chromium.ChromiumDriver
-import org.openqa.selenium.devtools.v131.network.Network
-import org.openqa.selenium.devtools.v131.network.model.RequestId
-import org.openqa.selenium.edge.EdgeDriver
+import org.openqa.selenium.devtools.v142.network.Network
+import org.openqa.selenium.devtools.v142.network.model.RequestId
+import org.openqa.selenium.devtools.v142.network.model.ResponseReceived
+import org.openqa.selenium.firefox.FirefoxDriver
 import org.openqa.selenium.remote.http.HttpHandler
 import org.openqa.selenium.remote.http.HttpRequest
 import org.openqa.selenium.remote.http.HttpResponse
 import org.openqa.selenium.support.ui.ExpectedConditions
 import org.openqa.selenium.support.ui.WebDriverWait
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.*
 import java.util.logging.Level
 
+typealias NetworkInterceptor = (request: HttpRequest, handler: HttpHandler) -> HttpResponse?
+typealias NetworkRequestListener = (request: RequestData) -> Unit
+typealias NetworkEventResponseReceivedListener = (eventNumber: Long, response: ResponseReceived) -> Unit
 
 open class SeleniumDriver(
   protected val wrappedDriver: WebDriver,
@@ -38,9 +47,20 @@ open class SeleniumDriver(
     script
   }
   
+  var networkBidi: org.openqa.selenium.bidi.module.Network? = null
+  
   private val initScript: String by lazy {
     BrowserSupport.get.loadScriptFromClassPath("_init")
   }
+  
+  //  private val interceptors: MutableList<NetworkInterceptor> = Collections.synchronizedList(mutableListOf<NetworkInterceptor>())
+  private val networkResponseListeners: MutableList<NetworkEventResponseReceivedListener> =
+    Collections.synchronizedList(mutableListOf<NetworkEventResponseReceivedListener>())
+  
+  private var interceptor: NetworkInterceptor? = null
+  
+  private val requestStartListeners: MutableList<NetworkRequestListener> =
+    Collections.synchronizedList(mutableListOf<NetworkRequestListener>())
   
   init {
     wrappedDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(implicitWait))
@@ -80,11 +100,11 @@ open class SeleniumDriver(
   override fun findElements(by: By): MutableList<WebElement> {
     return wrappedDriver.findElements(by)
   }
-
+  
   override fun findElement(by: By): WebElement {
     return wrappedDriver.findElement(by)
   }
-
+  
   override fun getCurrentUrl(): String? {
     return wrappedDriver.currentUrl
   }
@@ -98,6 +118,13 @@ open class SeleniumDriver(
   }
   
   override fun close() {
+    when (wrappedDriver) {
+      is ChromiumDriver -> {
+        wrappedDriver.devTools.clearListeners()
+      }
+    }
+    removeListeners()
+    networkBidi?.close()
     return wrappedDriver.close()
   }
   
@@ -136,7 +163,7 @@ open class SeleniumDriver(
   
   fun waitFor(by: By, seconds: Long = 10): WebElement {
     val wait = WebDriverWait(wrappedDriver, Duration.ofSeconds(seconds))
-    return wait.until(ExpectedConditions.presenceOfElementLocated(by))
+    return wait.until(ExpectedConditions.presenceOfElementLocated(by))!!
   }
   
   fun waitForVisibility(by: By, seconds: Long = 10): WebElement {
@@ -175,23 +202,111 @@ open class SeleniumDriver(
     } else null
   }
   
+  fun saveScreenshot(targetPath: Path): Path {
+    Files.createDirectories(targetPath.parent)
+    val shot = (wrappedDriver as TakesScreenshot).getScreenshotAs<File>(OutputType.FILE).toPath()
+    Files.move(targetPath, shot, StandardCopyOption.REPLACE_EXISTING)
+    return targetPath
+  }
+  
   fun enableDevToolsWithNetworkModule() {
     when (wrappedDriver) {
-      is ChromiumDriver -> {
+      is FirefoxDriver -> {
         wrappedDriver.setLogLevel(Level.OFF)
+        
+        networkBidi = org.openqa.selenium.bidi.module.Network(wrappedDriver)
+        networkBidi!!.addIntercept(AddInterceptParameters(InterceptPhase.BEFORE_REQUEST_SENT))
+        networkBidi!!.onBeforeRequestSent { req ->
+          val requestId = req.request.requestId
+          log.debug("INTERCEPT, RequestId: {}, {}", requestId, req.request.url)
+          networkBidi!!.continueRequest(ContinueRequestParameters(requestId))
+          log.debug("INTERCEPT done, RequestId: {}", requestId)
+        }
+        
+      }
+      
+      is ChromiumDriver -> {
+        
+        networkBidi = org.openqa.selenium.bidi.module.Network(wrappedDriver)
+//        networkBidi!!.addIntercept(AddInterceptParameters(InterceptPhase.RESPONSE_STARTED))
+//        networkBidi!!.onResponseStarted { resp ->
+//          val requestId = resp.request.requestId
+//          log.debug("INTERCEPT 2, RequestId: {}, {}", requestId, resp.request.url)
+//          inBackground {
+//            networkBidi!!.continueResponse(ContinueResponseParameters(requestId))
+////            networkBidi!!.provideResponse(ProvideResponseParameters(requestId))
+//            log.debug("INTERCEPT 2 done async, RequestId: {}", requestId)
+//          }
+//          log.debug("INTERCEPT 2 done, RequestId: {}", requestId)
+//        }
+        
+//        networkBidi!!.onBeforeRequestSent { req ->
+//          val requestId = req.request.requestId
+//          log.debug(
+//            "INTERCEPT: {} [{}] {}",
+//            requestId,
+//            req.request.headers.firstOrNull { "Accept".equals(it.name, true)  }?.value?.value.orEmpty(),
+//            req.request.url
+//          )
+//          val listeners = requestStartListeners
+//          for (listener in listeners) {
+//            listener.invoke(req.request)
+//          }
+////          inBackground {
+////            networkBidi!!.continueRequest(ContinueRequestParameters(requestId))
+////            delay(1000)
+////          }
+////          networkBidi!!.continueRequest(ContinueRequestParameters(requestId))
+//        }
+//
+        wrappedDriver.setLogLevel(Level.FINE)
         wrappedDriver.devTools.createSessionIfThereIsNotOne()
-        wrappedDriver.devTools.send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()))
-        wrappedDriver.devTools.domains.network().interceptTrafficWith { next ->
-          HttpHandler { req: HttpRequest ->
-//            req.addHeader("cheese", "brie");
-            val res: HttpResponse = next.execute(req);
-            log.debug("Intercept: ${req.method} ${res.status} | size: ${res.content.length()} B | ${req.uri}")
-            res
-          }
-        }
-        wrappedDriver.devTools.addListener(Network.responseReceived()) { id, e ->
-          log.debug("EVENT responseReceived {} | {} | size: {} B | {}", e.type, e.requestId, e.response.encodedDataLength, e.response.url)
-        }
+        wrappedDriver.devTools.send(
+          Network.enable(
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty(),
+            Optional.empty()
+          )
+        )
+
+
+//        wrappedDriver.devTools.domains.network().interceptTrafficWith { next ->
+//          HttpHandler { req: HttpRequest ->
+//            val interceptor = this.interceptor
+//            val response = if (interceptor == null) {
+//              next.execute(req)
+//            } else {
+//              interceptor.invoke(req, next)
+//            }
+//            var content = ""
+//            if (response?.contentType?.contains("mpegurl") == true) {
+//              content = "\n" + response.contentAsString()
+//            }
+//
+//            log.debug("Intercept: ${req.method} ${response?.status ?: "0"} ${response?.contentType.orEmpty()} | size: ${response?.content?.length() ?: 0} B | ${req.uri}${content}")
+//            response
+//          }
+//        }
+//        val usefulTypes = listOf(ResourceType.OTHER, ResourceType.FETCH, ResourceType.XHR, ResourceType.MEDIA)
+////        Network.requestWillBeSent()
+//        wrappedDriver.devTools.addListener(Network.responseReceived()) { id, e ->
+////          if (usefulTypes.contains(e.type))
+//          log.debug(
+//            "EVENT responseReceived {} | {} [{}] | size: {} B | {}",
+//            e.type,
+//            e.requestId,
+//            e.frameId,
+//            e.response.encodedDataLength,
+//            e.response.url
+//          )
+//
+//          val listeners = networkResponseListeners
+//          for (listener in listeners) {
+//            listener.invoke(id, e)
+//          }
+//        }
       }
     }
   }
@@ -209,10 +324,48 @@ open class SeleniumDriver(
     }
   }
   
+  fun setNetworkInterceptor(interceptor: NetworkInterceptor): NetworkInterceptor {
+//    interceptors.add(interceptor)
+    this.interceptor = interceptor
+    return interceptor
+  }
+  
+  fun clearNetworkInterceptor() {
+//    interceptors.remove(interceptor)
+    this.interceptor = null
+  }
+  
   private fun getFunctionExpressionWithCheck(function: String, params: Array<out String>): String {
     if (cachedScript.contains(Regex("function\\s+$function\\s*\\("))) {
       return cachedScript + ";\nreturn " + function + "(" + params.joinToString(", ") + ");"
     }
     throw IllegalArgumentException("Function '$function' was not found in script files")
+  }
+  
+  
+  fun addListener(listener: NetworkEventResponseReceivedListener): NetworkEventResponseReceivedListener {
+    networkResponseListeners.add(listener)
+    return listener
+  }
+  
+  fun removeListener(listener: NetworkEventResponseReceivedListener): NetworkEventResponseReceivedListener {
+    networkResponseListeners.remove(listener)
+    return listener
+  }
+  
+  
+  fun addListener(listener: NetworkRequestListener): NetworkRequestListener {
+    this.requestStartListeners.add(listener)
+    return listener
+  }
+  
+  fun removeListener(listener: NetworkRequestListener): NetworkRequestListener {
+    this.requestStartListeners.remove(listener)
+    return listener
+  }
+  
+  fun removeListeners() {
+    networkResponseListeners.clear()
+    this.requestStartListeners.clear()
   }
 }
