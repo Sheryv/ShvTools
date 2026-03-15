@@ -17,6 +17,7 @@ release
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
 /jre
+/jre*
 /config.json
 config_*.json
 /*/config.json
