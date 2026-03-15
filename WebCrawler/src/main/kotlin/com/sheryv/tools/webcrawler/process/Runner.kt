@@ -2,6 +2,7 @@ package com.sheryv.tools.webcrawler.process
 
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.Crawler
@@ -13,7 +14,6 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.Streamin
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.util.logging.log
 import org.openqa.selenium.SessionNotCreatedException
-import org.openqa.selenium.manager.SeleniumManager
 import kotlin.io.path.exists
 import kotlin.io.path.isExecutable
 
@@ -42,10 +42,9 @@ class Runner(
     
     var driver: SDriver? = null
     try {
-      driver = browser.selectedDriver.webDriverBuilder.build(config, browser)
-      val crawler = crawlerDef.build(config, browser, driver, params)
-      
-      driver.initialize(crawler)
+      val crawler = crawlerDef.build(config, browser, browser.selectedDriver.webDriverBuilder, params)
+      crawler.initialize()
+      driver = crawler.driver
       if (crawler is SeleniumCrawler<SettingsBase>) {
         GlobalState.runningProcess.value = (crawler)
       }
@@ -90,10 +89,9 @@ class Runner(
     
     var driver: SeleniumDriver? = null
     try {
-      driver = browser.selectedDriver.webDriverBuilder.build(config, browser) as SeleniumDriver
-      val crawler = (crawlerDef as StreamingCrawlerBase).build(config, browser, driver, params) as StreamingWebsiteBase
-      
-      driver.initialize(crawler as Crawler<out SDriver, SettingsBase>)
+      val crawler = (crawlerDef as StreamingCrawlerBase).build(config, browser, browser.selectedDriver.webDriverBuilder as DriverBuilder<SeleniumDriver>, params) as StreamingWebsiteBase
+      crawler.initialize()
+      driver = crawler.driver
       GlobalState.runningProcess.value = crawler as SeleniumCrawler<SettingsBase>
       log.info("Crawler '${crawler.def}' built")
       

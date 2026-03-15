@@ -13,14 +13,14 @@ findProject(':UiUtils')?.name = 'ui-util'
 
 
 include 'CmdTools'
-include 'SubtitlesTranslator'
+include 'VideoConverter'
 include 'FileMatcher'
 include 'ExplorerCopyFilesWithVerifyHandler'
 include 'QRCodeProcessor'
 include 'WebCrawler'
 //include 'CloudServerManager'
 findProject(':CmdTools')?.name = 'cmd-tools'
-findProject(':SubtitlesTranslator')?.name = 'subtitles-translator'
+findProject(':VideoConverter')?.name = 'video-converter'
 findProject(':FileMatcher')?.name = 'file-matcher'
 findProject(':ExplorerCopyFilesWithVerifyHandler')?.name = 'copy-with-verify-handler'
 findProject(':QRCodeProcessor')?.name = 'qrcode-processor'
@@ -68,7 +68,7 @@ dependencyResolutionManagement {
 //            library('tinylog-impl', 'org.tinylog:tinylog-impl:2.6.2')
 //            library('tinylog-slf4j', 'org.tinylog:slf4j-tinylog:2.6.2')
 
-            library('apache-commons-text', 'org.apache.commons:commons-text:1.10.0')
+            library('apache-commons-text', 'org.apache.commons:commons-text:1.15.0')
 //            library('janino', 'org.codehaus.janino:janino:3.1.8')
 //            library('janino-compiler', 'org.codehaus.janino:commons-compiler:3.1.8')
 
@@ -79,7 +79,7 @@ dependencyResolutionManagement {
             library('flatlaf', 'com.formdev:flatlaf:3.1.1')
             library('selenium', 'org.seleniumhq.selenium:selenium-java:4.40.0')
             library('selenium-cdp', 'org.seleniumhq.selenium:selenium-devtools-v142:4.40.0')
-            library('apache-http', 'org.apache.httpcomponents:httpclient:4.5.14')
+            library('apache-http', 'org.apache.httpcomponents.client5:httpclient5:5.6')
 
             library('jsoup', 'org.jsoup:jsoup:1.16.1')
 

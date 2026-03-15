@@ -1,6 +1,6 @@
 package com.sheryv.tools.webcrawler.view.settings
 
-import com.sheryv.tools.webcrawler.utils.ViewUtils
+import com.sheryv.util.fx.core.view.ViewUtils
 import com.sheryv.util.fx.lib.mapObservable
 import javafx.beans.property.ObjectProperty
 import javafx.scene.control.*

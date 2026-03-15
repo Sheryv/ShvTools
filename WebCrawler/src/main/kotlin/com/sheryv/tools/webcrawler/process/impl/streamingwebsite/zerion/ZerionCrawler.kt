@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.zerion
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.ProcessingStates
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
@@ -23,9 +24,9 @@ class ZerionCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver,
+  driverBuilder: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
-) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
+) : StreamingWebsiteBase(configuration, browser, def, driverBuilder, params) {
   
   override suspend fun getMainLang() = "pl"
   
@@ -79,7 +80,7 @@ class ZerionCrawler(
     return blockExecutedOnPage?.invoke()
   }
   
-  override suspend fun checkForCaptchaAndOtherOverlays(data: VideoData) {
+  override suspend fun checkForCaptchaAndOtherOverlays(data: VideoData): Boolean {
     val captacha = wait(By.cssSelector(".hcaptcha"))
     if (captacha != null) {
       GlobalState.processingState.value = (ProcessingStates.PAUSED)
@@ -87,7 +88,9 @@ class ZerionCrawler(
         GlobalState.view.showMessageDialog("Captcha detected! Solve it and resume process.")
       }
       waitIfPaused()
+      return true
     }
+    return false
   }
   
 }

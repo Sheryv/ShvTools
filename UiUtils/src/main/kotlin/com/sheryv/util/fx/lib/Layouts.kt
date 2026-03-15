@@ -91,6 +91,7 @@ val Parent.gridpaneColumnConstraints: ColumnConstraints?
         next.parent == null -> (next.properties[GridPaneParentObjectKey] as? GridPane)?.let {
           it to next.getChildList()?.indexOf(cursor)
         }
+        
         else -> null
       }
       
@@ -127,7 +128,11 @@ fun Parent.toolbar(vararg nodes: Node, op: ToolBar.() -> Unit = {}): ToolBar {
 }
 
 
-@Deprecated("No need to wrap ToolBar children in children{} anymore. Remove the wrapper and all builder items will still be added as before.", ReplaceWith("no children{} wrapper"), DeprecationLevel.WARNING)
+@Deprecated(
+  "No need to wrap ToolBar children in children{} anymore. Remove the wrapper and all builder items will still be added as before.",
+  ReplaceWith("no children{} wrapper"),
+  DeprecationLevel.WARNING
+)
 fun ToolBar.children(op: ToolBar.() -> Unit) = apply { op() }
 
 fun Parent.hbox(spacing: Number = 10.0, alignment: Pos = Pos.CENTER_LEFT, fillHeight: Boolean = true, op: HBox.() -> Unit = {}): HBox {
@@ -160,10 +165,15 @@ fun ToolBar.separator(orientation: Orientation = Orientation.HORIZONTAL, op: Sep
   return separator
 }
 
-fun Parent.separator(orientation: Orientation = Orientation.HORIZONTAL, op: Separator.() -> Unit = {}) = Separator(orientation).attachTo(this, op)
+fun Parent.separator(orientation: Orientation = Orientation.HORIZONTAL, op: Separator.() -> Unit = {}) =
+  Separator(orientation).attachTo(this, op)
 
-fun Parent.group(initialChildren: Iterable<Node>? = null, op: Group.() -> Unit = {}) = Group().apply { if (initialChildren != null) children.addAll(initialChildren) }.attachTo(this, op)
-fun Parent.stackpane(initialChildren: Iterable<Node>? = null, op: StackPane.() -> Unit = {}) = StackPane().apply { if (initialChildren != null) children.addAll(initialChildren) }.attachTo(this, op)
+fun Parent.group(initialChildren: Iterable<Node>? = null, op: Group.() -> Unit = {}) =
+  Group().apply { if (initialChildren != null) children.addAll(initialChildren) }.attachTo(this, op)
+
+fun Parent.stackpane(initialChildren: Iterable<Node>? = null, op: StackPane.() -> Unit = {}) =
+  StackPane().apply { if (initialChildren != null) children.addAll(initialChildren) }.attachTo(this, op)
+
 fun Parent.gridpane(op: GridPane.() -> Unit = {}) = GridPane().attachTo(this, op)
 fun Parent.pane(op: Pane.() -> Unit = {}) = Pane().attachTo(this, op)
 fun Parent.flowpane(op: FlowPane.() -> Unit = {}) = FlowPane().attachTo(this, op)
@@ -218,14 +228,24 @@ fun <T : Node> BorderPane.center(centerNode: T, op: T.() -> Unit = {}): T {
   return centerNode.attachTo(this, op)
 }
 
-fun Parent.titledpane(title: String? = null, node: Node? = null, collapsible: Boolean = true, op: (TitledPane).() -> Unit = {}): TitledPane {
+fun Parent.titledpane(
+  title: String? = null,
+  node: Node? = null,
+  collapsible: Boolean = true,
+  op: (TitledPane).() -> Unit = {}
+): TitledPane {
   val titledPane = TitledPane(title, node)
   titledPane.isCollapsible = collapsible
   titledPane.attachTo(this, op)
   return titledPane
 }
 
-fun Parent.titledpane(title: ObservableValue<String>, node: Node? = null, collapsible: Boolean = true, op: (TitledPane).() -> Unit = {}): TitledPane {
+fun Parent.titledpane(
+  title: ObservableValue<String>,
+  node: Node? = null,
+  collapsible: Boolean = true,
+  op: (TitledPane).() -> Unit = {}
+): TitledPane {
   val titledPane = TitledPane("", node)
   titledPane.textProperty().bind(title)
   titledPane.isCollapsible = collapsible
@@ -240,7 +260,11 @@ fun Parent.pagination(pageCount: Int? = null, pageIndex: Int? = null, op: Pagina
   return pagination.attachTo(this, op)
 }
 
-fun Parent.scrollpane(fitToWidth: Boolean = true, fitToHeight: Boolean = true, op: ScrollPane.() -> Unit = {}): ScrollPane {
+fun Parent.scrollpane(
+  fitToWidth: Boolean = true,
+  fitToHeight: Boolean = true,
+  op: ScrollPane.() -> Unit = {}
+): ScrollPane {
   val pane = ScrollPane()
   pane.isFitToWidth = fitToWidth
   pane.isFitToHeight = fitToHeight
@@ -263,7 +287,11 @@ fun Parent.splitpane(orientation: Orientation = Orientation.HORIZONTAL, vararg n
   return splitpane
 }
 
-@Deprecated("No need to wrap splitpane items in items{} anymore. Remove the wrapper and all builder items will still be added as before.", ReplaceWith("no items{} wrapper"), DeprecationLevel.WARNING)
+@Deprecated(
+  "No need to wrap splitpane items in items{} anymore. Remove the wrapper and all builder items will still be added as before.",
+  ReplaceWith("no items{} wrapper"),
+  DeprecationLevel.WARNING
+)
 fun SplitPane.items(op: (SplitPane.() -> Unit)) = op(this)
 
 fun Parent.canvas(width: Double = 0.0, height: Double = 0.0, op: Canvas.() -> Unit = {}) =
@@ -291,7 +319,11 @@ fun <T : Node> Accordion.fold(title: String? = null, node: T, expanded: Boolean 
   return fold
 }
 
-@Deprecated("Properties added to the container will be lost if you add only a single child Node", ReplaceWith("Accordion.fold(title, node, op)"), DeprecationLevel.WARNING)
+@Deprecated(
+  "Properties added to the container will be lost if you add only a single child Node",
+  ReplaceWith("Accordion.fold(title, node, op)"),
+  DeprecationLevel.WARNING
+)
 fun Accordion.fold(title: String? = null, op: Pane.() -> Unit = {}): TitledPane {
   val vbox = VBox().also(op)
   val fold = TitledPane(title, if (vbox.children.size == 1) vbox.children[0] else vbox)
@@ -303,7 +335,9 @@ fun Parent.region(op: Region.() -> Unit = {}) = Region().attachTo(this, op)
 
 
 @Deprecated("Use the paddingRight property instead", ReplaceWith("paddingRight = p"))
-fun Region.paddingRight(p: Double) { paddingRight = p }
+fun Region.paddingRight(p: Double) {
+  paddingRight = p
+}
 
 var Region.paddingRight: Number
   get() = padding.right
@@ -312,7 +346,9 @@ var Region.paddingRight: Number
   }
 
 @Deprecated("Use the paddingLeft property instead", ReplaceWith("paddingLeft = p"))
-fun Region.paddingLeft(p: Double) { paddingLeft = p }
+fun Region.paddingLeft(p: Double) {
+  paddingLeft = p
+}
 
 var Region.paddingLeft: Number
   get() = padding.left
@@ -321,7 +357,9 @@ var Region.paddingLeft: Number
   }
 
 @Deprecated("Use the paddingTop property instead", ReplaceWith("paddingTop = p"))
-fun Region.paddingTop(p: Double) { paddingTop = p }
+fun Region.paddingTop(p: Double) {
+  paddingTop = p
+}
 
 var Region.paddingTop: Number
   get() = padding.top
@@ -330,7 +368,9 @@ var Region.paddingTop: Number
   }
 
 @Deprecated("Use the paddingBottom property instead", ReplaceWith("paddingBottom = p"))
-fun Region.paddingBottom(p: Double) { paddingBottom = p }
+fun Region.paddingBottom(p: Double) {
+  paddingBottom = p
+}
 
 var Region.paddingBottom: Number
   get() = padding.bottom
@@ -339,7 +379,9 @@ var Region.paddingBottom: Number
   }
 
 @Deprecated("Use the paddingVertical property instead", ReplaceWith("paddingVertical = p"))
-fun Region.paddingVertical(p: Double) { paddingVertical = p }
+fun Region.paddingVertical(p: Double) {
+  paddingVertical = p
+}
 
 var Region.paddingVertical: Number
   get() = padding.vertical * 2
@@ -349,7 +391,9 @@ var Region.paddingVertical: Number
   }
 
 @Deprecated("Use the paddingHorizontal property instead", ReplaceWith("paddingHorizontal = p"))
-fun Region.paddingHorizontal(p: Double) { paddingHorizontal = p }
+fun Region.paddingHorizontal(p: Double) {
+  paddingHorizontal = p
+}
 
 var Region.paddingHorizontal: Number
   get() = padding.horizontal * 2

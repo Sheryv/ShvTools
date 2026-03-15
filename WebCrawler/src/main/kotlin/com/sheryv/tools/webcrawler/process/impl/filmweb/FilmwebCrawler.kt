@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.process.impl.filmweb
 
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.FilmwebSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
@@ -16,9 +17,9 @@ class FilmwebCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, FilmwebSettings>,
-  driver: SeleniumDriver,
+  driverBuilder: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
-) : SeleniumCrawler<FilmwebSettings>(configuration, browser, def, driver, params) {
+) : SeleniumCrawler<FilmwebSettings>(configuration, browser, def, driverBuilder, params) {
   
   private val result = FilmwebResult()
   private lateinit var user: String

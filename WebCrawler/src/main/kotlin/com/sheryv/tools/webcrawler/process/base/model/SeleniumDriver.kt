@@ -75,7 +75,7 @@ open class SeleniumDriver(
     }
   }
   
-  override fun initialize(crawler: Crawler<out SDriver, SettingsBase>) {
+  override fun initialize(crawler: Crawler<SDriver, SettingsBase>) {
     this.crawler = crawler as Crawler<SeleniumDriver, SettingsBase>
   }
   

@@ -7,7 +7,6 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.*
-import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.tools.webcrawler.view.OnChangeScheduledExecutor
@@ -61,7 +60,7 @@ class DownloaderView : FxmlView("view/downloader.fxml") {
     
     btnAdd.setOnAction {
       val result =
-        DialogUtils.inputDialog(
+        factory.dialogs.inputDialog(
           "Add URL - " + ViewUtils.TITLE,
           null,
           listOf(

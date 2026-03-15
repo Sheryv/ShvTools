@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.core.JsonFactory
 import com.fasterxml.jackson.core.type.TypeReference
 import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.jsontype.NamedType
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer
@@ -90,19 +92,21 @@ object SerialisationUtils {
   
   @JvmStatic
   fun createJsonMapper(types: Map<String, Class<*>> = emptyMap(), factory: JsonFactory? = null): ObjectMapper {
-    val map = ObjectMapper(factory)
+    val map =JsonMapper.builder(factory ?: JsonFactory())
+//    val map = ObjectMapper(factory)
     map.configure(SerializationFeature.INDENT_OUTPUT, true)
-    map.registerModule(KotlinModule.Builder().build())
-    map.registerModule(JavaTimeModule())
-    map.setSerializationInclusion(JsonInclude.Include.NON_NULL)
-    map.dateFormat = StdDateFormat()
+    map.configure(MapperFeature.PROPAGATE_TRANSIENT_MARKER, true)
+    map.addModule(KotlinModule.Builder().build())
+    map.addModule(JavaTimeModule())
+    map.serializationInclusion(JsonInclude.Include.NON_NULL)
+    map.defaultDateFormat(StdDateFormat())
     map.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
     map.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     map.registerSubtypes(*types.map { NamedType(it.value, it.key) }.toTypedArray())
     val mod = SimpleModule()
     mod.addSerializer(Path::class.java, ToStringSerializer())
-    map.registerModule(mod)
-    return map
+    map.addModule(mod)
+    return map.build()
   }
   
 }

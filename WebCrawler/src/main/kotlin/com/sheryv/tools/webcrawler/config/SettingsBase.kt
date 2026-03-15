@@ -6,6 +6,7 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
+import com.sheryv.util.fx.core.view.ViewFactory
 import java.nio.file.Path
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -18,7 +19,7 @@ abstract class SettingsBase(
   
   abstract fun copyAll(): SettingsBase
   
-  abstract fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader>
+  abstract fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader>
   
   open fun validate(def: CrawlerDef) {
   }

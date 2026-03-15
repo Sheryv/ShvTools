@@ -1,13 +1,19 @@
 package com.sheryv.util.fx.core.view
 
+import com.sheryv.util.fx.core.Dialogs
+import com.sheryv.util.fx.core.Styles
+import com.sheryv.util.fx.core.app.AppConfiguration
 import com.sheryv.util.fx.lib.onChange
 import javafx.fxml.FXMLLoader
 import javafx.scene.Scene
+import javafx.scene.layout.Pane
 import javafx.stage.Stage
 import org.koin.core.Koin
 import kotlin.reflect.KClass
 
 class ViewFactory(private val koin: Koin) {
+  private val configuration = koin.get<AppConfiguration>()
+  val dialogs = koin.get<Dialogs>()
   
   inline fun <reified T : BaseView> createWindow(
     width: Double = 1000.0,
@@ -17,8 +23,8 @@ class ViewFactory(private val koin: Koin) {
   
   fun <T : BaseView> createWindow(
     view: KClass<T>,
-    width: Double = 1000.0,
-    height: Double = 600.0,
+    width: Double = 0.0,
+    height: Double = 0.0,
     stage: Stage = Stage(),
   ): () -> T {
     val v = koin.get<T>(view)
@@ -34,9 +40,20 @@ class ViewFactory(private val koin: Koin) {
       else -> throw IllegalArgumentException("Not recognized view type for $v")
     }
     
-    val scene = Scene(root, width, height)
+    var w = if (width > 0) width else 1000.0
+    var h = if (height > 0) height else 600.0
+    if (root is Pane) {
+      if (root.prefWidth > 0) {
+        w = root.prefWidth
+      }
+      if (root.prefHeight > 0) {
+        h = root.prefHeight
+      }
+    }
+    
+    val scene = Scene(root, w, h)
     stage.scene = scene
-    appendStyleSheets(stage.scene)
+    Styles.appendStyleSheets(stage.scene, configuration)
     stage.titleProperty().bind(v.titleProperty)
     v.iconProperty.onChange {
       stage.icons.clear()
@@ -52,7 +69,7 @@ class ViewFactory(private val koin: Koin) {
       v
     }
   }
-  
+
 //  fun <T : BaseView> createPrimaryWindow(view: KClass<T>): () -> T {
 //    return createWindow(view, stage = context.primaryStage).let {
 //      {
@@ -62,11 +79,4 @@ class ViewFactory(private val koin: Koin) {
 //      }
 //    }
 //  }
-  
-  fun appendStyleSheets(scene: Scene) {
-    if (scene.stylesheets.isEmpty()) {
-      scene.stylesheets.add(javaClass.classLoader.getResource("style.css")?.toExternalForm())
-      scene.stylesheets.add(javaClass.classLoader.getResource("dark.css")?.toExternalForm())
-    }
-  }
 }

@@ -29,7 +29,7 @@ abstract class BinarySizeBase<T : MetricUnit>() : ScientificValue<Double, T>() {
         
         val scale = (log10(bytes.toDouble()) / log10(1024.0)).toInt()
         val res = bytes / 1024.0.pow(scale.toDouble())
-        val u = BinaryUnit.entries.firstOrNull { it.scale == scale } ?: BinaryUnit.PB
+        val u = BinaryUnit.entries.firstOrNull { it.scale == scale } ?: BinaryUnit.PiB
         
         Triple(res, bytes, u)
       }

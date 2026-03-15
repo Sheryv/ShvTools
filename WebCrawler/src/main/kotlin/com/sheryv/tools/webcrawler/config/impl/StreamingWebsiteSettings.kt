@@ -9,10 +9,14 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.view.settings.*
+import com.sheryv.util.fx.core.view.ViewFactory
 import com.sheryv.util.fx.lib.onChangeNotNull
 import javafx.beans.property.SimpleStringProperty
 import java.nio.file.Path
 import java.time.Duration
+import kotlin.collections.get
+import kotlin.text.indexOf
+import kotlin.toString
 
 data class StreamingWebsiteSettings(
   override val crawlerId: String,
@@ -28,7 +32,7 @@ data class StreamingWebsiteSettings(
   val searchStopIndex: Int = -1,
   val episodeCodeFormatter: String = "\${series_name} S\${season}E\${episode_number}",
   val episodeNameFormatter: String = " - \${episode_name}\${file_extension}",
-  val triesBeforeStreamingProviderChange: Int = 3,
+  val shuffleStreamingProviderOrder: Boolean = false,
   val numOfTopStreamingProvidersUsedSimultaneously: Int = 3,
   val allowedEpisodeTypes: List<EpisodeType> = EpisodeType.all(),
   val allowedQualities: List<StreamQuality> = StreamQuality.all(),
@@ -38,22 +42,22 @@ data class StreamingWebsiteSettings(
   val linkExpirationDuration: Duration = Duration.ofDays(1),
 ) : SettingsBase() {
   
-  override fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
-    val savePathRow = TextInputSettingsRow("Intermediate file path", outputPath.toString())
-    val seriesNameRow = TextInputSettingsRow("Series name", seriesName)
+  override fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
+    val savePathRow = TextInputSettingsRow(viewFactory, "Intermediate file path", outputPath.toString())
+    val seriesNameRow = TextInputSettingsRow(viewFactory, "Series name", seriesName)
     val seriesNumberRow = NumberRangeSettingRow("Season number", seasonNumber, 1, 100, showSlider = false)
-    val seriesUrlRow = TextInputSettingsRow("Series URL address (can be relative)", seriesUrl)
-    val download = TextInputSettingsRow("Download directory (parent)", downloadDir)
+    val seriesUrlRow = TextInputSettingsRow(viewFactory, "Series URL address (can be relative)", seriesUrl)
+    val download = TextInputSettingsRow(viewFactory, "Download directory (parent)", downloadDir)
     val searchStart = NumberRangeSettingRow("Search start index", searchStartIndex, 1, 10000)
     val searchStop = NumberRangeSettingRow("Search stop index (set -1 to disable)", searchStopIndex, -1, 10000)
-    val tmdb = TextInputSettingsRow("API key for TMDB database (themoviedb.org)", tmdbKey.orEmpty())
-    val idm = TextInputSettingsRow("Path to IDM exe (Internet Download Manager integration)", idmExePath.orEmpty())
-    val triesBeforeSwitch =
-      NumberRangeSettingRow("Number of tries before switch for each streaming provider", triesBeforeStreamingProviderChange, 1, 51)
+    val tmdb = TextInputSettingsRow(viewFactory, "API key for TMDB database (themoviedb.org)", tmdbKey.orEmpty())
+    val idm = TextInputSettingsRow(viewFactory, "Path to IDM exe (Internet Download Manager integration)", idmExePath.orEmpty())
+    val shuffleProviderOrder =
+      BoolSettingsRow("Shuffle order of streaming providers when searching each episode", shuffleStreamingProviderOrder)
     val parallelProviders =
       NumberRangeSettingRow("Number of streaming provider used simultaneously", numOfTopStreamingProvidersUsedSimultaneously, 1, 51)
-    val codeTemplate = TextInputSettingsRow("Episode code template", episodeCodeFormatter)
-    val nameTemplate = TextInputSettingsRow("Episode name template", episodeNameFormatter)
+    val codeTemplate = TextInputSettingsRow(viewFactory, "Episode code template", episodeCodeFormatter)
+    val nameTemplate = TextInputSettingsRow(viewFactory, "Episode name template", episodeNameFormatter)
     val providers = TableSettingsRow(
       "Streaming providers order (Drag and drop to change order)",
       buildListAndAddNew(videoServerConfigs, VideoServerConfig.all()).map {
@@ -109,7 +113,7 @@ data class StreamingWebsiteSettings(
         searchStop,
         tmdb,
         idm,
-        triesBeforeSwitch,
+        shuffleProviderOrder,
         parallelProviders,
         codeTemplate,
         nameTemplate,
@@ -137,7 +141,7 @@ data class StreamingWebsiteSettings(
         searchStop.readValue(),
         codeTemplate.readValue(),
         nameTemplate.readValue(),
-        triesBeforeSwitch.readValue(),
+        shuffleProviderOrder.readValue(),
         parallelProviders.readValue(),
         buildListAndAddNew(allowedEpisodeTypes, EpisodeType.all()).map { e ->
           e.changeActivation(types.first { it.cells.first() == e.kind.toString().lowercase() }.isEnabled()) as EpisodeType
@@ -151,23 +155,6 @@ data class StreamingWebsiteSettings(
         skipped.filter { it.isEnabled() }.map { it.cells.first().toInt() },
         history
       )
-    }
-  }
-  
-  
-  override fun validate(def: CrawlerDef) {
-    require(searchStartIndex > 0) { "Search create index have to be greater than 0 and less than or equal to episodes count!" }
-    require(!(searchStopIndex < searchStartIndex && searchStopIndex != -1)) { "Search stop index have to be greater than or equal to create index or equal to -1 for unlimited value" }
-    require(episodeCodeFormatter.isNotBlank()) { "EpisodeCodeFormatter cannot be empty" }
-    require(downloadDir.isNotBlank()) { "Download directory path cannot be empty" }
-    require(seriesUrl.isNotBlank()) { "Series URL cannot be empty" }
-//    require(seriesName.isNotBlank()) { "Series Name cannot be empty" }
-  }
-  
-  fun appendHistory(item: HistoryItem) {
-    history = listOf(item) + history
-    if (history.size > 30) {
-      history = history.dropLast(1)
     }
   }
   
@@ -190,6 +177,24 @@ data class StreamingWebsiteSettings(
     return ChoiceSettingsRow("Load from history", "-", history.map { it.toString() } + "-", historyProp)
   }
   
+  
+  override fun validate(def: CrawlerDef) {
+    require(searchStartIndex > 0) { "Search create index have to be greater than 0 and less than or equal to episodes count!" }
+    require(!(searchStopIndex < searchStartIndex && searchStopIndex != -1)) { "Search stop index have to be greater than or equal to create index or equal to -1 for unlimited value" }
+    require(episodeCodeFormatter.isNotBlank()) { "EpisodeCodeFormatter cannot be empty" }
+    require(downloadDir.isNotBlank()) { "Download directory path cannot be empty" }
+    require(seriesUrl.isNotBlank()) { "Series URL cannot be empty" }
+//    require(seriesName.isNotBlank()) { "Series Name cannot be empty" }
+  }
+  
+  fun appendHistory(item: HistoryItem) {
+    history = listOf(item) + history
+    if (history.size > 30) {
+      history = history.dropLast(1)
+    }
+  }
+  
+
   override fun copyAll(): SettingsBase = copy()
   
   @Suppress("RedundantOverride")

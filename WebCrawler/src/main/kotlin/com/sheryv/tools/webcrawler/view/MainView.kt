@@ -20,7 +20,6 @@ import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.Downloader
 import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGenerator
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
-import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
@@ -31,6 +30,7 @@ import com.sheryv.tools.webcrawler.view.search.SearchWindow
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.util.*
+import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.FxmlView
 import com.sheryv.util.fx.core.view.ViewFactory
 import com.sheryv.util.fx.lib.onChange
@@ -97,7 +97,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       prepareRegistry()
       init()
     } catch (e: Exception) {
-      DialogUtils.textAreaDialog(
+      factory.dialogs.textAreaDialog(
         "Details", e.stackTraceToString(), TITLE,
         "Error occurred while starting application", Alert.AlertType.ERROR, false, false, ButtonType.OK
       )
@@ -267,18 +267,18 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     cbBrowser.selectionModel.select(config.browserSettings.selected)
     
     btnSelectDriver.setOnAction {
-      DialogUtils.openFileDialog(stage, initialFile = tfBrowserDriverPath.text.takeIf { it.isNotBlank() })?.also {
+      factory.dialogs.openFileDialog(stage, initialFile = tfBrowserDriverPath.text.takeIf { it.isNotBlank() })?.also {
         tfBrowserDriverPath.text = it.toAbsolutePath().toString()
       }
     }
     
     btnSelectBrowserExec.setOnAction {
-      DialogUtils.openFileDialog(stage, initialFile = tfBrowserPath.text.takeIf { it.isNotBlank() })?.also {
+      factory.dialogs.openFileDialog(stage, initialFile = tfBrowserPath.text.takeIf { it.isNotBlank() })?.also {
         tfBrowserPath.text = it.toAbsolutePath().toString()
       }
     }
     btnSelectUserProfileDir.setOnAction {
-      DialogUtils.openDirectoryDialog(stage, initialDir = tfUserProfilePath.text.takeIf { it.isNotBlank() })?.also {
+      factory.dialogs.openDirectoryDialog(stage, initialDir = tfUserProfilePath.text.takeIf { it.isNotBlank() })?.also {
         tfUserProfilePath.text = it.toAbsolutePath().toString()
       }
     }
@@ -351,7 +351,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               setOnAction {
                 val type = selected!!.settingsClass
                 val source = config.settings.filter { it.crawlerId != selected!!.id() && type.isInstance(it) }
-                DialogUtils.choiceDialog("Copy options from other scraper", source, "Choose source scraper")?.also {
+                factory.dialogs.choiceDialog("Copy options from other scraper", source, "Choose source scraper")?.also {
                   config.updateSettings(it.copyAll())
                   showSettingsForSelectedScraper()
                 }
@@ -360,9 +360,9 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             SeparatorMenuItem(),
             MenuItem("Merge many files to single one").apply {
               setOnAction {
-                DialogUtils.openDirectoryDialog(stage, "Select directory with input files")?.let { dir ->
-                  DialogUtils.saveFileDialog(stage, initialFile = dir.resolve(dir.fileName).toAbsolutePath().toString())?.let {
-                    DialogUtils.messageDialog("Merging of '$it' started")
+                factory.dialogs.openDirectoryDialog(stage, "Select directory with input files")?.let { dir ->
+                  factory.dialogs.saveFileDialog(stage, initialFile = dir.resolve(dir.fileName).toAbsolutePath().toString())?.let {
+                    factory.dialogs.messageDialog("Merging of '$it' started")
                     inBackground {
                       FileUtils.mergeFilesFromDirToSingle(dir.listDirectoryEntries(), it)
                     }
@@ -376,7 +376,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
           items.setAll(
             MenuItem("Show configuration file location").apply {
               setOnAction {
-                DialogUtils.messageCopyableDialog(
+                factory.dialogs.messageCopyableDialog(
                   Path.of(Configuration.FILE).toAbsolutePath().toString(),
                   "Location of Configuration file",
                 )
@@ -386,7 +386,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               setOnAction {
                 val msg =
                   "Created by Sheryv\nVersion: ${VersionUtils.loadVersionByModuleName("web-crawler-version")}\nWebsite: https://github.com/Sheryv/ShvTools"
-                DialogUtils.messageCopyableDialog(msg, "About info")
+                factory.dialogs.messageCopyableDialog(msg, "About info")
               }
             })
         },
@@ -417,7 +417,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             } catch (e: Exception) {
               log.error("Running error", e)
               inMainThread {
-                DialogUtils.textAreaDialog(
+                factory.dialogs.textAreaDialog(
                   "Details", e.stackTraceToString(), TITLE,
                   "Error occurred while scraping", Alert.AlertType.ERROR, false, false, ButtonType.OK
                 )
@@ -438,7 +438,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   private fun showSettingsForSelectedScraper() {
     val settings = selected!!.findSettings(config)
     lbSelected.text = selected.toString()
-    val parts = SettingsPanelBuilder(settings).build()
+    val parts = SettingsPanelBuilder(settings, viewFactory).build()
     settingsReader = parts.second
     vbOptions.children.setAll(parts.first)
   }
@@ -455,7 +455,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       }
     } catch (e: Exception) {
       log.error("Cannot save config", e)
-      DialogUtils.textAreaDialog(
+      factory.dialogs.textAreaDialog(
         "One or more values is incorrect", e.message + "\n\n" + e.stackTraceToString(), TITLE,
         "Error while saving configuration for ${selected!!.findSettings(config)}", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
@@ -470,12 +470,12 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     } else {
       TITLE
     }
-    DialogUtils.dialog(message, header, owner = stage, buttons = arrayOf(ButtonType.OK))
+    factory.dialogs.dialog(message, header, owner = stage, buttons = arrayOf(ButtonType.OK))
   }
   
   private fun openSearchEpisodesWindow() {
     if (selected!!.findSettings(config) !is StreamingWebsiteSettings) {
-      DialogUtils.dialog("This feature is only available for video streaming scrapers")
+      factory.dialogs.dialog("This feature is only available for video streaming scrapers")
       return
     }
     EventQueue.invokeLater {
@@ -498,7 +498,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       viewFactory.createWindow<JDownloaderView>()()
     } catch (e: Exception) {
       log.error("Error while opening dialog JDownloader 2 import", e)
-      DialogUtils.textAreaDialog(
+      factory.dialogs.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
         "Error while opening dialog JDownloader 2 import", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
@@ -548,12 +548,12 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                       )
                     )
                     inMainThread {
-                      DialogUtils.messageDialog("Successfully added to IDM $done episodes out of $all")
+                      factory.dialogs.messageDialog("Successfully added to IDM $done episodes out of $all")
                     }
                   } catch (e: Exception) {
                     log.error("Error while sending to IDM", e)
                     inMainThread {
-                      DialogUtils.textAreaDialog(
+                      factory.dialogs.textAreaDialog(
                         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
                         "Error while sending to IDM", Alert.AlertType.ERROR, true, false, ButtonType.OK
                       )
@@ -578,7 +578,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                       .resolve(it.generateFileName(series, settings))
                   }
                   .toList()
-                when (DialogUtils.textAreaDialog(
+                when (factory.dialogs.textAreaDialog(
                   "List of HLS files - ${episodes.size} to be added",
                   episodes.joinToString("\n") { (e, path) -> "$path - ${e.downloadUrl}" },
                   header = null,
@@ -626,12 +626,12 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                 }
                 
                 inMainThread {
-                  DialogUtils.messageDialog("Successfully generated metadata in directory ${seriesDir.toAbsolutePath()}")
+                  factory.dialogs.messageDialog("Successfully generated metadata in directory ${seriesDir.toAbsolutePath()}")
                 }
               } catch (e: Exception) {
                 log.error("Error while generating", e)
                 inMainThread {
-                  DialogUtils.textAreaDialog(
+                  factory.dialogs.textAreaDialog(
                     "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
                     "Error while generating", Alert.AlertType.ERROR, true, false, ButtonType.OK
                   )
@@ -648,17 +648,17 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               if (crawler is StreamingCrawlerBase) {
                 inMainThread {
                   val rows = settings.history.map { it.toString() }
-                  DialogUtils.choiceDialog("Select tv series from history", rows)?.also { seriesCode ->
+                  factory.dialogs.choiceDialog("Select tv series from history", rows)?.also { seriesCode ->
                     val item = settings.history[rows.indexOf(seriesCode)]
                     
-                    DialogUtils.inputDialog("Select season for ${item.title}", header = "", rows = listOf(Pair("Season", ""))).firstOrNull()
+                    factory.dialogs.inputDialog("Select season for ${item.title}", header = "", rows = listOf(Pair("Season", ""))).firstOrNull()
                       ?.toIntOrNull()
                       ?.also {
                         val updated = item.copy(seasonNumber = it)
                         crawler.onLoadFromHistory(updated)
-                        DialogUtils.messageDialog("Series $updated loaded")
+                        factory.dialogs.messageDialog("Series $updated loaded")
                       } ?: {
-                      DialogUtils.messageDialog("Cannot search episodes because season number is incorrect")
+                      factory.dialogs.messageDialog("Cannot search episodes because season number is incorrect")
                     }
                   }
                 }
@@ -666,7 +666,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             } catch (e: Exception) {
               log.error("Error while searching", e)
               inMainThread {
-                DialogUtils.textAreaDialog(
+                factory.dialogs.textAreaDialog(
                   "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
                   "Error while searching", Alert.AlertType.ERROR, true, false, ButtonType.OK
                 )
@@ -676,7 +676,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
         },
         MenuItem("Find URL for single episode").apply {
           setOnAction {
-            val results = DialogUtils.inputDialog(
+            val results = factory.dialogs.inputDialog(
               "Find URL for single episode",
               null,
               listOf("URL" to "https://vidmoly.biz/embed-zdt5yr6mfjo8.html"),
@@ -695,7 +695,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
               } catch (e: Exception) {
                 log.error("Running error", e)
                 inMainThread {
-                  DialogUtils.textAreaDialog(
+                  factory.dialogs.textAreaDialog(
                     "Details", e.stackTraceToString(), TITLE,
                     "Error occurred while scraping", Alert.AlertType.ERROR, false, false, ButtonType.OK
                   )
@@ -714,7 +714,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       viewFactory.createWindow<DownloaderView>()()
     } catch (e: Exception) {
       log.error("Error while opening downloader dialog", e)
-      DialogUtils.textAreaDialog(
+      factory.dialogs.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
         "Error while opening downloader dialog", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )
@@ -762,7 +762,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     
     val helpBtn = Button("Help")
     helpBtn.setOnAction {
-      DialogUtils.textAreaDialog(
+      factory.dialogs.textAreaDialog(
         "",
         """
         All scripts are executed by browser driver in current driver state.
@@ -801,7 +801,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
     GridPane.setHgrow(bottomRow, Priority.ALWAYS)
     
     alert.dialogPane.content = expContent
-    viewFactory.appendStyleSheets(alert.dialogPane.scene)
+    Styles.appendStyleSheets(alert.dialogPane.scene, config)
     
     inputArea.textProperty().addListener { _, _, n -> config.lastUserScript = n }
     

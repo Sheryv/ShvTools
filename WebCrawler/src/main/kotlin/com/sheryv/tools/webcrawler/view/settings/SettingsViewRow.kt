@@ -1,6 +1,6 @@
 package com.sheryv.tools.webcrawler.view.settings
 
-import com.sheryv.tools.webcrawler.utils.ViewUtils
+import com.sheryv.util.fx.core.view.ViewUtils
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyObjectProperty

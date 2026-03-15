@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.process.base
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.ProcessingStates
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
@@ -10,15 +11,24 @@ import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.Step
 import com.sheryv.tools.webcrawler.process.base.model.TerminationException
 import com.sheryv.util.logging.log
+import com.sheryv.util.singleAssign
 import kotlinx.coroutines.delay
 
 abstract class Crawler<T : SDriver, S : SettingsBase>(
   protected val configuration: Configuration,
   val browser: BrowserConfig,
   val def: CrawlerDefinition<T, S>,
-  val driver: T,
+  protected val driverBuilder: DriverBuilder<T>,
   val params: ProcessParams
 ) {
+  
+  var driver by singleAssign<T>()
+  
+  open fun initialize() {
+    driver = driverBuilder.build(configuration, browser)
+    driver.initialize(this as Crawler<SDriver, SettingsBase>)
+  }
+  
   abstract fun getSteps(): List<Step<out Any, out Any>>
   
   fun logText(text: String, vararg params: Any) {

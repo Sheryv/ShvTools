@@ -5,18 +5,18 @@ import com.sheryv.util.logging.log
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import java.util.concurrent.atomic.AtomicBoolean
 
 class OnChangeScheduledExecutor(private val name: String, private val delayMillis: Long = 400, private val onChange: suspend () -> Unit) {
   private var refreshJob: Job? = null
-  private var changed: Boolean = false
+  private val changed: AtomicBoolean = AtomicBoolean(false)
   
   
   fun start(delayMillis: Long = this.delayMillis): Job {
     log.trace("Refresh coroutine [$name] started with rate $delayMillis")
     refreshJob = inBackground {
       while (isActive) {
-        if (changed) {
-          changed = false
+        if (changed.compareAndExchange(true, false)) {
           log.trace("Refresh coroutine [$name] doing refresh")
           onChange()
         }
@@ -34,13 +34,13 @@ class OnChangeScheduledExecutor(private val name: String, private val delayMilli
   }
   
   fun executeNow() {
-    changed = false
+    changed.set(false)
     inBackground {
       onChange()
     }
   }
   
   fun markChanged() {
-    changed = true
+    changed.set(true)
   }
 }

@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.process.base
 
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.Format
@@ -31,7 +32,7 @@ abstract class CrawlerDefinition<T : SDriver, S : SettingsBase>(
   abstract fun build(
     configuration: Configuration,
     browser: BrowserConfig,
-    driver: T,
+    driverBuilder: DriverBuilder<T>,
     params: ProcessParams
   ): Crawler<T, S>
   

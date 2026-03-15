@@ -2,11 +2,11 @@ package com.sheryv.util.unit
 
 enum class BinaryUnit(override val label: String, val shortLabel: String, val scale: Int) : MetricUnit {
   B("Bytes", "B", 0),
-  KB("Kilobytes", "kB", 1),
-  MB("Megabytes", "MB", 2),
-  GB("Gigabytes", "GB", 3),
-  TB("Terabytes", "TB", 4),
-  PB("Petabytes", "PB", 5);
+  KiB("Kibibytes", "KiB", 1),
+  MiB("Mibibytes", "MiB", 2),
+  GiB("Gibibytes", "GiB", 3),
+  TiB("Tebibytes", "TiB", 4),
+  PiB("Pebibytes", "PiB", 5);
   
   override fun toString(): String = shortLabel
 }

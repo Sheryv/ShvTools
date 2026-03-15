@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.config
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
@@ -43,11 +44,15 @@ class Configuration(
 //    private set
   
   
-  @Transient
+  @JsonIgnore
   override val name: String = TITLE
   
-  @Transient
-  override val iconPath: String = "icons/app.png"
+  @get:JsonIgnore
+  override val stylesPaths: AppConfiguration.Companion.AppStylePaths
+    get() {
+      val c = super.stylesPaths
+      return c.copy(common = c.common + "style.css", dark = c.dark + "dark.css")
+    }
   
   fun updateSettings(settings: SettingsBase): Configuration {
     if (this.settings.contains(settings)) {
@@ -141,7 +146,10 @@ data class BrowserSettings(
   fun currentBrowser() = configs.first { it.type == selected }
 }
 
-data class CommonConfiguration(var runOnlyForFailedOrAbsentEpisodes: Boolean = true, var verifyDownloadedFilesBeforeRetrying: Boolean = true)
+data class CommonConfiguration(
+  var runOnlyForFailedOrAbsentEpisodes: Boolean = true,
+  var verifyDownloadedFilesBeforeRetrying: Boolean = true
+)
 
 private class SettingsSetDeserializer : StdDeserializer<Set<SettingsBase>>(Set::class.java) {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Set<SettingsBase> {

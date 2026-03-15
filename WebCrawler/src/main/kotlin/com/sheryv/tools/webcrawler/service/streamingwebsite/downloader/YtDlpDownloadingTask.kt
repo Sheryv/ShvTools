@@ -40,7 +40,7 @@ class YtDlpDownloadingTask(
   
   private val program = "yt-dlp"
   private lateinit var process: Process
-  private lateinit var progress: DataTransferProgress
+  private var progress: DataTransferProgress? = null
   private var partsNumber: Int = 0
 
 //  private val tempDir: Path = config.tempDirPath.resolve(id).toAbsolutePath()
@@ -113,7 +113,7 @@ class YtDlpDownloadingTask(
   }
   
   override fun avgSpeed(durationMillis: Long): BinaryTransferSpeed {
-    return progress.avgSpeed
+    return progress?.avgSpeed ?: BinaryTransferSpeed.zero
   }
   
   override fun stop() {
@@ -124,11 +124,11 @@ class YtDlpDownloadingTask(
   }
   
   override fun extrapolateSize(): Long {
-    return progress.totalSizeBytes ?: 0
+    return progress?.totalSizeBytes ?: 0
   }
   
   override fun currentlyDownloadedBytes(): Long {
-    return progress.currentSizeBytes
+    return progress?.currentSizeBytes ?: 0
   }
   
   override fun progress(): DataTransferProgress? {

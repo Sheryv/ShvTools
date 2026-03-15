@@ -1,11 +1,9 @@
 package com.sheryv.util.fx.core.view
 
 import com.sheryv.util.fx.core.app.AppConfiguration
-import com.sheryv.util.fx.lib.getValue
-import com.sheryv.util.fx.lib.setValue
+import com.sheryv.util.fx.lib.mutableProperty
+import com.sheryv.util.fx.lib.paddingAll
 import com.sheryv.util.unsubscribeAllEvents
-import javafx.beans.property.ObjectProperty
-import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.beans.property.StringProperty
 import javafx.scene.Parent
@@ -22,6 +20,7 @@ abstract class SimpleView : BaseView() {
   
   fun createRoot(prefWidth: Double = 1200.0, prefHeight: Double = 700.0, b: VBox.() -> Unit) = VBox().apply {
     setPrefSize(prefWidth, prefHeight)
+    paddingAll = 5.0
     
     spacing = 10.0
     isFillWidth = true
@@ -39,12 +38,15 @@ abstract class FxmlView(val fxmlPath: String) : BaseView() {
 
 abstract class BaseView : KoinComponent {
   protected open val config: AppConfiguration by lazy { get() }
+  open val factory: ViewFactory by lazy { get() }
   protected lateinit var stage: Stage
   
   open fun onViewCreated(stage: Stage) {
     this.stage = stage
     if (config.iconPath.isNotBlank())
-      icon = Image(javaClass.classLoader.getResourceAsStream(config.iconPath))
+      javaClass.classLoader.getResourceAsStream(config.iconPath)?.also {
+        icon = Image(it)
+      }
     
     title = config.name
     
@@ -72,7 +74,8 @@ abstract class BaseView : KoinComponent {
       titleProperty.set(value)
     }
   
-  val iconProperty: ObjectProperty<Image> = SimpleObjectProperty(null)
+  val iconProperty = mutableProperty<Image?>(null)
   var icon by iconProperty
   
+  internal fun stageRef() = stage
 }

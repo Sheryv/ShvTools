@@ -1,5 +1,6 @@
 package com.sheryv.tools.webcrawler.browser
 
+import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.SystemType
 import java.nio.file.Path
@@ -9,28 +10,28 @@ enum class DriverTypes(
   val fileName: String,
   val propertyNameForSeleniumDriver: String,
   val downloadUrl: String,
-  val webDriverBuilder: DriverBuilder
+  val webDriverBuilder: DriverBuilder<SDriver>
 ) {
   CHROME(
     "Chromium based (Google Chrome)",
     "chromedriver",
     "webdriver.chrome.driver",
     "https://chromedriver.chromium.org/downloads",
-    ChromeDriverBuilder()
+    ChromeDriverBuilder() as DriverBuilder<SDriver>
   ),
   FIREFOX(
     "Gecko (Firefox)",
     "geckodriver",
     "webdriver.gecko.driver",
     "https://github.com/mozilla/geckodriver/releases",
-    FirefoxDriverBuilder()
+    FirefoxDriverBuilder() as DriverBuilder<SDriver>
   ),
   EDGE(
     "Microsoft Edge",
     "msedgedriver",
     "webdriver.edge.driver",
     "https://developer.microsoft.com/en-us/microsoft-edge/tools/webdriver/#downloads",
-    EdgeDriverBuilder()
+    EdgeDriverBuilder() as DriverBuilder<SDriver>
   );
   
   fun toConfig(): DriverConfig {

@@ -2,6 +2,7 @@ package com.sheryv.tools.webcrawler
 
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.browser.DriverConfig
 import com.sheryv.tools.webcrawler.browser.DriverTypes
 import com.sheryv.tools.webcrawler.config.BrowserSettings
@@ -18,6 +19,7 @@ import com.sheryv.tools.webcrawler.process.base.model.Step
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
 import com.sheryv.util.DateUtils
+import com.sheryv.util.fx.core.view.ViewFactory
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -96,7 +98,7 @@ class MockCrawler(
             TODO("Not yet implemented")
           }
           
-          override fun buildSettingsPanelDef(): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
+          override fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
             TODO("Not yet implemented")
           }
           
@@ -108,13 +110,13 @@ class MockCrawler(
       override fun build(
         configuration: Configuration,
         browser: BrowserConfig,
-        driver: SeleniumDriver,
+        driverBuilder: DriverBuilder<SeleniumDriver>,
         params: ProcessParams
       ): MockCrawler {
         if (!configuration.settings.contains(settings)) {
           configuration.settings.add(settings)
         }
-        return MockCrawler(exec, configuration, browser, this, driver, params)
+        return MockCrawler(exec, configuration, browser, this, driverBuilder, params)
       }
     }
   }

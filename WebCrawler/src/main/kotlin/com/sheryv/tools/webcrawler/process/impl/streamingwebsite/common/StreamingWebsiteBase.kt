@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.HistoryItem
@@ -10,13 +11,11 @@ import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.VideoServerConfi
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.*
-import com.sheryv.tools.webcrawler.process.base.model.browserevent.BrowserResponseEvent
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilmanCrawler
 import com.sheryv.tools.webcrawler.utils.AppError
-import com.sheryv.tools.webcrawler.view.remoteclient.Intercepted
-import com.sheryv.tools.webcrawler.view.remoteclient.MsgType
-import com.sheryv.tools.webcrawler.view.remoteclient.WS
+import com.sheryv.tools.webcrawler.view.remoteclient.WebSocket
+import com.sheryv.tools.webcrawler.view.remoteclient.WsMessage.InterceptorMessage
+import com.sheryv.tools.webcrawler.view.remoteclient.WsMessage.MsgType
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.inBackgroundAsync
 import com.sheryv.util.logging.log
@@ -26,8 +25,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import org.openqa.selenium.By
-import org.openqa.selenium.bidi.network.RequestData
-import org.openqa.selenium.devtools.v142.network.model.ResourceType
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
@@ -43,12 +40,13 @@ abstract class StreamingWebsiteBase(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver,
+  driverBuilder: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
-) : SeleniumCrawler<StreamingWebsiteSettings>(configuration, browser, def, driver, params) {
+) : SeleniumCrawler<StreamingWebsiteSettings>(configuration, browser, def, driverBuilder, params) {
   lateinit var series: Series
-  lateinit var websocket: WS
-  val flow: Channel<Intercepted> = Channel<Intercepted>(capacity = 500, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+  lateinit var websocket: WebSocket
+  val interceptorEventsFlow: Channel<InterceptorMessage> =
+    Channel<InterceptorMessage>(capacity = 500, onBufferOverflow = BufferOverflow.DROP_OLDEST)
   
   override fun getSteps(): List<Step<out Any, out Any>> {
     return listOf(
@@ -62,6 +60,22 @@ abstract class StreamingWebsiteBase(
       || url.startsWith("www")
     ) return url
     return if (!url.startsWith("/")) def.attributes.websiteUrl + "/" + url else def.attributes.websiteUrl + url
+  }
+  
+  override fun initialize() {
+    websocket = WebSocket({ m, e ->
+      if (m?.type == MsgType.INTERCEPT) {
+        val intercepted = SerialisationUtils.jsonMapper.convertValue<InterceptorMessage>(m.data)
+        log.trace("Intercept: {}", intercepted.url)
+        interceptorEventsFlow.trySend(intercepted)
+      }
+    }, { }
+    ).also {
+      it.connectionLostTimeout = 10
+      it.start()
+    }
+    
+    super.initialize()
   }
   
   protected suspend fun start() {
@@ -86,23 +100,13 @@ abstract class StreamingWebsiteBase(
       }
     } else null) ?: Series(0, settings.seriesName, settings.seasonNumber, getMainLang(), getSeriesLink())
 
+
 //    driver.enableDevToolsWithNetworkModule()
-    
+    val enabledAudioTypes = settings.allowedEpisodeTypes.filter { it.enabled }.map { it.kind }.sortedBy { it.priority }
     driver.get(getSeriesLink())
 //    driver.get("https://bot.sannysoft.com/")
     driver.waitForVisibility(By.tagName("body"))
     
-    websocket = WS({ m, e ->
-      if (m?.type == MsgType.INTERCEPT) {
-        val intercepted = SerialisationUtils.jsonMapper.convertValue<Intercepted>(m.data)
-        log.info("Intercept: {}", intercepted)
-        flow.trySend(intercepted)
-      }
-    }, { }
-    ).also {
-      it.connectionLostTimeout = 10
-      it.start()
-    }
     
     forceSeriesPageLoaded()
     
@@ -166,16 +170,15 @@ abstract class StreamingWebsiteBase(
           } else {
             val serverHandlers = streamingServersHandlers()
             
-            val allServers: List<VideoServer> = loadItemDataFromSummaryPageAndGetServers(item).let { list ->
-              if (list.any { it.type != EpisodeAudioTypes.UNKNOWN }) {
-                val enabled = settings.allowedEpisodeTypes.filter { it.enabled }.map { it.kind }
+            val allServers: List<VideoServer> = loadItemDataFromSummaryPageAndGetServers(item).let { found ->
+              if (found.any { it.type != EpisodeAudioTypes.UNKNOWN }) {
                 val n = mutableListOf<VideoServer>()
-                for (en in enabled) {
-                  n.addAll(list.filter { it.type == en }.sortedBy { it.format.quality.priority })
+                for (en in enabledAudioTypes) {
+                  n.addAll(found.filter { it.type == en }.sortedBy { it.format.quality.priority })
                 }
                 n
               } else {
-                list.sortedBy { it.format.quality.priority }
+                found.sortedBy { it.format.quality.priority }
               }
             }
             waitIfPaused()
@@ -194,40 +197,43 @@ abstract class StreamingWebsiteBase(
             val priorities = getPriorities(index, allServers, serverHandlers)
             if (priorities.isNotEmpty()) {
               log.info("Using servers: " + priorities.joinToString(" | ") { (k, v) ->
-                val indexes = v.joinToString(",") { it.index.toString() }
-                "${k.definition.label()}=($indexes)"
+                "${k.definition.label()}=(${v.index})"
               })
             } else {
               log.warn("No server matches criteria")
             }
             
             for (pair in priorities) {
-              for (server in pair.second) {
-                try {
-                  item.server = server
-                  waitIfPaused()
-                  item.pageOpenTimestamp = Instant.now()
-                  val handler = streamingServersHandlers()[server.matchedServerDef]!!
-                  
-                  clearListeners()
-                  var asyncIntercepted: Deferred<Intercepted>? = null
-                  if (handler.server.isStreaming) {
-                    asyncIntercepted = setupListenerAndWaitForCorrectEvent { e ->
-                      handler.server.isUrlMatchingRequestWithM3U8Manifest(e.url)
-                    }
+              try {
+                item.server = pair.second
+                waitIfPaused()
+                item.pageOpenTimestamp = Instant.now()
+                val handler = streamingServersHandlers()[pair.second.matchedServerDef]!!
+                
+                clearListeners()
+                var asyncIntercepted: Deferred<InterceptorMessage>? = null
+                if (handler.server.isStreaming) {
+                  asyncIntercepted = setupListenerAndWaitForCorrectEvent { e ->
+                    log.debug("[{}] Checking: {}", item.number, e.url)
+                    handler.server.isUrlMatchingRequestWithM3U8Manifest(e.url)
                   }
-                  downloadUrl = openStreamAndInitializePlayerThenRun(item, server) {
-                    waitIfPaused()
-                    if (handler.server.isStreaming) {
-                      handler.findVideoContainer()
-                      val response = withTimeout(10.seconds) {
+                }
+                downloadUrl = openStreamAndInitializePlayerThenRun(item, pair.second) {
+                  waitIfPaused()
+                  if (handler.server.isStreaming) {
+                    handler.findVideoContainer()
+                    val response = try {
+                      withTimeout(15.seconds) {
                         asyncIntercepted!!.await()
                       }
-                      return@openStreamAndInitializePlayerThenRun extractUrlFromRequest(response)
-                    } else {
-                      findDirectVideoDownloadUrlFromHtml(item, handler)
+                    } finally {
+                      asyncIntercepted?.cancel()
                     }
+                    return@openStreamAndInitializePlayerThenRun extractUrlFromRequest(response)
+                  } else {
+                    findDirectVideoDownloadUrlFromHtml(item, handler)
                   }
+                }
 
 
 //                clearNetworkInterceptor()
@@ -254,21 +260,17 @@ abstract class StreamingWebsiteBase(
 
 //                  findLoadedVideoDownloadUrl(item, streamingServersHandlers()[server.matchedServerDef]!!)
 //                }
-                  
-                  if (downloadUrl != null) {
-                    break
-                  }
-                } catch (e: TerminationException) {
-                  throw e
-                } catch (e: Exception) {
-                  log.error(
-                    "Error while searching download url at ${server.serverName} [${server.index}] | ${server.videoPageExternalUrl}",
-                    e
-                  )
+                
+                if (downloadUrl != null) {
+                  break
                 }
-              }
-              if (downloadUrl != null) {
-                break
+              } catch (e: TerminationException) {
+                throw e
+              } catch (e: Exception) {
+                log.error(
+                  "Error while searching download url at ${pair.second.serverName} [${pair.second.index}] | ${pair.second.videoPageExternalUrl}",
+                  e
+                )
               }
             }
           }
@@ -316,7 +318,7 @@ abstract class StreamingWebsiteBase(
       }
     } finally {
       websocket.stop()
-      flow.cancel()
+      interceptorEventsFlow.cancel()
     }
     
     if (index - 1 < series.episodes.size) {
@@ -364,11 +366,12 @@ abstract class StreamingWebsiteBase(
   protected open suspend fun findDirectVideoDownloadUrlFromHtml(data: VideoData, serverHandler: VideoServerHandler): DirectUrl? {
     var found = serverHandler.findVideoSrcUrl(5)
     if (found == null) {
-      checkForCaptchaAndOtherOverlays(data)
-//      runBlocking(Dispatchers.Main) {
-//        GlobalState.view.showMessageDialog("Cannot find URL. Video not started?")
-//      }
-      found = serverHandler.findVideoSrcUrl(5)
+      if (checkForCaptchaAndOtherOverlays(data)) {
+        runBlocking(Dispatchers.Main) {
+          GlobalState.view.showMessageDialog("Cannot find URL. Video not started?")
+        }
+        found = serverHandler.findVideoSrcUrl(5)
+      }
     }
     return found?.let { DirectUrl(it) }
   }
@@ -435,19 +438,25 @@ abstract class StreamingWebsiteBase(
     episodeNumber: Int,
     allFoundServers: List<VideoServer>,
     handlers: Map<VideoServerDefinition, VideoServerHandler>
-  ): List<Pair<VideoServerConfig, List<VideoServer>>> {
+  ): List<Pair<VideoServerConfig, VideoServer>> {
     
     val base = settings.videoServerConfigs.filter { obj -> obj.enabled }.map { priority ->
       priority to allFoundServers
         .filter { priority.definition.searchTerm().containsMatchIn(it.serverName.lowercase()) }
-        .filter { settings.allowedQualities.any { q -> it.format.quality == q.kind } }
-        .onEach { it.matchedServerDef = priority.definition }
-        .take(settings.triesBeforeStreamingProviderChange)
-    }.filter { (_, v) -> v.isNotEmpty() }
-    val offset = episodeNumber - 1 % settings.numOfTopStreamingProvidersUsedSimultaneously
-    val result = base.take(settings.numOfTopStreamingProvidersUsedSimultaneously).toMutableList()
-    Collections.rotate(result, -offset)
-    result.addAll(base.drop(settings.numOfTopStreamingProvidersUsedSimultaneously))
+        .firstOrNull { settings.allowedQualities.any { q -> it.format.quality == q.kind } }
+        ?.also { it.matchedServerDef = priority.definition }
+    }.filter { (_, v) -> v != null }.map { (k, v) -> k to v!! }
+    
+    val list = if (settings.shuffleStreamingProviderOrder) {
+      
+      val offset = episodeNumber - 1 % settings.numOfTopStreamingProvidersUsedSimultaneously
+      val result = base.take(settings.numOfTopStreamingProvidersUsedSimultaneously).toMutableList()
+      Collections.rotate(result, -offset)
+      result.addAll(base.drop(settings.numOfTopStreamingProvidersUsedSimultaneously))
+      result
+    } else {
+      base
+    }
 
 //    var offset = indexOffset
 //    val base: MutableList<VideoServerConfig> = settings.videoServerConfigs.filter { obj -> obj.enabled }.toMutableList()
@@ -465,53 +474,12 @@ abstract class StreamingWebsiteBase(
 //    }
 //    val result = deque.toMutableList()
 //    result.addAll(base)
-    return result
+    return list
   }
   
   
-  protected open fun getM3U8UrlFromEvents(handler: VideoServerHandler): String? {
-    val url = try {
-      val events = getNetworkResponseEventsFromBrowserTools().filter { it.response?.mimeType == "application/vnd.apple.mpegurl" }.toList()
-      val m3u8events = events.filter { it.response!!.url.contains(".m3u8") }
-      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response!!.url, series) }
-      if (events.isNotEmpty()) {
-        log.debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
-          (if (i == index) "[#] " else "[ ] ") + e.response!!.url
-        }.joinToString("\n"))
-      }
-      
-      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull {
-        handler.tryToGetCorrectM3U8Url(
-          it.response?.url!!,
-          series
-        )
-      }?.also {
-        log.debug("Found alternative url from browser tools: $it")
-      }
-    } catch (e: IllegalArgumentException) {
-      null
-    }
-    if (url == null) {
-      val events = getNetworkResponseEventsFromJS()
-      val m3u8events = events.filter { it.name.contains(".m3u8") }
-      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.name, series) }
-      if (events.isNotEmpty()) {
-        log.debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
-          (if (i == index) "[#] " else "[ ] ") + e.name
-        }.joinToString("\n"))
-      }
-      
-      return m3u8events.getOrNull(index)?.name ?: m3u8events
-        .firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }
-        ?.also {
-          log.debug("Found alternative url from JavaScript performance objects: $it")
-        }
-    }
-    return url
-  }
-  
-  protected open suspend fun checkForCaptchaAndOtherOverlays(data: VideoData) {
-  
+  protected open suspend fun checkForCaptchaAndOtherOverlays(data: VideoData): Boolean {
+    return false
   }
   
   protected open suspend fun isSingleBuiltinHostingPerEpisode(data: VideoData): Boolean = false
@@ -558,33 +526,6 @@ abstract class StreamingWebsiteBase(
   
   protected abstract suspend fun loadItemDataFromSummaryPageAndGetServers(data: VideoData): List<VideoServer>
   
-  
-  private fun extractUrlFromRequest(wrapper: Intercepted): VideoUrl {
-    val headers = wrapper.headers.associate { it.name to it.value }
-    return M3U8Url(wrapper.url, UrlMetadata(headers))
-  }
-  
-  private fun extractUrlFromRequest3(wrapper: BrowserResponseEvent): VideoUrl {
-    val headers = wrapper.response!!.headers!!.mapValues {
-      if (it is Iterable<*>) {
-        it.joinToString(",")
-      } else {
-        it?.toString() ?: ""
-      }
-    }
-    
-    return M3U8Url(wrapper.response.url.toString(), UrlMetadata(headers))
-  }
-  
-  private fun extractUrlFromRequest2(wrapper: RequestData): VideoUrl {
-    val headers = wrapper.headers
-      .filter { it.value?.value?.isNotEmpty() == true }
-      .associate { it.name to it.value.value }
-    
-    return M3U8Url(wrapper.url, UrlMetadata(headers))
-  }
-  
-  
   fun closeOtherTabs(leftTab: String) {
     for (handle in driver.windowHandles) {
       try {
@@ -598,10 +539,54 @@ abstract class StreamingWebsiteBase(
   }
   
   suspend fun setupListenerAndWaitForCorrectEvent(
-    filter: (data: Intercepted) -> Boolean
-  ): Deferred<Intercepted> = inBackgroundAsync {
-    return@inBackgroundAsync flow.receiveAsFlow().first { filter(it) }
+    filter: (data: InterceptorMessage) -> Boolean
+  ): Deferred<InterceptorMessage> = inBackgroundAsync {
+    return@inBackgroundAsync interceptorEventsFlow.receiveAsFlow().first { filter(it) }
+  }
+  
+  private fun extractUrlFromRequest(wrapper: InterceptorMessage): VideoUrl {
+    val headers = wrapper.headers.associate { it.name to it.value }
+    return M3U8Url(wrapper.url, UrlMetadata(headers))
+  }
+  
+  protected open fun getM3U8UrlFromEvents(handler: VideoServerHandler): String? {
+    val url = try {
+      val events = getNetworkResponseEventsFromBrowserTools().filter { it.response?.mimeType == "application/vnd.apple.mpegurl" }.toList()
+      val m3u8events = events.filter { it.response!!.url.contains(".m3u8") }
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.response!!.url, series) }
+      if (events.isNotEmpty()) {
+        log.debug("Filtered stream urls from browser tools (matching: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
+          (if (i == index) "[#] " else "[ ] ") + e.response!!.url
+        }.joinToString("\n"))
+      }
+      
+      m3u8events.getOrNull(index)?.response?.url ?: m3u8events.firstNotNullOfOrNull {
+        handler.tryToGetCorrectM3U8Url(
+          it.response?.url!!,
+          series
+        )
+      }?.also {
+        log.debug("Found alternative url from browser tools: $it")
+      }
+    } catch (e: IllegalArgumentException) {
+      null
+    }
+    if (url == null) {
+      val events = getNetworkResponseEventsFromJS()
+      val m3u8events = events.filter { it.name.contains(".m3u8") }
+      val index = m3u8events.indexOfLast { handler.checkIfM3U8UrlCorrect(it.name, series) }
+      if (events.isNotEmpty()) {
+        log.debug("Filtered stream urls from JavaScript performance objects (all: ${events.size})\n" + m3u8events.mapIndexed { i, e ->
+          (if (i == index) "[#] " else "[ ] ") + e.name
+        }.joinToString("\n"))
+      }
+      
+      return m3u8events.getOrNull(index)?.name ?: m3u8events
+        .firstNotNullOfOrNull { handler.tryToGetCorrectM3U8Url(it.name, series) }
+        ?.also {
+          log.debug("Found alternative url from JavaScript performance objects: $it")
+        }
+    }
+    return url
   }
 }
-
-private val USEFUL_REQUEST_TYPES = listOf(ResourceType.OTHER, ResourceType.FETCH, ResourceType.XHR, ResourceType.MEDIA)

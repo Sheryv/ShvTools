@@ -14,7 +14,6 @@ ext.addLaunch4j()
 dependencies {
     implementation libs.selenium
     implementation libs.selenium.cdp
-    implementation libs.apache.http
 
     implementation libs.jsoup
     implementation 'org.java-websocket:Java-WebSocket:1.6.0'

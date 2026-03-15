@@ -1,5 +1,6 @@
 package com.sheryv.util.fx.core.app
 
+import com.sheryv.util.fx.core.Dialogs
 import com.sheryv.util.fx.core.view.BaseView
 import com.sheryv.util.fx.core.view.ViewFactory
 import com.sheryv.util.fx.core.view.ViewState
@@ -92,7 +93,7 @@ abstract class App(protected val primaryViewClass: KClass<out BaseView>, val sta
         this.logger(SLF4JLogger())
         modules(org.koin.dsl.module {
           single { app }
-          single { AppConfiguration.empty() }
+//          single { AppConfiguration.empty() }
           singleOf(::ViewState)
         })
       }
@@ -102,6 +103,7 @@ abstract class App(protected val primaryViewClass: KClass<out BaseView>, val sta
         listOf(
           org.koin.dsl.module {
             single(createdAtStart = true) { deps.koin }
+            singleOf(::Dialogs)
             singleOf(::ViewFactory)
           },
         ) + this.modules,

@@ -7,11 +7,11 @@ import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.FileFormats
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.utils.Utils
+import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.apache.http.client.methods.RequestBuilder
 import org.openqa.selenium.By
 
 
@@ -69,8 +69,7 @@ open class VideoServerHandler(
   open fun tryToGetCorrectM3U8Url(incorrectUrl: String, series: Series): String? {
     if (incorrectUrl.contains("master.m3u8")) {
       val prefix = incorrectUrl.substringBefore("master.m3u8")
-      
-      val file = Utils.httpClientExecute(RequestBuilder.get(incorrectUrl).build())
+      val file = HttpSupport(securityEnabled = false).sendGet(incorrectUrl).body()
 
 //      val file = HttpClients.createDefault().use { httpclient ->
 //        val httpGet = ClassicRequestBuilder.get(incorrectUrl).build()

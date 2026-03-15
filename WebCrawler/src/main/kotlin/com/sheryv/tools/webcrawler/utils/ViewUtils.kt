@@ -13,13 +13,7 @@ private val SERIALIZED_MIME_TYPE = DataFormat("application/x-java-serialized-obj
 object ViewUtils {
   const val TITLE = "Web crawler"
   
-  fun saveToClipboard(text: String) {
-    val content = ClipboardContent()
-    content.putString(text)
-    Clipboard.getSystemClipboard().setContent(content)
-  }
-  
-  fun loadFromClipboard(): String? = Clipboard.getSystemClipboard().takeIf { it.hasString() }?.string
+
   
   fun <T> findFirstLeafInTree(root: TreeItem<T>): TreeItem<T>? {
     for (child in root.children) {

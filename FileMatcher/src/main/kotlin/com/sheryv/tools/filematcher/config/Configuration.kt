@@ -21,8 +21,6 @@ class Configuration : AppConfiguration() {
   
   @Transient
   override val name: String = ViewUtils.title
-  @Transient
-  override val iconPath: String = "icons/app.png"
   
   fun save() {
     SerialisationUtils.toJson(File(FILE), this)

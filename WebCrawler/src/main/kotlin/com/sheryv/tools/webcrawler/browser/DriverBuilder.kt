@@ -22,8 +22,8 @@ import java.nio.file.StandardOpenOption
 import java.util.logging.Level
 
 
-abstract class DriverBuilder {
-  abstract fun build(config: Configuration, browser: BrowserConfig): SDriver
+abstract class DriverBuilder<S: SDriver> {
+  abstract fun build(config: Configuration, browser: BrowserConfig): S
   
   protected fun setDefaults(options: MutableCapabilities, config: Configuration, browser: BrowserConfig) {
     if (config.browserSettings.useUserProfile == true) {
@@ -71,8 +71,8 @@ abstract class DriverBuilder {
   }
 }
 
-class FirefoxDriverBuilder : DriverBuilder() {
-  override fun build(config: Configuration, browser: BrowserConfig): SDriver {
+class FirefoxDriverBuilder : DriverBuilder<SeleniumDriver>() {
+  override fun build(config: Configuration, browser: BrowserConfig): SeleniumDriver {
 
     val options = FirefoxOptions()
     options.enableBiDi()
@@ -83,8 +83,8 @@ class FirefoxDriverBuilder : DriverBuilder() {
   
 }
 
-class ChromeDriverBuilder : DriverBuilder() {
-  override fun build(config: Configuration, browser: BrowserConfig): SDriver {
+class ChromeDriverBuilder : DriverBuilder<SeleniumDriver>() {
+  override fun build(config: Configuration, browser: BrowserConfig): SeleniumDriver {
     val options = ChromeOptions()
 //    val service = ChromeDriverService.Builder().build()
 //    service.sendOutputTo(Files.newOutputStream(Path.of("driver-logs.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE))
@@ -112,8 +112,8 @@ class ChromeDriverBuilder : DriverBuilder() {
   
 }
 
-class EdgeDriverBuilder : DriverBuilder() {
-  override fun build(config: Configuration, browser: BrowserConfig): SDriver {
+class EdgeDriverBuilder : DriverBuilder<SeleniumDriver>() {
+  override fun build(config: Configuration, browser: BrowserConfig): SeleniumDriver {
     val options = EdgeOptions()
     
     val logPrefs = LoggingPreferences()

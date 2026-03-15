@@ -1,19 +1,39 @@
 package com.sheryv.util.fx.lib
 
 import com.sheryv.util.EditableValue
-import javafx.beans.InvalidationListener
 import javafx.beans.Observable
 import javafx.beans.binding.*
 import javafx.beans.property.*
 import javafx.beans.value.*
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import javafx.collections.ObservableSet
+import java.nio.file.Path
+import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.*
 
-fun <T> property(value: T? = null) = PropertyDelegate(SimpleObjectProperty<T>(value))
+/**
+ * Binds JavaFx to KProperty
+ */
+fun <T> property(value: T) = ReadOnlyPropertyFX(value)
+
+/**
+ * Binds JavaFx to KProperty
+ */
+fun <T> mutableProperty(value: T) = PropertyFX(value)
+
 fun <T> property(block: () -> Property<T>) = PropertyDelegate(block())
+
+class PropertyFX<T>(value: T) : SimpleObjectProperty<T>(value), ReadWriteProperty<Any?, T> {
+  override fun getValue(thisRef: Any?, property: KProperty<*>): T = get()
+  override fun setValue(thisRef: Any?, property: KProperty<*>, value: T) = set(value)
+}
+
+class ReadOnlyPropertyFX<T>(value: T) : ReadOnlyObjectWrapper<T>(value), ReadOnlyProperty<Any?, T> {
+  override fun getValue(thisRef: Any?, property: KProperty<*>): T = get()
+}
 
 class PropertyDelegate<T>(val fxProperty: Property<T>) : ReadWriteProperty<Any, T> {
   
@@ -24,6 +44,18 @@ class PropertyDelegate<T>(val fxProperty: Property<T>) : ReadWriteProperty<Any, 
   }
   
 }
+
+fun staticProperty(value: String) = ReadOnlyStringWrapper(value)
+fun staticProperty(value: Int) = ReadOnlyIntegerWrapper(value)
+fun staticProperty(value: Long) = ReadOnlyLongWrapper(value)
+fun staticProperty(value: Boolean) = ReadOnlyBooleanWrapper(value)
+fun staticProperty(value: Double) = ReadOnlyDoubleWrapper(value)
+fun staticProperty(value: Float) = ReadOnlyFloatWrapper(value)
+fun <E> staticProperty(value: List<E>) = ReadOnlyListWrapper(FXCollections.observableList(value))
+fun <K, V> staticProperty(value: Map<K, V>) = ReadOnlyMapWrapper(FXCollections.observableMap(value))
+fun <E> staticProperty(value: Set<*>) = ReadOnlySetWrapper(FXCollections.observableSet(value))
+fun <T> staticProperty(value: T) = ReadOnlyObjectWrapper(value)
+
 
 //fun <T> Any.getProperty(prop: KMutableProperty1<*, T>): ObjectProperty<T> {
 //  // avoid kotlin-reflect dependency
@@ -51,6 +83,9 @@ class PropertyDelegate<T>(val fxProperty: Property<T>) : ReadWriteProperty<Any, 
 //  return superclass.findMethodByName(name)
 //}
 
+
+fun <S> S.observablePath(prop: KMutableProperty1<S, Path>) = observable(this, prop, Path::of, Path::toString)
+
 /**
  * Convert an owner instance and a corresponding property reference into an observable
  */
@@ -63,7 +98,21 @@ fun <S, T> S.observable(prop: KMutableProperty1<S, T>) = observable(this, prop)
 fun <S, T> observable(owner: S, prop: KMutableProperty1<S, T>): ObjectProperty<T> {
   return object : SimpleObjectProperty<T>(owner, prop.name) {
     override fun get() = prop.get(owner)
-    override fun set(v: T) = prop.set(owner, v)
+    override fun set(v: T) {
+      prop.set(owner, v)
+      fireValueChangedEvent()
+    }
+  }
+}
+
+@JvmName("observableFromMutablePropertyConverted")
+fun <O, S, T> observable(owner: O, prop: KMutableProperty1<O, S>, fromFx: (T) -> S, toFx: (S) -> T): ObjectProperty<T> {
+  return object : SimpleObjectProperty<T>(owner, prop.name) {
+    override fun get(): T = toFx(prop.get(owner))
+    override fun set(v: T) {
+      prop.set(owner, fromFx(v))
+      fireValueChangedEvent()
+    }
   }
 }
 
@@ -751,4 +800,4 @@ class TriggerObservableValue internal constructor() : ObservableValueBase<Unit>(
   fun fire() = fireValueChangedEvent()
 }
 
-fun triggerObs():TriggerObservableValue  = TriggerObservableValue()
+fun triggerObs(): TriggerObservableValue = TriggerObservableValue()

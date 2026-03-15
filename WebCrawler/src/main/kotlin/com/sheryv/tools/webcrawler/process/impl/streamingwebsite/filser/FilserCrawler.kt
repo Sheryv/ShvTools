@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman
 
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
@@ -20,9 +21,9 @@ class FilserCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver,
+  driverBuilder: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
-) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
+) : StreamingWebsiteBase(configuration, browser, def, driverBuilder, params) {
   private val urlPattern = Regex("(" +Regex.escape(def.attributes.websiteUrl) + """)?/?(title|watch)/(\w+)/?.*""")
   
   

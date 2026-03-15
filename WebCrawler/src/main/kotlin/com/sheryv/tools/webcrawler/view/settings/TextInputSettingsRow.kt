@@ -1,20 +1,22 @@
 package com.sheryv.tools.webcrawler.view.settings
 
-import com.sheryv.tools.webcrawler.utils.DialogUtils
-import com.sheryv.tools.webcrawler.utils.ViewUtils
+import com.sheryv.util.fx.core.view.ViewFactory
+import com.sheryv.util.fx.core.view.ViewUtils
 import javafx.beans.property.ObjectProperty
 import javafx.scene.control.*
 import javafx.scene.layout.HBox
 import javafx.scene.layout.Priority
 import javafx.scene.layout.Region
+import javafx.stage.Stage
 
 
 class TextInputSettingsRow(
+  val viewFactory: ViewFactory,
   name: String,
   val text: String,
   val lines: Int = 1,
   val characterLimitPerLine: Int = 250,
-  listener: ObjectProperty<String>? = null
+  listener: ObjectProperty<String>? = null,
 ) :
   SettingsViewRow<String>(name, listener = listener) {
   
@@ -44,12 +46,12 @@ class TextInputSettingsRow(
       SeparatorMenuItem(),
       MenuItem("Choose directory path").apply {
         setOnAction {
-          DialogUtils.openDirectoryDialog(textField.scene.window)?.let { textField.text = it.toAbsolutePath().toString() }
+          viewFactory.dialogs.openDirectoryDialog(textField.scene.window as Stage)?.let { textField.text = it.toAbsolutePath().toString() }
         }
       },
       MenuItem("Choose file path").apply {
         setOnAction {
-          DialogUtils.saveFileDialog(textField.scene.window)?.let { textField.text = it.toAbsolutePath().toString() }
+          viewFactory.dialogs.saveFileDialog(textField.scene.window as Stage)?.let { textField.text = it.toAbsolutePath().toString() }
         }
       },
       SeparatorMenuItem(),

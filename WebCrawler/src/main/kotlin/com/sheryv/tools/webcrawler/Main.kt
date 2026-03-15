@@ -9,6 +9,7 @@ import com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView
 import com.sheryv.tools.webcrawler.view.search.SearchView
 import com.sheryv.tools.webcrawler.view.remoteclient.HttpServerView
 import com.sheryv.util.fx.core.app.App
+import com.sheryv.util.fx.core.app.AppConfiguration
 import org.koin.core.module.dsl.factoryOf
 import java.lang.management.ManagementFactory
 
@@ -31,89 +32,9 @@ fun main(args: Array<String>) {
       factoryOf(::SearchView)
       factoryOf(::HttpServerView)
       single(createdAtStart = true) { Configuration.get() }
+      single<AppConfiguration> { Configuration.get() }
     }
   }
-
-//
-//  Platform.startup {
-//    log.debug("App init at ${ManagementFactory.getRuntimeMXBean().uptime}")
-//
-//    val root = VBox().apply {
-//      paddingAll = 10.0
-//      spacing = 10.0
-//      isFillWidth = true
-//      background = Background(BackgroundFill( Color.TRANSPARENT, CornerRadii.EMPTY, Insets.EMPTY))
-//
-//      hbox {
-//        isFillHeight = true
-//        prefHeight = 30.0
-//        spacing = 3.0
-//
-//        label("Title"){
-//          hgrow = Priority.ALWAYS
-//          maxWidth = Double.MAX_VALUE
-//        }
-//        button("_")
-//        button("□")
-//        button("x")
-//      }
-//
-//      menubar {
-//        menu("File") {
-//          item("cvbvcb")
-//        }
-//        menu("Help") {
-//          item("cvbvcb")
-//        }
-//      }
-//
-//      textfield("xzcvcxv")
-//      button("123213")
-//      progressbar(0.2)
-//      tabpane {
-//        tab("asdasd")
-//        tab("vbcbv")
-//      }
-//      slider {
-//
-//      }
-//    }
-//    val stage = Stage()
-//    stage.title = "Title"
-//    stage.initStyle(StageStyle.UNIFIED)
-//    val scene = Scene(root, 1000.0, 400.0)
-//    scene.fill = Color.TRANSPARENT
-//    stage.scene = scene
-//    log.debug("App view created at ${ManagementFactory.getRuntimeMXBean().uptime}")
-//
-//    stage.show()
-//    log.debug("App visible at ${ManagementFactory.getRuntimeMXBean().uptime}")
-//  }
-//
-
-//  runBlocking {
-//    M3U8Downloader.add(
-//      "https://delivery-node-ynug3prrg0f4gget.voe-network.net/engine/hls2/01/04356/60nycdrz7ejk_n/index-v1-a1.m3u8?t=y9670yLb2B72Z3nCnXzqZaUIVzHzx-hp2ktAc0gyhrE&s=1681756394&e=14400&f=21781206&node=delivery-node-ynug3prrg0f4gget.voe-network.net&i=77.65&sp=4500&asn=212163\n",
-////      "http://sample.vodobox.net/skate_phantom_flex_4k/veryhigh/skate_phantom_flex_4k_1056_480p.m3u8",
-//      Path.of("D:\\test").resolve("${(System.currentTimeMillis() / 1000)}.ts")
-//    )
-//    M3U8Downloader.startScheduler()
-//
-//
-//    while (M3U8Downloader.inProgress.isNotEmpty() || M3U8Downloader.queue.isNotEmpty()) {
-//      M3U8Downloader.inProgress.forEach {
-//        if (it.started) {
-//          val p = it.progress()
-//          val ratio = "%2.2f".format(p.currentRatio)
-//          log.debug(
-//            "Progress ${it.fileName()} [${it.id}] >> ${p.formatDownloaded().padStart(7)} $ratio% | speed ${p.formatSpeed()}"
-//          )
-//        }
-//      }
-//      delay(200)
-//    }
-//  }
-//  M3U8Downloader.stopScheduler()
 }
 
 

@@ -36,6 +36,21 @@ var Node.vgrow: Priority?
     VBox.setVgrow(this, value)
   }
 
+fun <T : Node> T.grow(prio: Priority = Priority.ALWAYS): T {
+  HBox.setHgrow(this, prio)
+  VBox.setVgrow(this, prio)
+  return this
+}
+
+fun <T : Node> T.growH(prio: Priority = Priority.ALWAYS): T {
+  HBox.setHgrow(this, prio)
+  return this
+}
+
+fun <T : Node> T.growV(prio: Priority = Priority.ALWAYS): T {
+  VBox.setVgrow(this, prio)
+  return this
+}
 
 fun Parent.getToggleGroup(): ToggleGroup? = properties["shvtools.togglegroup"] as ToggleGroup?
 
@@ -124,6 +139,12 @@ fun Parent.textfield(property: ObservableValue<Number>, op: TextField.() -> Unit
 
 @JvmName("textfieldInt")
 fun Parent.textfield(property: ObservableValue<Int>, op: TextField.() -> Unit = {}) = textfield().apply {
+  bind(property)
+  op(this)
+}
+
+@JvmName("textfieldDouble")
+fun Parent.textfield(property: ObservableValue<Double>, op: TextField.() -> Unit = {}) = textfield().apply {
   bind(property)
   op(this)
 }
@@ -273,6 +294,7 @@ fun Parent.togglegroup(property: ObservableValue<Any>? = null, op: ToggleGroup.(
   op(tg)
 }
 
+
 /**
  * Bind the selectedValueProperty of this toggle group to the given property. Passing in a writeable value
  * will result in a bidirectional binding, while passing in a read only value will result in a unidirectional binding.
@@ -377,6 +399,20 @@ fun Parent.label(text: String = "", graphic: Node? = null, op: Label.() -> Unit 
   if (graphic != null) it.graphic = graphic
 }
 
+fun Parent.labelWrap(text: String = "", child: Node, op: Label.() -> Unit = {}) = vbox {
+  spacing = 2.0
+  Label(text).attachTo(this, op)
+  child.attachTo(this)
+}
+
+fun Parent.labelWrap(text: String = "", child: Node, graphic: Node, op: Label.() -> Unit = {}) = vbox {
+  spacing = 2.0
+  Label(text).attachTo(this, op) {
+    it.graphic = graphic
+  }
+  child.attachTo(this)
+}
+
 inline fun <reified T> Parent.label(
   observable: ObservableValue<T>,
   graphicProperty: ObservableValue<Node>? = null,
@@ -476,6 +512,11 @@ fun ScrollPane.fixBlurring(): ScrollPane {
   return this
 }
 
+fun <T : Control> T.strech(): T {
+  maxWidth = Double.MAX_VALUE
+  return this
+}
+
 // -- TreeItem helpers
 /**
  * Expand this [TreeItem] and children down to `depth`.
@@ -523,7 +564,31 @@ fun <S, T> TableView<S>.columnBound(
     if (width != null) {
       prefWidth = width.toDouble()
     }
-    setCellValueFactory { o -> value(o.value) }
+    setCellValueFactory { o ->
+      val p1 = o.value
+      value(p1)
+    }
+  }
+  this.columns.add(col)
+  return col
+}
+
+fun <S, T> TableView<S>.columnBoundCustom(
+  name: String,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  value: (TableColumn.CellDataFeatures<S, T>) -> ObservableValue<T>
+): TableColumn<S, T> {
+  val col = TableColumn<S, T>(name).apply {
+    if (alignRight) {
+      this.style = "-fx-alignment: CENTER-RIGHT;"
+    }
+    if (width != null) {
+      prefWidth = width.toDouble()
+    }
+    setCellValueFactory { o ->
+      value(o)
+    }
   }
   this.columns.add(col)
   return col

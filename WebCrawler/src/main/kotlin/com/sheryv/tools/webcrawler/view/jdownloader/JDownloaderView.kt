@@ -8,7 +8,6 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.jdownloader.JDownloaderCrawlerEntry
-import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.util.DateUtils
 import com.sheryv.util.io.FileUtils
@@ -45,7 +44,7 @@ class JDownloaderView : FxmlView("view/jdownloader-generate.fxml") {
     
     tfWatchedDir.text = settings.jDownloaderWatchedDir.orEmpty()
     
-    btnOpenSelectDir.setOnAction { DialogUtils.openDirectoryDialog(stage)?.also { tfWatchedDir.text = it.toAbsolutePath().toString() } }
+    btnOpenSelectDir.setOnAction { factory.dialogs.openDirectoryDialog(stage)?.also { tfWatchedDir.text = it.toAbsolutePath().toString() } }
     
     btnGenerate.setOnAction { generate() }
     
@@ -65,9 +64,9 @@ class JDownloaderView : FxmlView("view/jdownloader-generate.fxml") {
       val filename = "${FileUtils.fixFileNameWithColonSupport(String.format("%s %02d", lastSeries.title, lastSeries.season))}_" +
           "${DateUtils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.crawljob"
       Files.writeString(Path.of(tfWatchedDir.text, filename), taJsonList.text)
-      DialogUtils.messageDialog("File generated. \nNow wait for next scan of JDownloader Folder Watch")
+      factory.dialogs.messageDialog("File generated. \nNow wait for next scan of JDownloader Folder Watch")
     } catch (e: Exception) {
-      DialogUtils.textAreaDialog(
+      factory.dialogs.textAreaDialog(
         "Details", e.message + "\n\n" + e.stackTraceToString(), ViewUtils.TITLE,
         "Error while generating file", Alert.AlertType.ERROR, true, false, ButtonType.OK
       )

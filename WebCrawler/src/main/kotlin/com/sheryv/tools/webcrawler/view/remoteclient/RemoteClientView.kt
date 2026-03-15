@@ -2,7 +2,7 @@ package com.sheryv.tools.webcrawler.view.remoteclient
 
 import com.fasterxml.jackson.module.kotlin.convertValue
 import com.sheryv.tools.webcrawler.config.Configuration
-import com.sheryv.tools.webcrawler.utils.DialogUtils
+import com.sheryv.tools.webcrawler.view.remoteclient.WsMessage.MsgType
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.Strings
 import com.sheryv.util.fx.core.view.SimpleView
@@ -12,10 +12,6 @@ import javafx.geometry.Orientation
 import javafx.geometry.Pos
 import javafx.scene.Parent
 import javafx.scene.layout.Priority
-import org.java_websocket.WebSocket
-import org.java_websocket.handshake.ClientHandshake
-import org.java_websocket.server.WebSocketServer
-import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.exists
@@ -24,7 +20,7 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
   private val input = stringProperty("")
   private val filePath = stringProperty(config.remoteClient.scriptPath.toAbsolutePath().toString())
   private val output = stringProperty("")
-  private var server: WS? = null
+  private var server: com.sheryv.tools.webcrawler.view.remoteclient.WebSocket? = null
   private val connected = booleanProperty(false)
   private val inProgress = booleanProperty(false)
   
@@ -43,7 +39,7 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
           }
           button("...") {
             setOnAction {
-              DialogUtils.openFileDialog(stage, initialFile = filePath.value)?.also { filePath.set(it.toAbsolutePath().toString()) }
+              factory.dialogs.openFileDialog(stage, initialFile = filePath.value)?.also { filePath.set(it.toAbsolutePath().toString()) }
             }
           }
           button("Execute from file") {
@@ -119,12 +115,12 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
       throw RuntimeException("Script have to contain top level run function with signature:\nfunction run(shv)")
     }
     
-    val msg = Message(MsgType.EXECUTE_SCRIPT, mapOf("code" to script.trim()), Strings.generateId(6))
+    val msg = WsMessage(MsgType.EXECUTE_SCRIPT, mapOf("code" to script.trim()), Strings.generateId(6))
     server!!.send(msg)
   }
   
   override fun onViewReady() {
-    server = WS({ m, e ->
+    server = WebSocket({ m, e ->
       val line = if (m != null) {
         "[M] $m"
       } else {
@@ -133,9 +129,6 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
       
       output.value += "\n" + line
       log.debug(line)
-      if (m?.type == MsgType.INTERCEPT) {
-        log.info("intercept {}", SerialisationUtils.jsonMapper.convertValue<Intercepted>(m.data))
-      }
     }, { connected.set(!it) }
     ).also {
       it.connectionLostTimeout = 10
@@ -171,74 +164,4 @@ class HttpServerView(override val config: Configuration) : SimpleView() {
 //  }
 }
 
-class WS(val handler: (Message?, String?) -> Unit, val connectionChanged: (Boolean) -> Unit) :
-  WebSocketServer(InetSocketAddress("localhost", 45623)) {
-  
-  private var socket: WebSocket? = null
-  
-  fun send(msg: Message) {
-    socket?.takeIf { it.isOpen }?.send(SerialisationUtils.toJson(msg)) ?: broadcast(SerialisationUtils.toJson(msg))
-  }
-  
-  override fun onOpen(p0: WebSocket?, p1: ClientHandshake?) {
-    if (socket == null && p0 != null) {
-      socket = p0
-      log.info("Websocket first client connection opened")
-    } else {
-      log.info("Websocket second client ignored")
-    }
-    connectionChanged(true)
-  }
-  
-  override fun onClose(p0: WebSocket?, p1: Int, p2: String?, p3: Boolean) {
-    log.info("Websocket closed")
-    connectionChanged(false)
-  }
-  
-  override fun onMessage(p0: WebSocket?, p1: String?) {
-    try {
-      val result = SerialisationUtils.fromJson<Message>(p1.orEmpty())
-      handler(result, null)
-    } catch (e: Exception) {
-      log.error("Error parsing websocket message", e)
-      handler(null, e.message)
-    }
-  }
-  
-  override fun onError(p0: WebSocket?, p1: java.lang.Exception?) {
-    log.error("Websocket error", p1)
-    connectionChanged(false)
-  }
-  
-  override fun onStart() {
-    log.info("Websocket started")
-  }
-}
 
-
-data class Message(val type: MsgType, val data: Map<String, Any>, val ref: String = "", val meta: Meta? = null) {
-
-
-}
-
-data class Meta(val website: String, val data: String)
-
-enum class MsgType {
-  EXECUTE_SCRIPT,
-  META,
-  LOG,
-  INTERCEPT,
-  RESULTS,
-}
-
-data class LogBody(val level: String, val msg: String, val args: Map<String, String>)
-
-data class Header(val name: String, val value: String)
-
-data class Intercepted(
-  val url: String,
-  val method: String,
-  val headers: List<Header>,
-  val body: String? = null,
-  val referrer: String? = null
-)

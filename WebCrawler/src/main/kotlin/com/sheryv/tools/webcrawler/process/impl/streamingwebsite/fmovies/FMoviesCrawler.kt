@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.fmovies
 
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
@@ -17,9 +18,9 @@ class FMoviesCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver,
+  driverBuilder: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
-) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
+) : StreamingWebsiteBase(configuration, browser, def, driverBuilder, params) {
   
   override suspend fun getMainLang() = "en"
   
@@ -67,7 +68,7 @@ class FMoviesCrawler(
     return blockExecutedOnPage?.invoke()
   }
   
-  override suspend fun checkForCaptchaAndOtherOverlays(data: VideoData) {
-  
+  override suspend fun checkForCaptchaAndOtherOverlays(data: VideoData): Boolean {
+    return false
   }
 }

@@ -2,6 +2,7 @@ package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman
 
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
+import com.sheryv.tools.webcrawler.browser.DriverBuilder
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
@@ -12,7 +13,6 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Ep
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServerFormat
-import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -24,9 +24,9 @@ class FilmanCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, StreamingWebsiteSettings>,
-  driver: SeleniumDriver,
+  driverBuilder: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
-) : StreamingWebsiteBase(configuration, browser, def, driver, params) {
+) : StreamingWebsiteBase(configuration, browser, def, driverBuilder, params) {
   
   override suspend fun getMainLang() = "pl"
   

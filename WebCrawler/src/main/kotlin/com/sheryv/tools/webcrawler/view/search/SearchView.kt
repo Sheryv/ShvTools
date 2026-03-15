@@ -12,7 +12,6 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGe
 import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
-import com.sheryv.tools.webcrawler.utils.DialogUtils
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.emitEvent
@@ -99,14 +98,17 @@ class SearchView(override val config: Configuration) : SimpleView() {
       }
       hbox {
         disableProperty().bind(inProgress)
-        alignment = Pos.CENTER_LEFT
-        spacing = 10.0
-        isFillWidth = true
         
         button("Remove selected") {
           disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
           setOnAction {
             updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) })
+          }
+        }
+        button("Clear URL for selected") {
+          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
+          setOnAction {
+            updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) }.map { it.copy(downloadUrl = null) })
           }
         }
         pane {
@@ -151,7 +153,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
           
           val text = series.value!!.episodes.joinToString("\n") { "%2d | %-40s | %s".format(it.number, it.title, it.url.value) }
           
-          val dialog = DialogUtils.textAreaDialog(
+          val dialog = factory.dialogs.textAreaDialog(
             "Edit as text:",
             text,
             wrapText = false,
@@ -193,7 +195,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
             
             val s = series.value!!.copy(episodes = mappedEpisodes)
             
-            if (DialogUtils.textAreaDialog(
+            if (factory.dialogs.textAreaDialog(
                 "Confirm changes:",
                 s.formattedString(),
                 wrapText = false,
@@ -242,7 +244,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
               
               
               withContext(Dispatchers.Main) {
-                if (DialogUtils.textAreaDialog(
+                if (factory.dialogs.textAreaDialog(
                     "Confirm following changes:",
                     "Output: $seriesDir\nMapped files: \n${map.map { it.key + " -> " + it.value }.joinToString("\n")}\nNew files: \n" +
                         list.joinToString("\n"),
@@ -417,7 +419,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
         }
         button("Generate") {
           setOnAction {
-            DialogUtils.openDirectoryDialog(stage, initialDir = settings.downloadDir)?.run {
+            factory.dialogs.openDirectoryDialog(stage, initialDir = settings.downloadDir)?.run {
               val dir = toAbsolutePath().resolve(s.generateDirectoryPathForSeason())
               Files.createDirectories(dir)
               s.episodes
@@ -439,7 +441,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
     }
     
     
-    DialogUtils.dialog(
+    factory.dialogs.dialog(
       "",
       "Files",
       type = Alert.AlertType.NONE,

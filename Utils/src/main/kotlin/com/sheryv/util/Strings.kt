@@ -1,13 +1,14 @@
 package com.sheryv.util
 
+import com.sheryv.util.logging.log
 import org.apache.commons.text.StringSubstitutor
+import org.apache.commons.text.lookup.StringLookup
+import org.apache.commons.text.lookup.StringLookupFactory
 import java.io.BufferedInputStream
-import java.io.FileInputStream
 import java.io.InputStream
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.nio.charset.StandardCharsets
-import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.*
 import java.util.concurrent.ThreadLocalRandom
@@ -15,6 +16,7 @@ import kotlin.math.ceil
 
 object Strings {
   private val HEX_ARRAY = "0123456789ABCDEF".toByteArray(StandardCharsets.US_ASCII)
+  private val SUPPORTED_FORMATTER_CONVERSIONS = listOf('d', 'f', 's', 'o', 'x', 'b')
   fun isNullOrEmpty(string: String?): Boolean {
     return string == null || string.isEmpty()
   }
@@ -27,6 +29,17 @@ object Strings {
   
   fun getTemplater(values: Map<String, Any>): StringSubstitutor {
     return StringSubstitutor(values, "\${", "}")
+  }
+  
+  /**
+   * Format is specified with ::
+   * Example "${key::-03d}"
+   * Value after :: is the part also in String.format() after % char
+   */
+  fun getTemplaterWithFormatterSupport(values: Map<String, Any>): StringSubstitutor {
+    val lookup = FormattedStringLookup(StringLookupFactory.INSTANCE.mapStringLookup<Any>(values))
+    
+    return StringSubstitutor(lookup, "\${", "}", StringSubstitutor.DEFAULT_ESCAPE)
   }
   
   fun fillTemplate(template: String, values: Map<String, Any>): String {
@@ -65,4 +78,42 @@ object Strings {
     }
     return bytesToHex(result)
   }
+  
+  private class FormattedStringLookup(private val base: StringLookup) : StringLookup {
+    @Deprecated("Deprecated in Java")
+    override fun lookup(key: String): String? {
+      if (key.contains("::")) {
+        SUPPORTED_FORMATTER_CONVERSIONS
+        
+        try {
+          val (k, conversion) = key.split("::")
+          
+          val specifier = conversion.last()
+          if (specifier !in SUPPORTED_FORMATTER_CONVERSIONS) {
+            throw IncorrectConverstionException("Conversion specifier '$specifier' is not supported.", conversion, specifier)
+          }
+          
+          val value = base.apply(k)
+          if (value == null) {
+            throw KeyNotFoundException("Key '$k' was not found in values map.", k)
+          }
+          
+          val converted = when (specifier) {
+            'f' -> value.toDouble()
+            's', 'b' -> value
+            else -> value.toLong()
+          }
+          
+          return String.format("%$conversion", converted)
+        } catch (e: IllegalFormatException) {
+          log.error("Cannot format value for key '{}': {}: {}", key, e.javaClass.simpleName, e.message)
+          return key
+        }
+      }
+      return base.apply(key)
+    }
+  }
+  
+  class KeyNotFoundException(message: String, val key: String) : RuntimeException(message)
+  class IncorrectConverstionException(message: String, val conversion: String, val specifier: Char) : RuntimeException(message)
 }
