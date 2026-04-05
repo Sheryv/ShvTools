@@ -227,7 +227,7 @@ open class SeleniumDriver(
       
       is ChromiumDriver -> {
         
-        networkBidi = org.openqa.selenium.bidi.module.Network(wrappedDriver)
+//        networkBidi = org.openqa.selenium.bidi.module.Network(wrappedDriver)
 //        networkBidi!!.addIntercept(AddInterceptParameters(InterceptPhase.RESPONSE_STARTED))
 //        networkBidi!!.onResponseStarted { resp ->
 //          val requestId = resp.request.requestId
@@ -260,16 +260,16 @@ open class SeleniumDriver(
 //        }
 //
         wrappedDriver.setLogLevel(Level.FINE)
-        wrappedDriver.devTools.createSessionIfThereIsNotOne()
-        wrappedDriver.devTools.send(
-          Network.enable(
-            Optional.empty(),
-            Optional.empty(),
-            Optional.empty(),
-            Optional.empty(),
-            Optional.empty()
-          )
-        )
+//        wrappedDriver.devTools.createSessionIfThereIsNotOne()
+//        wrappedDriver.devTools.send(
+//          Network.enable(
+//            Optional.empty(),
+//            Optional.empty(),
+//            Optional.empty(),
+//            Optional.empty(),
+//            Optional.empty()
+//          )
+//        )
 
 
 //        wrappedDriver.devTools.domains.network().interceptTrafficWith { next ->

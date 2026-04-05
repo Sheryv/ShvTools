@@ -10,7 +10,10 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
 import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
-import com.sheryv.util.*
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.Strings
+import com.sheryv.util.event.EventBus
+import com.sheryv.util.inBackground
 import com.sheryv.util.io.FileUtils
 import com.sheryv.util.logging.log
 import org.apache.commons.lang3.StringUtils
@@ -93,7 +96,7 @@ class SearchWindow {
           null,
           {
             SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), lastSeries)
-            emitEvent(FetchedDataExternalChangeEvent())
+            EventBus.emitEvent(FetchedDataExternalChangeEvent())
           },
           null,
           { setProgress(100) }

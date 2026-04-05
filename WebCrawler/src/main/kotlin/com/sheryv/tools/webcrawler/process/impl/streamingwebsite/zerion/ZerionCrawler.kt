@@ -14,6 +14,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Ep
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServerFormat
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.VideoServerHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
@@ -48,7 +49,7 @@ class ZerionCrawler(
   
   override suspend fun loadItemDataFromSummaryPageAndGetServers(data: VideoData): List<VideoServer> {
     // language=js
-    val js ="""
+    val js = """
       return shv.find('.video-list > table')
       .map(v => [shv.findIn(v, 'tr').filter(v=>v.childNodes[0].nodeName === 'TD'), v.getAttribute('data-key')])
       .flatMap(a => a[0].map(v=>{return {h: v.childNodes[0].textContent, q: v.childNodes[1].textContent, a: a[1]}}));
@@ -63,7 +64,7 @@ class ZerionCrawler(
       }
       ?.filter { it.first != "premium" }
       ?.mapIndexed { i, (name, format, audio) ->
-        val audioType = when(audio){
+        val audioType = when (audio) {
           "PL" -> EpisodeAudioTypes.LECTOR
           "DUB" -> EpisodeAudioTypes.DUBBING
           "SUBPL" -> EpisodeAudioTypes.SUBS
@@ -74,7 +75,10 @@ class ZerionCrawler(
       ?: emptyList()
   }
   
-  override suspend fun <T> openStreamAndInitializePlayerThenRun(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
+  override suspend fun <T> openStreamAndInitializePlayerThenRun(
+    data: VideoData, server: VideoServer,
+    handler: VideoServerHandler<*>, blockExecutedOnPage: (suspend () -> T)?
+  ): T? {
     val js = "shv.click_fast(shv.find('.video-list tr .btn.watch-btn')[" + server.index + "])"
     driver.executeScript(js)
     return blockExecutedOnPage?.invoke()

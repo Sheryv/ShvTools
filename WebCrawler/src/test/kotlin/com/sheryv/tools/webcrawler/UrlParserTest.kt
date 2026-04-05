@@ -1,6 +1,6 @@
 package com.sheryv.tools.webcrawler
 
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.CommonVideoServers
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.CommonVideoServers
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

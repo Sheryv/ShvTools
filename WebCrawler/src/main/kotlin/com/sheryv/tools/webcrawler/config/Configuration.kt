@@ -15,7 +15,7 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.Downloade
 import com.sheryv.tools.webcrawler.utils.AppError
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.util.SerialisationUtils
-import com.sheryv.util.emitEvent
+import com.sheryv.util.event.EventBus
 import com.sheryv.util.fx.core.app.AppConfiguration
 import com.sheryv.util.logging.log
 import java.io.File
@@ -65,7 +65,7 @@ class Configuration(
   fun save(): Configuration {
     modifyDate = OffsetDateTime.now()
     mapper.writeValue(File(FILE), this)
-    emitEvent(ConfigurationChangedEvent(this))
+    EventBus.emitEvent(ConfigurationChangedEvent(this))
     return this
   }
   

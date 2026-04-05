@@ -14,7 +14,7 @@ import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
-import com.sheryv.util.emitEvent
+import com.sheryv.util.event.EventBus
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.lib.*
 import com.sheryv.util.inBackground
@@ -219,7 +219,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
           if (series.value != null) {
             inBackground(inProgress.asEditable()) {
               SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), series.value)
-              emitEvent(FetchedDataExternalChangeEvent())
+              EventBus.emitEvent(FetchedDataExternalChangeEvent())
             }
           }
         }

@@ -9,8 +9,9 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.model.*
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.BrowserResponseEvent
 import com.sheryv.tools.webcrawler.process.base.model.browserevent.JSNetworkEvent
+import com.sheryv.util.CoreUtils
 import com.sheryv.util.SerialisationUtils
-import com.sheryv.util.inBackgroundAsync
+import com.sheryv.util.inBackgroundWithResult
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.delay
@@ -55,13 +56,13 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     return waitForAttributeCheckBy(selector, attribute, timeoutSeconds) { !it?.getAttribute(attribute).isNullOrEmpty() }
   }
   
-  internal fun wait(selector: By, timeoutSeconds: Int = 3, throwEx: Boolean = false): WebElement? {
+  internal fun waitOld(selector: By, timeoutSeconds: Int = 3, throwEx: Boolean = false): WebElement? {
     var element: WebElement? = null
     try {
       element = wait.withTimeout(Duration.ofSeconds(timeoutSeconds.toLong())).until(ExpectedConditions.presenceOfElementLocated(selector))
       
     } catch (e: TimeoutException) {
-      com.sheryv.util.logging.log.warn(
+      log.warn(
         "ERROR: Selector '{}' not found during {} seconds | {}",
         selector.toString(),
         timeoutSeconds,
@@ -72,6 +73,32 @@ abstract class SeleniumCrawler<S : SettingsBase>(
       }
     }
     return element
+  }
+  
+  internal suspend fun wait(
+    selector: By, timeoutSeconds: Int = 3, intervalMs: Long = 250, label: String? = null, checkIsCorrect: (WebElement) -> Boolean = { true }
+  ): WebElement? {
+    var ex: Exception? = null
+    val result = CoreUtils.waitFor(intervalMs, timeoutSeconds * 1000L) {
+      val element = try {
+        driver.findElement(selector)
+      } catch (e: Exception) {
+        ex = e
+        return@waitFor false to null
+      }
+      checkIsCorrect(element) to element
+    }
+    if (result == null) {
+      log.warn(
+        "ERROR: Selector '{}' not found during {} seconds | {}{}",
+        selector.toString(),
+        timeoutSeconds,
+        label,
+        ex?.let { " | ${it.message}" } ?: ""
+      )
+    }
+    
+    return result
   }
   
   internal suspend fun waitForAttributeCheckBy(
@@ -241,7 +268,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   
   suspend fun setupListenerAndWaitForCorrectEvent4(
     filter: (eventNumber: Long, response: ResponseReceived) -> Boolean
-  ): Deferred<ResponseReceived> = inBackgroundAsync {
+  ): Deferred<ResponseReceived> = inBackgroundWithResult {
     suspendCoroutine { continuation ->
       var listener: NetworkEventResponseReceivedListener? = null
       listener = driver.addListener { id, e ->
@@ -255,7 +282,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   
   suspend fun setupListenerAndWaitForCorrectEvent2(
     filter: (eventNumber: Long, response: BrowserResponseEvent) -> Boolean
-  ): Deferred<BrowserResponseEvent> = inBackgroundAsync {
+  ): Deferred<BrowserResponseEvent> = inBackgroundWithResult {
     val start = java.time.Instant.now().epochSecond
     val cachedNotMatching = mutableSetOf<String>()
     
@@ -281,12 +308,12 @@ abstract class SeleniumCrawler<S : SettingsBase>(
       result = check()
     }
     log.debug("Found event: ${result.toLine()}")
-    return@inBackgroundAsync result
+    return@inBackgroundWithResult result
   }
   
   suspend fun setupListenerAndWaitForCorrectEvent3(
     filter: (response: RequestData) -> Boolean
-  ): Deferred<RequestData> = inBackgroundAsync {
+  ): Deferred<RequestData> = inBackgroundWithResult {
     log.debug("Started listening for events")
     
     suspendCoroutine { continuation ->

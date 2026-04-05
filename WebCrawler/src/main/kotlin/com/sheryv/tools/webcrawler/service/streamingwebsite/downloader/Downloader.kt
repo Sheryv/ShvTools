@@ -4,6 +4,7 @@ import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.ConfigurationChangedEvent
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoUrl
 import com.sheryv.util.*
+import com.sheryv.util.event.EventBus
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -91,7 +92,7 @@ object Downloader {
     val e =
       DownloadingStateChanged(
       )
-    emitEvent(e)
+    EventBus.emitEvent(e)
   }
   
   fun stopScheduler() {

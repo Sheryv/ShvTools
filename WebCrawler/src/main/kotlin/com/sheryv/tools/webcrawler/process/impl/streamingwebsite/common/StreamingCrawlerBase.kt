@@ -15,8 +15,8 @@ import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
 import com.sheryv.util.DateUtils
 import com.sheryv.util.SerialisationUtils
-import com.sheryv.util.emitEvent
 import com.sheryv.util.event.AsyncEvent
+import com.sheryv.util.event.EventBus
 import com.sheryv.util.inBackground
 import java.nio.file.Files
 import java.nio.file.Path
@@ -80,7 +80,7 @@ abstract class StreamingCrawlerBase(
             },
           )
           SerialisationUtils.jsonMapper.writeValue(settings.outputPath.toFile(), series)
-          emitEvent(FetchedDataExternalChangeEvent())
+          EventBus.emitEvent(FetchedDataExternalChangeEvent())
         }
       }
     }
@@ -89,10 +89,10 @@ abstract class StreamingCrawlerBase(
   protected fun onFetchedDataExternalChangeEvent(e: FetchedDataExternalChangeEvent) {
     val path = findSettings(Configuration.get()).outputPath
     if (!Files.exists(path)) {
-      emitEvent(FetchedDataStatusChangedEvent(""))
+      EventBus.emitEvent(FetchedDataStatusChangedEvent(""))
       return
     }
     val series = SerialisationUtils.jsonMapper.readValue(path.toFile(), Series::class.java)
-    emitEvent(FetchedDataStatusChangedEvent(series.formattedString()))
+    EventBus.emitEvent(FetchedDataStatusChangedEvent(series.formattedString()))
   }
 }

@@ -67,6 +67,15 @@ class EventBus : AutoCloseable {
   
   companion object {
     val global = EventBus()
+    
+    
+    fun emitEvent(event: AsyncEvent) {
+      global.emit(event)
+    }
+    
+    suspend fun emitEventWait(event: AsyncEvent) {
+      global.emitWait(event)
+    }
   }
   
   protected data class Handler<T : AsyncEvent>(val eventType: KClass<T>, val block: suspend (T) -> Unit)

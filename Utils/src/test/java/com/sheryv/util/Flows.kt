@@ -44,7 +44,7 @@ object Flows {
   
   suspend fun setupListenerAndWaitForCorrectEvent3(
     filter: (data: String) -> Boolean
-  ): Deferred<String> = inBackgroundAsync {
-    return@inBackgroundAsync flow.receiveAsFlow().onEach { println("Processing $it") }.first { filter(it) }
+  ): Deferred<String> = inBackgroundWithResult {
+    return@inBackgroundWithResult flow.receiveAsFlow().onEach { println("Processing $it") }.first { filter(it) }
   }
 }

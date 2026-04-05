@@ -4,8 +4,8 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.impl.filmweb.FilmwebCrawlerDef
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.CommonVideoServers
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.VideoServerDefinition
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.CommonVideoServers
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.VideoServerDefinition
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilmanCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilserCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.fmovies.FMoviesCrawlerDef
@@ -24,7 +24,7 @@ object Registry {
       )
     }
   
-    override fun serverDefinitions() = CommonVideoServers.entries.toList()
+    override fun serverDefinitions() = CommonVideoServers.ALL
   
   }
   

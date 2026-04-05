@@ -3,6 +3,7 @@
 package com.sheryv.tools.webcrawler
 
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.service.videosearch.TmdbService
 import com.sheryv.tools.webcrawler.view.MainView
 import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
 import com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView
@@ -31,6 +32,7 @@ fun main(args: Array<String>) {
       factoryOf(::JDownloaderView)
       factoryOf(::SearchView)
       factoryOf(::HttpServerView)
+      factoryOf(::TmdbService)
       single(createdAtStart = true) { Configuration.get() }
       single<AppConfiguration> { Configuration.get() }
     }

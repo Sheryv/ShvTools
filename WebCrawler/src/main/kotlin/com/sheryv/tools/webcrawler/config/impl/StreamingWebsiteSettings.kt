@@ -62,7 +62,7 @@ data class StreamingWebsiteSettings(
       "Streaming providers order (Drag and drop to change order)",
       buildListAndAddNew(videoServerConfigs, VideoServerConfig.all()).map {
         TableSettingsRow.RowDefinition(
-          listOf(it.definition.label(), it.definition.domains().joinToString(", "), it.id),
+          listOf(it.definition.label, it.definition.domains.joinToString(", "), it.id),
           it.enabled
         )
       },

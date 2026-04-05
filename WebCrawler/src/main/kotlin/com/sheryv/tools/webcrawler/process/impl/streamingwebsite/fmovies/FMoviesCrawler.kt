@@ -11,6 +11,7 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.Streamin
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.VideoServerHandler
 import kotlinx.coroutines.delay
 import org.openqa.selenium.By
 
@@ -53,7 +54,12 @@ class FMoviesCrawler(
     } ?: emptyList()
   }
   
-  override suspend fun <T> openStreamAndInitializePlayerThenRun(data: VideoData, server: VideoServer, blockExecutedOnPage: (suspend () -> T)?): T? {
+  override suspend fun <T> openStreamAndInitializePlayerThenRun(
+    data: VideoData,
+    server: VideoServer,
+    handler: VideoServerHandler<*>,
+    blockExecutedOnPage: (suspend () -> T)?
+  ): T? {
     
     val js = "document.querySelectorAll('#servers .server')[" + server.index + "].click()"
     driver.executeScript(js)
@@ -61,7 +67,7 @@ class FMoviesCrawler(
     delay(1000)
     
     val iframe = waitForAttributeCheckBy(By.cssSelector("#player iframe"), "src", 10) {
-      it?.getAttribute("src")?.let { src -> server.matchedServerDef!!.domains().any { src.contains(it) } } == true
+      it?.getAttribute("src")?.let { src -> handler.def.domains.any { src.contains(it) } } == true
     }?.also {
       driver.switchTo().frame(it)
     }

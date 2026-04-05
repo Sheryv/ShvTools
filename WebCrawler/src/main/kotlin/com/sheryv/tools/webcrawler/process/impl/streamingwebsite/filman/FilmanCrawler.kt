@@ -9,12 +9,11 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.EpisodeAudioTypes
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoData
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServer
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.VideoServerFormat
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.*
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.VideoServerHandler
+import com.sheryv.util.CoreUtils
+import com.sheryv.util.logging.log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
 import org.openqa.selenium.WebElement
@@ -72,6 +71,7 @@ class FilmanCrawler(
   override suspend fun <T> openStreamAndInitializePlayerThenRun(
     data: VideoData,
     server: VideoServer,
+    handler: VideoServerHandler<*>,
     blockExecutedOnPage: (suspend () -> T)?
   ): T? {
     val tabs = driver.windowHandles.toList()
@@ -84,11 +84,11 @@ class FilmanCrawler(
     if (driver.findElements(By.cssSelector("#player-container #frame a.btn")).isNotEmpty()) {
       
       driver.executeScript("\$('#player-container #frame a.btn').get()[0].click()")
-      delay(500)
-      
-      if (driver.windowHandles.size > tabs.size) {
-        driver.switchTo().window(driver.windowHandles.first { !tabs.contains(it) })
+      CoreUtils.wait {
+        driver.windowHandles.size > tabs.size
       }
+      log.debug("Switching tab")
+      driver.switchTo().window(driver.windowHandles.first { !tabs.contains(it) })
       try {
         val res = blockExecutedOnPage?.invoke()
         
@@ -98,14 +98,17 @@ class FilmanCrawler(
         driver.switchTo().window(current)
       }
     } else {
+      log.debug("Switching frame")
       driver.switchTo().frame(driver.findElement(By.cssSelector("#player-container #frame iframe")))
       return blockExecutedOnPage?.invoke()
     }
   }
   
-  override suspend fun getSeriesName(): String {
-    val result = Regex("""(.* / )?(.*) - Filman\.cc.*""").matchEntire(driver.title.orEmpty())!!
-    return result.groups[2]!!.value
+  override suspend fun extractSeriesDetails(): SeriesDetailsFromPage {
+    val year =
+      driver.executeScript("return document.querySelector('#single-info > .meta-row .meta-value').innerText;")?.toString()?.toIntOrNull()
+    val result = Regex("""(.* / )?(.*) - Filman\.cc.*""").matchEntire(driver.title.orEmpty())?.let { it.groups[2]!!.value }
+    return SeriesDetailsFromPage(result ?: settings.seriesName, year)
   }
   
   

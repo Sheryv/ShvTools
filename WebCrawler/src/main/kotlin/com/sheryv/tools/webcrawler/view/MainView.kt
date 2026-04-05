@@ -30,6 +30,7 @@ import com.sheryv.tools.webcrawler.view.search.SearchWindow
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelBuilder
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.util.*
+import com.sheryv.util.event.EventBus
 import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.FxmlView
 import com.sheryv.util.fx.core.view.ViewFactory
@@ -148,7 +149,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
 //          SystemUtils.userDownloadDir(),
 //          "${settings.outputPath}-${Utils.now().format(DateTimeFormatter.ISO_LOCAL_DATE)}.${settings.outputFormat.extension}"
 //        ).toAbsolutePath().toString()
-        emitEvent(FetchedDataExternalChangeEvent())
+        EventBus.emitEvent(FetchedDataExternalChangeEvent())
       }
     }
     
@@ -196,7 +197,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
           }
           
           ProcessingStates.IDLE -> {
-            emitEvent(FetchedDataExternalChangeEvent())
+            EventBus.emitEvent(FetchedDataExternalChangeEvent())
             btnStop.isVisible = false
             progressProcess.isVisible = false
             btnStart.isDisable = false

@@ -6,6 +6,7 @@ package com.sheryv.util
 import com.sheryv.util.event.AsyncEvent
 import com.sheryv.util.event.AsyncEventHandler
 import com.sheryv.util.event.EventBus
+import com.sheryv.util.event.EventBus.Companion.global
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.*
 
@@ -14,6 +15,34 @@ object CoreUtils {
 //    .logNoSubscriberMessages(false)
 //    .sendNoSubscriberEvent(false)
 //    .installDefaultEventBus()
+  
+  
+  suspend fun wait(intervalMs: Long = 100, timeoutMs: Long = 2000, check: suspend (Int) -> Boolean) {
+    waitFor(intervalMs, timeoutMs) {
+      check(it) to null
+    }
+  }
+  
+  suspend fun <T> waitForNotNull(intervalMs: Long = 100, timeoutMs: Long = 2000, check: suspend (Int) -> T?): T? {
+    return waitFor(intervalMs, timeoutMs) {
+      val result = check(it)
+      (result != null) to result
+    }
+  }
+  
+  suspend fun <T> waitFor(intervalMs: Long = 100, timeoutMs: Long = 2000, check: suspend (Int) -> Pair<Boolean, T?>): T? {
+    var result: T? = null
+    var correct = false
+    var index = 0
+    var start = System.currentTimeMillis()
+    while (!correct && System.currentTimeMillis() < start + timeoutMs) {
+      val r = check(index++)
+      correct = r.first
+      result = r.second
+      delay(intervalMs)
+    }
+    return result
+  }
   
   
   fun parseBoolean(s: String?) = "1" == s || "true".equals(s, true) || "yes".equals(s, true) || "y".equals(s, true)
@@ -25,15 +54,11 @@ fun inBackground(
   block: suspend CoroutineScope.() -> Unit
 ): Job {
   toUpdate?.set(true)
-  return GlobalScope.launch(Dispatchers.IO, start, {
-    try {
-      block()
-    } catch (e: CancellationException) {
-      log.trace("Coroutine canceled", e)
-    }
-  }).apply {
+  return GlobalScope.launch(Dispatchers.IO, start, block).apply {
     invokeOnCompletion {
-      if (it != null && it !is CancellationException) {
+      if (it != null && it is CancellationException) {
+        log.trace("Coroutine canceled", it)
+      } else if (it != null) {
         log.error("Error executing async block", it)
       }
       if (toUpdate != null) {
@@ -45,22 +70,17 @@ fun inBackground(
   }
 }
 
-fun <T> inBackgroundAsync(
+fun <T> inBackgroundWithResult(
   toUpdate: EditableValue<Boolean>? = null,
   start: CoroutineStart = CoroutineStart.DEFAULT,
   block: suspend CoroutineScope.() -> T
 ): Deferred<T> {
   toUpdate?.set(true)
-  return GlobalScope.async(Dispatchers.IO, start, {
-    try {
-      return@async block()
-    } catch (e: CancellationException) {
-      log.trace("Coroutine canceled", e)
-      throw e
-    }
-  }).apply {
+  return GlobalScope.async(Dispatchers.IO, start, block).apply {
     invokeOnCompletion {
-      if (it != null && it !is CancellationException) {
+      if (it != null && it is CancellationException) {
+        log.trace("Coroutine canceled", it)
+      } else if (it != null) {
         log.error("Error executing async block", it)
       }
       if (toUpdate != null) {
@@ -78,15 +98,11 @@ fun inMainThread(
   block: suspend CoroutineScope.() -> Unit
 ): Job {
   toUpdate?.set(true)
-  return GlobalScope.launch(Dispatchers.Main, start, {
-    try {
-      block()
-    } catch (e: CancellationException) {
-      log.trace("Coroutine canceled", e)
-    }
-  }).apply {
+  return GlobalScope.launch(Dispatchers.Main, start, block).apply {
     invokeOnCompletion {
-      if (it != null && it !is CancellationException) {
+      if (it != null && it is CancellationException) {
+        log.trace("Coroutine canceled", it)
+      } else if (it != null) {
         log.error("Error executing async block", it)
       }
       toUpdate?.set(false)
@@ -154,26 +170,9 @@ inline fun AsyncEventHandler.subscribeEvents(): AsyncEventHandler {
   return this
 }
 
-inline fun Any.subscribeEvents(noinline block: suspend (AsyncEvent) -> Unit): Any {
-  EventBus.global.subscribe(this, AsyncEvent::class, block = block)
-  log.debug("Registered all event handler to ${this.javaClass.simpleName}")
-  return this
-}
-
 inline fun Any.unsubscribeAllEvents(): Any {
   if (EventBus.global.unsubscribe(this)) {
     log.debug("Unregistered all event handlers from ${this.javaClass.simpleName}")
   }
   return this
 }
-
-
-inline fun emitEvent(event: AsyncEvent) {
-  EventBus.global.emit(event)
-//  CoreUtils.eventBus.post(event)
-}
-
-suspend inline fun emitEventWait(event: AsyncEvent) {
-  EventBus.global.emitWait(event)
-}
-
