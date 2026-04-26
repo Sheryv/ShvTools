@@ -96,6 +96,7 @@ dependencyResolutionManagement {
             library('koin-test', "io.insert-koin", "koin-test").versionRef(koinVer)
             library('koin-test-junit5', "io.insert-koin", "koin-test-junit5").versionRef(koinVer)
 
+            library('kotest', "io.kotest", "kotest-assertions-core").version("6.1.9")
 
             library('easybind', "org.fxmisc.easybind:easybind:1.0.3")
 
@@ -106,7 +107,7 @@ dependencyResolutionManagement {
             library("trakt", "com.uwetrottmann.trakt5:trakt-java:6.16.0")
 
             bundle('kotlin', ['kotlin', 'kotlin-coroutines'])
-            bundle('tests', ['junit-api', 'junit-engine'])
+            bundle('tests', ['junit-api', 'junit-engine', 'kotest'])
 //            bundle('logging', ['slf4j', 'tinylog', 'tinylog-impl', 'logback-core', 'logback-classic'])
             bundle('logging', ['slf4j', 'logback-core', 'logback-classic'])
             bundle('jackson', ['jackson.core', 'jackson.yaml', 'jackson.annotations', 'jackson.databind', 'jackson.jsr310', 'jackson.kotlin'])

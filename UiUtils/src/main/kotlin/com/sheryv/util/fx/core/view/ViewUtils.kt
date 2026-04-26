@@ -7,6 +7,9 @@ import com.sheryv.util.logging.log
 import javafx.scene.control.Alert
 import javafx.scene.input.Clipboard
 import javafx.scene.input.ClipboardContent
+import java.awt.Desktop
+import java.net.URI
+
 
 fun <T> BaseView.withErrorHandler(block: () -> T): T? {
   try {
@@ -56,4 +59,16 @@ object ViewUtils {
   
   fun loadFromClipboard(): String? = Clipboard.getSystemClipboard().takeIf { it.hasString() }?.string
   
+  fun openWebpage(uri: String): Boolean {
+    val desktop = if (Desktop.isDesktopSupported()) Desktop.getDesktop() else null
+    if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
+      try {
+        desktop.browse(URI.create(uri))
+        return true
+      } catch (e: java.lang.Exception) {
+        log.error("Error in open action", e)
+      }
+    }
+    return false
+  }
 }

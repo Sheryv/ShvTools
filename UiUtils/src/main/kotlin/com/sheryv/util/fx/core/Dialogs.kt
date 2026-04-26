@@ -11,12 +11,14 @@ import javafx.stage.FileChooser
 import javafx.stage.Modality
 import javafx.stage.Stage
 import java.lang.Double.MAX_VALUE
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import kotlin.io.path.name
 
 class Dialogs(private val appConfiguration: AppConfiguration) {
-  fun messageDialog(text: String) {
-    dialog(text, type = Alert.AlertType.NONE, buttons = arrayOf(ButtonType.OK))
+  fun messageDialog(text: String, type: Alert.AlertType = Alert.AlertType.NONE) {
+    dialog(text, type = type, buttons = arrayOf(ButtonType.OK))
   }
   
   fun messageCopyableDialog(text: String, label: String? = null, title: String = appConfiguration.name) {
@@ -188,13 +190,17 @@ class Dialogs(private val appConfiguration: AppConfiguration) {
   ): Path? {
     val directoryChooser = FileChooser()
     initialFile?.let {
-      val dir = Paths.get(initialFile).toFile()
-      directoryChooser.initialDirectory = dir.parentFile
-      directoryChooser.initialFileName = dir.name
-      if (!dir.parentFile.exists()) {
+      val dir = Paths.get(initialFile)
+      if (!Files.exists(dir.parent)) {
         return@let null
       }
-      dir.parentFile
+      if (Files.isDirectory(dir)) {
+        directoryChooser.initialDirectory = dir.toFile()
+      } else {
+        directoryChooser.initialDirectory = dir.parent.toFile()
+        directoryChooser.initialFileName = dir.name
+      }
+      dir.parent
     } ?: run {
       directoryChooser.initialDirectory = Path.of("").toAbsolutePath().toFile()
     }

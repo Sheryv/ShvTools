@@ -9,10 +9,13 @@ import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import javafx.collections.ObservableSet
+import javafx.scene.control.TextFormatter
+import javafx.util.converter.DoubleStringConverter
 import java.nio.file.Path
 import kotlin.properties.ReadOnlyProperty
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.*
+
 
 /**
  * Binds JavaFx to KProperty
@@ -801,3 +804,19 @@ class TriggerObservableValue internal constructor() : ObservableValueBase<Unit>(
 }
 
 fun triggerObs(): TriggerObservableValue = TriggerObservableValue()
+
+
+fun ObservableValue<Double>.formatter(): TextFormatter<Double?> {
+  val prop = this
+  val converter = object : DoubleStringConverter() {
+    override fun fromString(value: String): Double? {
+      try {
+        return super.fromString(value)
+      } catch (e: NumberFormatException) {
+        // If it's totally garbled, return the current property value to "revert"
+        return prop.getValue()
+      }
+    }
+  }
+  return TextFormatter(converter, 0.0)
+}

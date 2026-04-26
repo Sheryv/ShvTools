@@ -6,9 +6,12 @@ package com.sheryv.util
 import com.sheryv.util.event.AsyncEvent
 import com.sheryv.util.event.AsyncEventHandler
 import com.sheryv.util.event.EventBus
-import com.sheryv.util.event.EventBus.Companion.global
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.*
+import java.util.concurrent.ThreadLocalRandom
+import kotlin.math.min
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 object CoreUtils {
 //  val eventBus: EventBus = EventBus.builder()
@@ -46,6 +49,13 @@ object CoreUtils {
   
   
   fun parseBoolean(s: String?) = "1" == s || "true".equals(s, true) || "yes".equals(s, true) || "y".equals(s, true)
+  
+  fun calculateBackoffDelay(index: Int, baseDelayMillis: Long, jitter: Double = 0.1): Duration {
+    val delay = min(baseDelayMillis + index * index * baseDelayMillis, 10 * baseDelayMillis)
+    
+    val offset = (delay * jitter).toLong()
+    return ThreadLocalRandom.current().nextLong(delay - offset, delay + offset).milliseconds
+  }
 }
 
 fun inBackground(

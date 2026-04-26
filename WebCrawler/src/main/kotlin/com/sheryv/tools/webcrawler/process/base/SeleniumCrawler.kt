@@ -76,17 +76,26 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   }
   
   internal suspend fun wait(
-    selector: By, timeoutSeconds: Int = 3, intervalMs: Long = 250, label: String? = null, checkIsCorrect: (WebElement) -> Boolean = { true }
+    selector: By,
+    timeoutSeconds: Int = 3,
+    intervalMs: Long = 250,
+    label: String? = null,
+    checkIsCorrect: (WebElement) -> Boolean = { true }
   ): WebElement? {
     var ex: Exception? = null
+    val nothing = false to null
     val result = CoreUtils.waitFor(intervalMs, timeoutSeconds * 1000L) {
-      val element = try {
-        driver.findElement(selector)
+      val elements = try {
+        driver.findElements(selector)
       } catch (e: Exception) {
         ex = e
         return@waitFor false to null
       }
-      checkIsCorrect(element) to element
+      if (elements.isNotEmpty()) {
+        checkIsCorrect(elements.first()) to elements.first()
+      } else {
+        nothing
+      }
     }
     if (result == null) {
       log.warn(
@@ -99,6 +108,36 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     }
     
     return result
+  }
+  
+  internal suspend fun waitAll(
+    selector: By,
+    timeoutSeconds: Int = 3,
+    intervalMs: Long = 250,
+    label: String? = null,
+    checkIsCorrect: (List<WebElement>) -> Boolean = { it.isNotEmpty() }
+  ): List<WebElement> {
+    var ex: Exception? = null
+    val result = CoreUtils.waitFor(intervalMs, timeoutSeconds * 1000L) {
+      val elements = try {
+        driver.findElements(selector)
+      } catch (e: Exception) {
+        ex = e
+        return@waitFor false to null
+      }
+      checkIsCorrect(elements) to elements
+    }
+    if (result == null) {
+      log.warn(
+        "ERROR: Selector '{}' not found during {} seconds | {}{}",
+        selector.toString(),
+        timeoutSeconds,
+        label,
+        ex?.let { " | ${it.message}" } ?: ""
+      )
+    }
+    
+    return result ?: emptyList()
   }
   
   internal suspend fun waitForAttributeCheckBy(

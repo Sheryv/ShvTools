@@ -1,3 +1,13 @@
+@font-face {
+    /*font-family: 'Material Icons';*/
+    font-family: 'Material Symbols Outlined';
+    /*font-style: normal;*/
+    /*font-weight: 400;*/
+    /*src: url(../material-icons-font.woff2);*/
+    src: url(../MaterialSymbolsOutlined.ttf);
+}
+
+
 .root {
     -fx-light-text-color: -fx-text-inner-color;
     -icon-paint: -fx-light-text-color;
@@ -32,6 +42,14 @@
 
 .btn-danger:hover {
     -fx-color: #d2343e;
+}
+
+.btn-warn {
+    -fx-color: #954200;
+}
+
+.btn-warn:hover {
+    -fx-color: #b86802;
 }
 
 .btn-success {
@@ -204,6 +222,10 @@
     -icon-paint: #d2343e
 }
 
+.i-danger {
+    -icon-paint: #d2343e
+}
+
 .ValuePreviewSettingsRow {
 
 }
@@ -272,4 +294,49 @@
 .no-scroll-bar .scroll-pane {
     -fx-hbar-policy: never;
     -fx-vbar-policy: never;
+}
+
+
+.material-icons {
+    font-family: 'Material Icons';
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    -moz-font-feature-settings: 'liga';
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.if-btn {
+    -fx-font-family: 'Material Symbols Outlined';
+    -fx-padding: 0.1em 0.3em -0.2em 0.3em;
+    -fx-font-size: 1.7em;
+}
+
+.if-btn-label {
+    -fx-font-family: 'Material Symbols Outlined';
+    -fx-padding: -0.1em -0.1em -0.4em -0.1em;
+    -fx-font-size: 1.7em;
+}
+
+.if-btn-large-wrapper {
+    -fx-font-size: 1.2em;
+}
+
+.if-btn-large {
+    -fx-font-family: 'Material Symbols Outlined';
+    -fx-padding: 0.1em 0.3em -0.2em 0.3em;
+    -fx-font-size: 2.1em;
+}
+
+.if-btn-label-large {
+    -fx-font-family: 'Material Symbols Outlined';
+    -fx-padding: -0.1em -0.1em -0.4em -0.1em;
+    -fx-font-size: 2.1em;
 }

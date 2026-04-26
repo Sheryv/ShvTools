@@ -6,6 +6,7 @@ import javafx.beans.binding.Binding
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.property.Property
+import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.StringProperty
 import javafx.beans.value.ObservableValue
 import javafx.collections.FXCollections
@@ -139,7 +140,11 @@ inline fun <reified T : Any> getDefaultConverter() = when (T::class.javaPrimitiv
   LocalDateTime::class -> LocalDateTimeStringConverter()
   Boolean::class.javaPrimitiveType -> BooleanStringConverter()
   else -> null
-} as StringConverter<T>?
+} as? StringConverter<T>?
+
+inline fun <reified T : Any> textFormatter(default: T): TextFormatter<T> {
+  return TextFormatter(getDefaultConverter<T>()!!, default)
+}
 
 fun ObservableValue<Boolean>.toBinding() = object : BooleanBinding() {
   init {
@@ -205,6 +210,30 @@ fun <T> ObservableValue<T>.selectChain(): SelectBuilder<T> {
 fun <T> ObservableValue<T>.m(): MonadicObservableValue<T> {
   return EasyBind.monadic(this)
 }
+
+fun <T, R> Property<T?>.mapped(map: (T?) -> R?, revert: (R?) -> T?): Property<R?> {
+  val parent = this
+  
+  return object : SimpleObjectProperty<R?>(map(parent.getValue())) {
+    val listener = parent.onChangeValue { (o, n) ->
+      this.set(map(n))
+    }
+    
+    override fun get(): R? {
+      super.get()
+      return map(parent.value)
+    }
+    
+    override fun set(p0: R?) {
+      super.set(p0)
+      val new = revert(p0)
+      if (parent.value != new) {
+        parent.value = new
+      }
+    }
+  }
+}
+
 
 /*
 fun <T, N> ObservableValue<T>.select(nested: (T) -> ObservableValue<N>): Property<N> {

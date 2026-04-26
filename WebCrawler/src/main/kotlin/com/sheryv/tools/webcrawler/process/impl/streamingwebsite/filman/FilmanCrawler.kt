@@ -18,6 +18,8 @@ import kotlinx.coroutines.runBlocking
 import org.openqa.selenium.By
 import org.openqa.selenium.WebElement
 import org.openqa.selenium.support.ui.ExpectedConditions
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 class FilmanCrawler(
   configuration: Configuration,
@@ -60,7 +62,8 @@ class FilmanCrawler(
         "lektor" -> EpisodeAudioTypes.LECTOR
         "napisy" -> EpisodeAudioTypes.SUBS
         "dubbing" -> EpisodeAudioTypes.DUBBING
-        "napisy_tansl", "eng" -> EpisodeAudioTypes.ORIGIN
+        "napisy_transl" -> EpisodeAudioTypes.SUBS_GENERATED
+        "eng" -> EpisodeAudioTypes.ORIGIN
         else -> EpisodeAudioTypes.UNKNOWN
       }
       
@@ -121,5 +124,27 @@ class FilmanCrawler(
     }
     
     driver.navigate().to(getSeriesLink())
+  }
+  
+  override suspend fun searchByTitleAndYear(title: String, year: Int?): String? {
+    val encoded = URLEncoder.encode(title.replace(' ', '+'), StandardCharsets.UTF_8)
+    val searchUrl = "${def.attributes.websiteUrl}/search?phrase=${encoded}"
+    driver.get(searchUrl)
+    wait(By.id("item-list"))
+    val script = """
+      |return document.querySelectorAll('#item-list .col-xs-6').values().map(x => ({
+      |  y: x.querySelector('.film_year').textContent,
+      |  t: x.querySelector('.film_title').textContent,
+      |  l: x.querySelector('.poster a').getAttribute('href')
+      |})).toArray();""".trimMargin()
+    
+    val url = driver.executeScriptFetchList(script)
+      ?.filter { it["t"]?.toString()?.isNotBlank() == true && it["l"]?.toString()?.isNotBlank() == true }
+      ?.map { Triple(it["t"].toString(), it["y"].toString().toIntOrNull(), it["l"].toString()) }
+      ?.let {
+        it.firstOrNull { it.first.lowercase().contains(title.lowercase()) && (year == null || year == it.second) }?.third
+      }
+    
+    return url
   }
 }

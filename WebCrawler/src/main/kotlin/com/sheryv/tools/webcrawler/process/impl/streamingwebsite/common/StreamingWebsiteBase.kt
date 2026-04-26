@@ -472,6 +472,10 @@ abstract class StreamingWebsiteBase(
     return list.map { (k, v) -> handlers.first { it.def == k.definition } to v }
   }
   
+  protected open suspend fun searchByTitleAndYear(title: String, year: Int? = null): String? {
+    return null
+  }
+  
   
   protected open suspend fun checkForCaptchaAndOtherOverlays(data: VideoData): Boolean {
     return false

@@ -38,7 +38,7 @@ typealias NetworkEventResponseReceivedListener = (eventNumber: Long, response: R
 
 open class SeleniumDriver(
   protected val wrappedDriver: WebDriver,
-  protected val implicitWait: Long = 3,
+  protected val implicitWaitMs: Long = 200,
   protected val executor: JavascriptExecutor = wrappedDriver as JavascriptExecutor
 ) : SDriver, WebDriver {
   protected lateinit var crawler: Crawler<SeleniumDriver, SettingsBase>
@@ -63,7 +63,7 @@ open class SeleniumDriver(
     Collections.synchronizedList(mutableListOf<NetworkRequestListener>())
   
   init {
-    wrappedDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(implicitWait))
+    wrappedDriver.manage().timeouts().implicitlyWait(Duration.ofMillis(implicitWaitMs))
     
     val cmd = mapOf(
       "source" to initScript + "\n\nconsole.log('${ViewUtils.TITLE} initialised');"

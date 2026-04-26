@@ -75,6 +75,7 @@ class MainWindow(private val config: Config, private val results: Map<Path, List
         <originaltitle>${item.name()}</originaltitle>
         <year>${item.date()?.year ?: ""}</year>
         <tmdbid>${item.id}</tmdbid>
+        <uniqueid default="false" type="tmdb">${item.id}</uniqueid>
       </movie>
     """.trimIndent()
   }
@@ -150,7 +151,7 @@ class MainWindow(private val config: Config, private val results: Map<Path, List
       .map { it to target.parent.resolve(target.nameWithoutExtension + "." + it.extension) }
       .toSet()
     
-    val nfoPath = target.parent.resolve(target.nameWithoutExtension + ".nfo")
+    val nfoPath = target.parent.resolve("movie.nfo")
     
     override fun toString(): String =
       "--> ${item.name()} | $input\n" +

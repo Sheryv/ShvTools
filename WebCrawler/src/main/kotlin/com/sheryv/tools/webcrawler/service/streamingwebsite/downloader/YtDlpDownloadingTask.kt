@@ -87,9 +87,8 @@ class YtDlpDownloadingTask(
           if (System.currentTimeMillis() - lastPrint > 1000){
             lastPrint = System.currentTimeMillis()
             
-            log.debug("[D] {}: {}", output.fileName, progress)
+            log.trace("[D] {}: {}", output.fileName, progress)
           }
-          log.trace("progress: {}", progress)
         } else {
           log.debug("yt-dlp out: {}", line)
         }

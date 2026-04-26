@@ -4,7 +4,9 @@ import javafx.beans.property.ObjectProperty
 import javafx.beans.property.Property
 import javafx.beans.property.ReadOnlyObjectWrapper
 import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
+import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.collections.ObservableMap
 import javafx.event.EventTarget
@@ -271,6 +273,62 @@ fun ToolBar.button(text: ObservableValue<String>, graphic: Node? = null, op: But
   op(it)
 }
 
+/**
+ * @param icon Icon code from https://fonts.google.com/icons?selected=Material+Symbols+Outlined:add_2:FILL@0;wght@400;GRAD@0;opsz@24&icon.size=24&icon.color=%23e3e3e3&icon.query=add&icon.set=Material+Symbols
+ */
+fun Parent.buttonIcon(icon: String = "", text: String = "", tooltip: String? = null, large: Boolean = false, op: Button.() -> Unit = {}) =
+  Button(text).attachTo(this, op) {
+    val iconLabel = Label(icon)
+    if (large) {
+      styleClass += "if-btn-large-wrapper"
+      iconLabel.styleClass += "if-btn-label-large"
+    } else {
+      iconLabel.styleClass += "if-btn-label"
+    }
+    it.graphic = iconLabel
+    if (tooltip != null) it.tooltip = Tooltip(tooltip)
+  }
+
+/**
+ * @param icon Icon code from https://fonts.google.com/icons?selected=Material+Symbols+Outlined:add_2:FILL@0;wght@400;GRAD@0;opsz@24&icon.size=24&icon.color=%23e3e3e3&icon.query=add&icon.set=Material+Symbols
+ */
+fun ToolBar.buttonIcon(icon: String = "", text: String = "", tooltip: String? = null, large: Boolean = false, op: Button.() -> Unit = {}) =
+  Button(text).also {
+    val iconLabel = Label(icon)
+    if (large) {
+      styleClass += "if-btn-large-wrapper"
+      iconLabel.styleClass += "if-btn-label-large"
+    } else {
+      iconLabel.styleClass += "if-btn-label"
+    }
+    it.graphic = iconLabel
+    if (tooltip != null) it.tooltip = Tooltip(tooltip)
+    items += it
+    op(it)
+  }
+
+fun ToolBar.buttonIcon(
+  icon: ObservableValue<String>,
+  text: ObservableValue<String>? = null,
+  tooltip: String? = null,
+  large: Boolean = false,
+  op: Button.() -> Unit = {}
+) = Button().also {
+  text?.also { t -> it.textProperty().bind(t) }
+  val iconLabel = Label()
+  iconLabel.textProperty().bind(icon)
+  if (large) {
+    styleClass += "if-btn-large-wrapper"
+    iconLabel.styleClass += "if-btn-label-large"
+  } else {
+    iconLabel.styleClass += "if-btn-label"
+  }
+  it.graphic = iconLabel
+  if (tooltip != null) it.tooltip = Tooltip(tooltip)
+  items += it
+  op(it)
+}
+
 fun ButtonBar.button(text: String = "", type: ButtonBar.ButtonData? = null, graphic: Node? = null, op: Button.() -> Unit = {}) =
   Button(text).also {
     if (type != null) ButtonBar.setButtonData(it, type)
@@ -487,11 +545,23 @@ fun TextInputControl.stripNonInteger() = textProperty().mutateOnChange { it?.rep
 /**
  * Remove any non integer values from a Text Input Control.
  */
-fun TextInputControl.stripNonNumeric(vararg allowedChars: String = arrayOf(".", ",", "-")) =
+fun TextInputControl.stripNonNumeric(vararg allowedChars: String = arrayOf(".", ",", "-")): TextInputControl {
   textProperty().mutateOnChange { it?.replace(Regex("[^0-9${allowedChars.joinToString("")}]"), "") }
+  return this
+}
+
+inline fun <reified T : Any> TextInputControl.withFormatter(default: T): TextFormatter<T> {
+  val formatter = textFormatter<T>(default)
+  textFormatter = formatter
+  return formatter
+}
 
 fun ChoiceBox<*>.action(op: () -> Unit) = setOnAction { op() }
-fun ButtonBase.action(op: () -> Unit) = setOnAction { op() }
+fun ButtonBase.action(op: () -> Unit): ButtonBase {
+  setOnAction { op() }
+  return this
+}
+
 fun TextField.action(op: () -> Unit) = setOnAction { op() }
 fun MenuItem.action(op: () -> Unit) = setOnAction { op() }
 
@@ -568,6 +638,7 @@ fun <S, T> TableView<S>.columnBound(
       val p1 = o.value
       value(p1)
     }
+    
   }
   this.columns.add(col)
   return col
@@ -592,4 +663,209 @@ fun <S, T> TableView<S>.columnBoundCustom(
   }
   this.columns.add(col)
   return col
+}
+
+fun <S, T : Any, N : Node> TableView<S>.columnBoundToCustomCell(
+  name: String,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  modelValue: (S) -> Property<T?>,
+  builder: (TableCell<S, T?>) -> N,
+  controlValue: (N) -> Property<T?>,
+  onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
+): TableColumn<S, T?> {
+  return columnBound(name, width, alignRight, modelValue).customCell2(modelValue, builder, controlValue, onUpdate)
+}
+
+
+fun <S, T : Any, N : Node> TableColumn<S, T?>.customCell2(
+  modelValue: (S) -> Property<T?>,
+  builder: (TableCell<S, T?>) -> N,
+  controlValue: (N) -> Property<T?>,
+  onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
+): TableColumn<S, T?> {
+  setCellFactory { col ->
+    val c = object : TableCell<S, T?>() {
+      val node = builder(this)
+      val controlProperty = controlValue(node)
+      var lastListener: ChangeListener<T?>? = null
+      var lastRow: S? = null
+      
+      override fun updateItem(item: T?, empty: Boolean) {
+        super.updateItem(item, empty)
+        lastListener?.also { controlProperty.removeListener(it) }
+        if (empty || tableRow == null || tableRow.item == null) {
+          onUpdate(null, tableRow.item, graphic as? N)
+          lastListener = null
+          graphic = null
+        } else {
+          if (lastRow != tableRow.item) {
+            lastRow = tableRow.item
+            val model = modelValue(tableRow.item)
+            if (controlProperty.value != model.value) {
+              controlProperty.value = model.value
+            }
+            lastListener = ChangeListener { _, o, n ->
+//                log.debug("ChangeListener {} | {}", n, model.value)
+              model.value = n
+            }
+
+//              log.debug("Binding {} {} -> {} | {} | {}", tableRow.item, model.hashCode(), controlProperty.hashCode(), item, this.hashCode())
+          }
+          if (lastListener != null) {
+            controlProperty.addListener(lastListener)
+          }
+          onUpdate(item, tableRow.item, node)
+          graphic = node
+        }
+      }
+    }
+    c
+  }
+  return this
+}
+/*
+*              TextField().stripNonNumeric().let {
+                  val formatter = cell.itemProperty().formatter()
+                  it.textFormatter = formatter
+                  it to formatter.valueProperty()
+                }
+* */
+
+fun <S, N : TextInputControl> TableView<S>.columnBoundToTextControlCell(
+  name: String,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  modelValue: (S) -> Property<String?>,
+  builder: (TableCell<S, String?>) -> N,
+  controlValue: (N) -> Property<String?> = { it.textProperty() },
+  onUpdate: (String?, S?, N?) -> Unit = { _, _, _ -> }
+): TableColumn<S, String?> {
+  
+  return columnBoundToCustomCell(name, width, alignRight, modelValue, {
+    it.styleClass.add("text-field-table-cell")
+    builder(it)
+  }, controlValue, onUpdate)
+}
+
+fun <S> TableView<S>.columnBoundToTextFieldCell(
+  name: String,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  modelValue: (S) -> Property<String?>,
+  builder: (TableCell<S, String?>) -> TextField = { TextField() },
+  controlValue: (TextField) -> Property<String?> = { it.textProperty() },
+  onUpdate: (String?, S?, TextField?) -> Unit = { _, _, _ -> }
+): TableColumn<S, String?> {
+  
+  return columnBoundToCustomCell(name, width, alignRight, modelValue, {
+    it.styleClass.add("text-field-table-cell")
+    builder(it)
+  }, controlValue, onUpdate)
+}
+
+inline fun <S, reified T : Any, N : TextInputControl> TableView<S>.columnBoundToTextFieldFormattedCell(
+  name: String,
+  default: T,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  noinline modelValue: (S) -> Property<T?>,
+  noinline builder: (TableCell<S, T?>) -> N = { TextField() as N },
+  noinline controlValue: (N) -> Property<T?> = { it.withFormatter<T>(default).valueProperty() },
+  noinline onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
+): TableColumn<S, T?> {
+  
+  return columnBoundToCustomCell(name, width, alignRight, modelValue, {
+    it.styleClass.add("text-field-table-cell")
+    builder(it)
+  }, controlValue, onUpdate)
+
+//  return customCell({ c ->
+//    c.styleClass.add("text-field-table-cell")
+//    builder(c).let { it to it.withFormatter<T>(default).valueProperty() }
+//  }, { item, row, tf ->
+//    @Suppress("UNCHECKED_CAST")
+//    (tf.textFormatter as TextFormatter<T>).value = item
+//    onUpdate(item, row, tf)
+//  })
+}
+
+fun <S, T : Any, N : ComboBoxBase<T>> TableView<S>.columnBoundToComboCell(
+  name: String,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  modelValue: (S) -> Property<T?>,
+  default: ObservableList<T>? = null,
+  builder: (TableCell<S, T?>) -> N = { ComboBox<T>(default ?: FXCollections.emptyObservableList()) as N },
+  controlValue: (N) -> Property<T?> = { it.valueProperty() },
+  onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
+): TableColumn<S, T?> {
+  return columnBoundToCustomCell(name, width, alignRight, modelValue, {
+    styleClass.add("combo-box-table-cell")
+    builder(it)
+  }, controlValue, onUpdate)
+}
+
+fun <S, T : Any, N : ButtonBase> TableColumn<S, T>.customButtonCell(
+  builder: (TableCell<S, T>) -> N,
+  onUpdate: (T?, S?, N) -> Unit = { _, _, _ -> }
+): TableColumn<S, T> {
+  return customCell({ c -> builder(c) to null }, onUpdate)
+}
+
+
+fun <S, T : Any, N : Node> TableColumn<S, T>.customCell(
+  builder: (TableCell<S, T>) -> Pair<N, ObservableValue<T?>?>,
+  onUpdate: (T?, S?, N) -> Unit
+): TableColumn<S, T> {
+  isEditable = true
+  setCellFactory { col ->
+    val c = object : TableCell<S, T>() {
+      private var columnProperty: ObservableValue<T>? = null
+      fun getProp(): ObservableValue<T>? {
+        if (columnProperty == null) {
+          columnProperty = tableRow?.item?.let { cellValueFactory.call(TableColumn.CellDataFeatures(col.tableView, col, tableRow.item)) }
+        }
+        return columnProperty
+      }
+      
+      val node = builder(this).let {
+        it.second?.onChangeNotNull { value ->
+          val prop = getProp()
+          if (prop is Property<T>) {
+            prop.value = value
+          }
+//          startEdit()
+//          commitEdit(value)
+        
+        }
+        it.first
+      }
+      
+      override fun updateItem(item: T?, empty: Boolean) {
+        super.updateItem(item, empty)
+        if (empty || tableRow == null || tableRow.item == null) {
+          graphic = null
+          onUpdate(null, tableRow.item, node)
+        } else {
+          onUpdate(item, tableRow.item, node)
+          
+          graphic = node
+        }
+      }
+    }
+//    val (node, prop) = builder(c)
+//
+//    c.itemProperty().addListener { observable, oldValue, newValue ->
+//      if (oldValue != null) {
+//        prop.unbindBidirectional(c.itemProperty())
+//      }
+//      if (newValue != null) {
+//        prop.bindBidirectional(c.itemProperty())
+//      }
+//    }
+//    c.graphicProperty().bind(Bindings.`when`(c.emptyProperty()).then(null as Node?).otherwise(node))
+    c
+  }
+  return this
 }

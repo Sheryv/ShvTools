@@ -1,3 +1,4 @@
+import javafx.beans.binding.Bindings
 import javafx.beans.property.Property
 import javafx.beans.value.ObservableValue
 import javafx.event.EventTarget
@@ -7,6 +8,8 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyCodeCombination
 import javafx.scene.input.KeyCombination
 import javafx.scene.input.KeyCombination.Modifier
+import javafx.util.Callback
+
 
 operator fun <T : MenuItem> Menu.plusAssign(menuItem: T) {
   this.items += menuItem
@@ -31,7 +34,7 @@ operator fun KeyCodeCombination.plus(modifier: Modifier) {
   when (modifier.key) {
     KeyCode.SHIFT -> sh = modifier.value
     KeyCode.CONTROL -> c = modifier.value
-    KeyCode.ALT ->  a = modifier.value
+    KeyCode.ALT -> a = modifier.value
     KeyCode.META -> m = modifier.value
     KeyCode.SHORTCUT -> s = modifier.value
     else -> {}
@@ -320,3 +323,17 @@ fun ContextMenu.radiomenuitem(
   this += it
 }
 
+fun <S> TableView<S>.contextMenuPerRow(op: ContextMenu.(row: TableRow<S>) -> Unit) {
+  this.rowFactory = Callback { table ->
+    val row: TableRow<S> = TableRow()
+    val menu = ContextMenu()
+    op(menu, row)
+    
+    row.contextMenuProperty().bind(
+      Bindings.`when`(row.emptyProperty())
+        .then(null as ContextMenu?)
+        .otherwise(menu)
+    )
+    row
+  }
+}

@@ -3,6 +3,8 @@ import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.KaptExtension
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.regex.Pattern
 
@@ -22,6 +24,7 @@ allprojects {
     ext.site = 'https://github.com/Sheryv/ShvTools'
     ext.shortVersion = "0.1"
     ext.jarPrefix = ""
+    ext.bundledJre = true
     ext.file = "Shv" + project.projectDir.name
 
     group = 'com.sheryv.shvtools'
@@ -76,7 +79,7 @@ subprojects {
 
         launch4j {
             mainClassName = project.ext["className"].toString()
-            icon = iconPath
+            icon = Files.exists(Path.of(iconPath)) ? iconPath : null
             mutexName = "com.sheryv.tools.${project.name}.GUIMutex"
             outfile = file
             fileDescription = project.ext["file"] + " startup file"
@@ -84,14 +87,29 @@ subprojects {
             companyName = project.ext["author"].toString()
             textVersion = project.ext.shortVersion
             version = project.version
-            bundledJrePath = jre
+            bundledJrePath = project.ext["bundledJre"] == true ? jre : null
             jvmOptions = ["-Xms32m", "-Xmx256m", "--enable-native-access=ALL-UNNAMED", "-XX:-UseJVMCICompiler"]
+//            chdir = ""
             headerType = 'console'
 //            dontWrapJar = true
             stayAlive = true
             //    splashFileName = '..\\..\\..\\res\\splash.bmp'
             //    splashTimeout = 15
         }
+
+
+        tasks.register('copyExeToRelease', Copy) {
+            // 2. Define the source (where Launch4j puts the file)
+            // By default, this is often build/launch4j
+            from layout.buildDirectory.dir("launch4j")
+
+            // 3. Define the destination (your release folder)
+            into layout.projectDirectory.dir("release")
+
+            // Optional: Filter to only include the .exe if you have other junk in there
+//        include "*.exe"
+        }
+
 
         tasks.named("createExe")?.configure {
             doFirst {
@@ -102,6 +120,8 @@ subprojects {
                     version = project.version
                 }
             }
+
+            finalizedBy 'copyExeToRelease'
         }
     }
 
@@ -116,18 +136,17 @@ subprojects {
 
 
     tasks.register('fatJar', Jar) {
-        afterEvaluate { p ->
-            manifest {
-                attributes 'Implementation-Title': p.longName,
-                        'Implementation-Version': p.version,
-                        'Implementation-Vendor': p.author + ', ' + p.site,
-                        'Main-Class': p.className
-            }
-            archiveBaseName.set(project.name + '-all-java17')
-            archiveFileName.set("${archiveBaseName}-${p.ext.shortVersion}.${archiveExtension.get()}")
-            from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
-            with jar
+        duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+        manifest {
+            attributes 'Implementation-Title': project.ext.longName,
+                    'Implementation-Version': project.version,
+                    'Implementation-Vendor': project.ext.author + ', ' + project.ext.site,
+                    'Main-Class': project.ext.className
         }
+        archiveBaseName = (project.name + '-all-java')
+        archiveFileName = ("${archiveBaseName.get()}-${project.ext.shortVersion}.${archiveExtension.get()}")
+        from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+        with jar
     }
 
 
@@ -230,7 +249,7 @@ subprojects {
     }
 
     kotlin {
-        compilerOptions{
+        compilerOptions {
             jvmTarget = JvmTarget.JVM_24
         }
     }

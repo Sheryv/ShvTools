@@ -27,8 +27,8 @@ object Strings {
     return out.toString()
   }
   
-  fun getTemplater(values: Map<String, Any>): StringSubstitutor {
-    return StringSubstitutor(values, "\${", "}")
+  fun getTemplater(values: Map<String, Any>, prefix: String = "\${", suffix: String = "}"): StringSubstitutor {
+    return StringSubstitutor(values, prefix, suffix)
   }
   
   /**
@@ -36,10 +36,10 @@ object Strings {
    * Example "${key::-03d}"
    * Value after :: is the part also in String.format() after % char
    */
-  fun getTemplaterWithFormatterSupport(values: Map<String, Any>): StringSubstitutor {
+  fun getTemplaterWithFormatterSupport(values: Map<String, Any>, prefix: String = "\${", suffix: String = "}"): StringSubstitutor {
     val lookup = FormattedStringLookup(StringLookupFactory.INSTANCE.mapStringLookup<Any>(values))
     
-    return StringSubstitutor(lookup, "\${", "}", StringSubstitutor.DEFAULT_ESCAPE)
+    return StringSubstitutor(lookup, prefix, suffix, StringSubstitutor.DEFAULT_ESCAPE)
   }
   
   fun fillTemplate(template: String, values: Map<String, Any>): String {

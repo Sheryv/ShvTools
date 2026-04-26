@@ -1,7 +1,9 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver
 
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingWebsiteBase
+import kotlinx.coroutines.delay
 import org.openqa.selenium.By
+import kotlin.time.Duration.Companion.milliseconds
 
 
 object CommonVideoServers {
@@ -46,12 +48,18 @@ object CommonVideoServers {
 }
 
 private const val JW_PLAYER_ACTIVATION_SCRIPT =
-  "document.querySelector('.jw-controls .jw-button-color').click();document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
+  "document.querySelector('.jw-player .spin')?.click();document.querySelector('.jw-controls .jw-button-color')?.click();document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
 private const val JW_PLAYER_CHECK_READY_SCRIPT =
-  "document.querySelector('.jw-controls .jw-button-color') != null"
+  "document.querySelector('.jw-player .spin') != null"
 
 class JWVideoServerHandler(def: VideoServerDefinition, scraper: StreamingWebsiteBase) :
-  HLSVideoServerHandler(def, scraper, JW_PLAYER_ACTIVATION_SCRIPT, JW_PLAYER_CHECK_READY_SCRIPT)
+  HLSVideoServerHandler(def, scraper, JW_PLAYER_ACTIVATION_SCRIPT, JW_PLAYER_CHECK_READY_SCRIPT) {
+  
+  override suspend fun findVideoSrcUrl(timeout: Int): String? {
+    delay(2000.milliseconds)
+    return super.findVideoSrcUrl(timeout)
+  }
+}
 
 
 class VTubeVideoServerHanlder(def: VideoServerDefinition, scraper: StreamingWebsiteBase) :

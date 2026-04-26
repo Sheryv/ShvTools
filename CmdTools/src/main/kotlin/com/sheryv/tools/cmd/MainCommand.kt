@@ -20,7 +20,7 @@ const val CMD_SUB_COMMANDS_LABEL = "%nSubcommands:%n"
   parameterListHeading = CMD_PARAMETERS_LABEL,
   optionListHeading = CMD_OPTIONS_LABEL,
   commandListHeading = CMD_SUB_COMMANDS_LABEL,
-  description = ["%nThis application provides various tools - see any subcommand help for details"],
+  description = ["%nThis application provides various tools - see any subcommand help for details. Config directory can be set using environment variable CONFIGURATION_DIR"],
   subcommands = [
     AddAudioToMKVWithMkvtoolnix::class,
     AdbUninstallCommand::class,
@@ -32,14 +32,16 @@ class MainCommand {
 
 
 object Main {
-  const val PARAM_CONFIG_DIR = "configuration.directory-path"
+  const val PARAM_CONFIG_DIR = "CONFIGURATION_DIR"
   
   @JvmStatic
   lateinit var configPath: Path
   
   @JvmStatic
   fun main(args: Array<String>) {
-    configPath = Path.of(System.getProperty(PARAM_CONFIG_DIR, ""))
+    val env = System.getenv().entries.joinToString("\n") { "'${it.key}'='${it.value}'"}
+    println("OLD: $env")
+    configPath = Path.of(System.getenv(PARAM_CONFIG_DIR) ?: "")
     val version = VersionUtils.loadVersionByModuleName("cmd-tools-version")
     val commandLine = CommandLine(MainCommand())
     commandLine.commandSpec.version(version.toString())

@@ -6,6 +6,7 @@ import com.sheryv.tools.cmd.Colors.COLORS
 import com.sheryv.tools.cmd.Colors.RESET
 import picocli.CommandLine
 import java.io.File
+import java.nio.file.Path
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.Callable
@@ -119,10 +120,10 @@ object MKVMergeCommandRunner {
     println("Starting conversion")
     println(params)
     
-    val files = params.videoDir.listFiles()?.filter { !it.isDirectory && it.isFile && VIDEO_FORMATS.contains(it.extension) }
-      ?: throw IllegalArgumentException("Path ${params.videoDir.toPath().toAbsolutePath()} is incorrect")
-    val audioFiles = params.audioDir.listFiles()?.filter { !it.isDirectory && it.isFile && AUDIO_FORMATS.contains(it.extension) }
-      ?: throw IllegalArgumentException("Path ${params.audioDir.toPath().toAbsolutePath()} is incorrect")
+    val files = File(params.videoDir).listFiles()?.filter { !it.isDirectory && it.isFile && VIDEO_FORMATS.contains(it.extension) }
+      ?: throw IllegalArgumentException("Path ${File(params.videoDir).toPath().toAbsolutePath()} is incorrect")
+    val audioFiles = File(params.audioDir).listFiles()?.filter { !it.isDirectory && it.isFile && AUDIO_FORMATS.contains(it.extension) }
+      ?: throw IllegalArgumentException("Path ${File(params.audioDir).toPath().toAbsolutePath()} is incorrect")
     val regex = params.createRegex()
     val toConvert = files.associateWith { regex.find(it.name) }.filter { it.value != null }.mapNotNull {
       val foundPhrase = it.value!!.groups[0]!!.value
@@ -241,10 +242,10 @@ class AddAudioToMKVWithMkvtoolnix : Callable<Int> {
   lateinit var pattern: String
   
   @CommandLine.Parameters(paramLabel = "<VIDEO_DIR>", description = ["Path to dir with video files, can be empty \"\"."])
-  lateinit var videoDir: File
+  lateinit var videoDir: String
   
   @CommandLine.Parameters(paramLabel = "<AUDIO_DIR>", description = ["Path to dir with audio files."])
-  lateinit var audioDir: File
+  lateinit var audioDir: String
   
   @CommandLine.Option(names = ["-h", "--help"], description = ["Show this help message and exit."], usageHelp = true)
   private var help: Boolean = false
@@ -318,7 +319,7 @@ class AddAudioToMKVWithMkvtoolnix : Callable<Int> {
     if (o.isAbsolute) {
       return o
     }
-    return videoDir.resolve(o)
+    return Path.of(videoDir).toFile().resolve(o)
   }
   
   

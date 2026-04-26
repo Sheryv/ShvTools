@@ -13,15 +13,16 @@ ext.addJavafx()
 ext.addLaunch4j()
 
 dependencies {
-//    compile group: 'com.github.dnbn.submerge', name: 'submerge-api', version: '1.9.2'
-//    implementation 'commons-io:commons-io:1.3.2'
-    implementation 'commons-beanutils:commons-beanutils:1.9.2'
     implementation libs.apache.commons.text
 
     implementation project(':ui-util')
     implementation project(':web-util')
 
-    annotationProcessor 'org.projectlombok:lombok:1.18.42'
-    compileOnly 'org.projectlombok:lombok:1.18.42'
+    implementation "com.google.genai:google-genai:1.50.0"
 
+//    compile group: 'com.github.dnbn.submerge', name: 'submerge-api', version: '1.9.2'
+//    implementation 'commons-io:commons-io:1.3.2'
+//    implementation 'commons-beanutils:commons-beanutils:1.9.2'
+//    annotationProcessor 'org.projectlombok:lombok:1.18.42'
+//    compileOnly 'org.projectlombok:lombok:1.18.42'
 }

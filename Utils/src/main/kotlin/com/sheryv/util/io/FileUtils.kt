@@ -114,4 +114,15 @@ object FileUtils {
     return fixFileName(s)
   }
   
+  @JvmStatic
+  fun renameAsBackup(path: Path): Path {
+    var backup = path.resolveSibling(path.fileName.toString() + ".0.backup")
+    var counter = 1
+    while (Files.exists(backup)) {
+      backup = path.resolveSibling(path.fileName.toString() + ".${counter}.backup")
+      counter++
+    }
+    Files.move(path, backup)
+    return backup
+  }
 }

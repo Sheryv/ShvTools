@@ -31,6 +31,8 @@ class MetadataGenerator(private val settings: StreamingWebsiteSettings) {
           <certification/>
           <imdbid>${series.imdbId.orEmpty()}</imdbid>
           <tmdbid>${series.tvdbId.orEmpty()}</tmdbid>
+          <uniqueid default="false" type="tmdb">${series.tvdbId.orEmpty()}</uniqueid>
+          <uniqueid default="true" type="imdb">${series.imdbId.orEmpty()}</uniqueid>
           <premiered/>
           <status>Unknown</status>
           <watched>false</watched>
