@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="VideoConverterMain CLI" type="JetRunConfigurationType">
+    <option name="MAIN_CLASS_NAME" value="com.sheryv.tools.videoconverter.VideoConverterMain" />
+    <module name="shvtools.video-converter.main" />
+    <option name="PROGRAM_PARAMETERS" value="swap -w &quot;E:\Filmy\out&quot; -p &quot;Impuls.*&quot; -o &quot;&quot; -y" />
+    <shortenClasspath name="NONE" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/VideoConverter" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

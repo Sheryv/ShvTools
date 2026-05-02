@@ -17,23 +17,24 @@ import javafx.beans.binding.Bindings
 import javafx.collections.FXCollections
 import javafx.geometry.Orientation
 import javafx.geometry.Pos
+import javafx.scene.Node
 import javafx.scene.Parent
 import javafx.scene.control.SelectionMode
+import javafx.scene.control.TableRow
 import javafx.scene.control.TableView
 import javafx.scene.control.TextField
-import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.Region
 import javafx.stage.Stage
-import javafx.util.converter.DoubleStringConverter
 import java.nio.file.Path
 import java.util.regex.Pattern
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.extension
 import kotlin.io.path.nameWithoutExtension
 
-class VideoConverterView(val settings: MainSettings) : SimpleView() {
+
+class VideoConverterView(val settings: MainSettings, val context: Context) : SimpleView() {
   
   private val selected = FXCollections.observableArrayList<ConvertVideo>()
   private val statusProperty = stringProperty("")
@@ -74,9 +75,9 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
         columnBound("State") { it.stateProperty }
         columnBound("Conversion Progress", 170) { it.progressProperty.mapObservable { it.formatted } }
         columnBound("Sources summary", 140) {
-          val dependencies = it.sources.filterNotNull().map { it.timeOffsetProperty }
+          val dependencies = it.sources.filter { it.isValid }.map { it.timeOffsetProperty }
           stringBinding(it.sourcesProperty, *dependencies.toTypedArray()) {
-            filterNotNull().joinToString(", ") { "${it.type.code} (${it.timeOffset})" }
+            filter { it.isValid }.joinToString(", ") { "${it.type.code} (${it.timeOffset})" }
           }
         }
         column("Output", 300) { tryFindRelativePath(processor.calculateOutput(it.targetVideo)) }
@@ -104,12 +105,12 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
             factory.dialogs.openFileDialog(stage, initialFile = settings.workingDir.absolutePathString())?.let {
               settings.workingDirProperty.value = it.parent.absolutePathString()
               val exp = Pattern.compile(it.nameWithoutExtension, Pattern.LITERAL).pattern()
-              settings.videoPathPatternProperty.value = "^" + exp.split(' ').first() + ".*\\." + it.extension
-              settings.sources.first().run {
+              settings.mainSourceProperty.value.pathPatternProperty.value = "^" + exp.split(' ').first() + ".*\\." + it.extension
+              settings.additionalSources.first().run {
                 this.pathPatternProperty.value = "^" + exp + ".*\\." + SourceType.AUDIO.fileExtensions.joinToString("|", "(", ")")
                 this.defaultTimeOffsetProperty.value = 0.0
               }
-              settings.sources[1].run {
+              settings.additionalSources[1].run {
                 this.pathPatternProperty.value = "^" + exp + ".*\\." + SourceType.SUBTITLES.fileExtensions.joinToString("|", "(", ")")
                 this.defaultTimeOffsetProperty.value = 0.0
               }
@@ -175,7 +176,7 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
       
       vbox {
         vgrow = Priority.ALWAYS
-        paddingAll = 10.0
+        paddingHorizontal = 10.0
         
         
         // main
@@ -202,19 +203,33 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
               minHeight = 5.0
             }
             
-            TableView<Pair<Int, ConvertAdditionalSource?>>().attachTo(this).apply {
+            TableView<ConvertAdditionalSource>().attachTo(this).apply {
               styleClass.add(Styles.CLASS_MONO)
               isEditable = true
-              columnBound("#", 30) { staticProperty(it.first + 1) }
-              columnBound("Type") { it.second?.typeProperty ?: staticProperty("") }
-              columnBound("Path", 280) { it.second?.pathProperty ?: staticProperty("") }
-              columnBound("Offset", 60, true) { it.second?.timeOffsetProperty ?: mutableProperty(0.0) }.apply {
-                cellFactory = TextFieldTableCell.forTableColumn(DoubleStringConverter())
-                isEditable = true
+              columnBoundCustom("#", 30) {
+                it.tableView.itemsProperty().stringBinding { list ->
+                  list?.indexOf(it.value)?.plus(1)?.toString().orEmpty()
+                }
               }
+              columnBound("Type") { s -> s.typeProperty.map { if (s.isValid) it.toString() else "" } }
+              columnBound("Path", 280) { it.pathProperty.map { it?.toString().orEmpty() } }
+              columnBound("Streams") { it.metadataProperty.map { it?.streams?.size ?: 0 } }
+              columnBoundToTextFieldFormattedCell(
+                "Offset", 60, true,
+                default = 0.0,
+                modelValue = { it.timeOffsetProperty },
+                builder = { TextField().stripNonNumeric() }
+              )
               itemsProperty().bind(detailedVideoProperty.flatMap {
-                staticProperty(it?.sourcesProperty?.mapIndexed { i, v -> i to v }?.asObservable() ?: FXCollections.emptyObservableList())
+                staticProperty(it?.sourcesProperty ?: FXCollections.emptyObservableList())
               })
+              setRowFactory { table ->
+                val row = TableRow<ConvertAdditionalSource>()
+                row.disableProperty().bind(row.itemProperty().map { !it.isValid })
+//                row.disableProperty().bind(EasyBind.select(row.itemProperty()).map { it.isValid }.orElse(false))
+                row
+              }
+              
             }.growV()
             visibleProperty().bind(detailedVideoProperty.map { it != null })
           }
@@ -224,100 +239,131 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
         }.growV()
         // settings
         hbox {
-          vbox {
-            hgrow = Priority.SOMETIMES
-            
-            labelWrap("Working directory", hbox {
-              textfield(settings.workingDirProperty).grow()
-              button("...") {
-                setOnAction {
-                  factory.dialogs.openDirectoryDialog(stage, initialDir = settings.workingDir.toString())
-                    ?.apply { settings.workingDirProperty.value = this.toAbsolutePath().toString() }
-                }
-              }
-            })
-            labelWrap("Output directory (can be absolute)", textfield(settings.outputDirProperty))
-            labelWrap("Target video search pattern", textfield(settings.videoPathPatternProperty) {
-              styleClass.add(Styles.CLASS_MONO)
-            })
-            labelWrap("Example video path for pattern testing", textfield(settings.examplePathProperty))
-            labelWrap("Results of matching with example value", textarea(exampleMatchingResult) {
-              isEditable = false
-              styleClass.add(Styles.CLASS_MONO)
-              this.prefRowCount = 3
-              this.prefHeight = 100.0
-            })
-          }
-          vbox {
-            hgrow = Priority.SOMETIMES
-//            hbox {
-//              label("Sources:").growH()
-//            }
-//            hbox {
-//              label("#")
-//              label("Pattern").growH().strech()
-//              label("Time offset")
-//              label("Text encoding") {
-//                prefWidth = 90.0
-//              }
-//              label("Language code")
-//            }
-//            sourcesPane = vbox()
-            
-            sourcesTableView = TableView(FXCollections.observableArrayList<SourceSettings>()).attachTo(this).apply {
-              this.selectionModel.selectionMode = SelectionMode.SINGLE
-              styleClass.add(Styles.CLASS_MONO)
-              isEditable = true
-              vgrow = Priority.ALWAYS
-              isFillWidth = true
-              bindings.addAll(settings.sources.map {
-                Bindings.createStringBinding(
-                  { it.toString() },
-                  it.typeProperty,
-                  it.audioTypeProperty,
-                  it.languageProperty,
-                  it.defaultTimeOffsetProperty,
-                  it.pathPatternProperty
-                ).apply {
-                  onChange { s ->
-                    log.debug("Setting source changed: {}", s)
+          splitpane {
+            border = null
+            setDividerPosition(0, 0.3)
+            style += "-fx-box-border: transparent;"
+            vbox {
+              paddingRight = 5.0
+              labelWrap("Working directory", hbox {
+                textfield(settings.workingDirProperty).grow()
+                button("...") {
+                  setOnAction {
+                    factory.dialogs.openDirectoryDialog(stage, initialDir = settings.workingDir.toString())
+                      ?.apply { settings.workingDirProperty.value = this.toAbsolutePath().toString() }
                   }
                 }
               })
+              labelWrap("Output directory (can be absolute)", textfield(settings.outputDirProperty))
+//            labelWrap("Target video search pattern", textfield(settings.videoPathPatternProperty) {
+//              styleClass.add(Styles.CLASS_MONO)
+//            })
+              labelWrap("Example video path for pattern testing", textfield(settings.examplePathProperty))
+              labelWrap("Results of matching with example value", textarea(exampleMatchingResult) {
+                isEditable = false
+                styleClass.add(Styles.CLASS_MONO)
+                this.prefRowCount = 3
+                this.prefHeight = 100.0
+              })
+            }
+            vbox {
+              paddingLeft = 5.0
+              spacing = 5.0
+              label("Sources:").growH()
               
-              columnBound("#", 30) { it.indexProperty }
-              columnBoundToComboCell(
-                "Type",
-                modelValue = { it.typeProperty },
-                default = listOf(SourceType.AUDIO, SourceType.SUBTITLES).asObservable(),
-              )
-              columnBoundToTextFieldCell(
-                "Pattern",
-                500,
-                modelValue = { it.pathPatternProperty }
-              )
-              columnBoundToTextFieldFormattedCell(
-                "Offset",
-                default = 0.0,
-                modelValue = { it.defaultTimeOffsetProperty },
-                builder = { TextField().stripNonNumeric() }
-              )
-              columnBoundToTextFieldCell("Language code", modelValue = { it.languageProperty })
-              columnBoundToComboCell(
-                "Audio type",
-                modelValue = { it.audioTypeProperty },
-                default = SourceAudioType.entries.asObservable(),
-                onUpdate = { item, row, combo ->
-                  if (item != null && row != null) {
-                    combo?.disableProperty()?.bind(row.typeProperty.mapObservable { it != SourceType.AUDIO })
-                  } else {
-                    combo?.disableProperty()?.unbind()
+              sourcesTableView = TableView(FXCollections.observableArrayList<SourceSettings>()).attachTo(this).apply {
+                this.selectionModel.selectionMode = SelectionMode.SINGLE
+                styleClass.add(Styles.CLASS_MONO)
+                isEditable = true
+                vgrow = Priority.ALWAYS
+                isFillWidth = true
+                prefHeight = 100.0
+                
+                bindings.addAll(settings.sources.map {
+                  Bindings.createStringBinding(
+                    { it.toString() },
+                    it.typeProperty,
+                    it.audioTypeProperty,
+                    it.languageProperty,
+                    it.defaultTimeOffsetProperty,
+                    it.pathPatternProperty
+                  ).apply {
+                    onChange { s ->
+                      log.debug("Setting source changed: {}", s)
+                    }
                   }
                 })
-              
-              
+                
+                val main = FXCollections.observableArrayList(SourceType.ALL)
+                val types = listOf(SourceType.AUDIO, SourceType.SUBTITLES).asObservable()
+                val up = { item: Any?, row: SourceSettings?, node: Node? ->
+                  if (item != null && row?.main == true) {
+                    node?.isDisable = true
+                  } else {
+                    node?.isDisable = false
+                  }
+                }
+                
+                columnBoundCustom("#", 30) {
+                  it.tableView.itemsProperty().stringBinding { list ->
+                    list?.indexOf(it.value)?.plus(1)?.toString().orEmpty()
+                  }
+                }
+                columnBoundToCheckBoxCell("On", 30, modelValue = { it.enabledProperty }, onUpdate = up)
+                columnBoundToComboCell(
+                  "Type",
+                  modelValue = { it.typeProperty },
+                  default = types,
+                  onUpdate = { item, row, combo ->
+                    if (item != null && row?.main == true) {
+                      combo?.items = main
+//                    combo?.value = item
+                      combo?.isDisable = true
+                    } else {
+                      combo?.isDisable = false
+                      if (item != null && (combo == null || combo.items != types)) {
+                        combo?.items = types
+                      }
+                    }
+                  }
+                )
+                columnBoundToTextFieldCell(
+                  "Pattern",
+                  410,
+                  modelValue = { it.pathPatternProperty }
+                )
+                columnBoundToTextFieldFormattedCell(
+                  "Offset",
+                  60,
+                  default = 0.0,
+                  modelValue = { it.defaultTimeOffsetProperty },
+                  builder = { TextField().stripNonNumeric() },
+                  onUpdate = up
+                )
+                columnBoundToTextFieldCell("Language code", modelValue = { it.languageProperty }, onUpdate = up)
+                columnBoundToComboCell(
+                  "Stream selection",
+                  modelValue = { it.streamSelectionProperty },
+                  default = StreamSelection.entries.asObservable(),
+                  onUpdate = up
+                )
+                columnBoundToComboCell(
+                  "Audio type",
+                  modelValue = { it.audioTypeProperty },
+                  default = SourceAudioType.entries.asObservable(),
+                  onUpdate = { item, row, combo ->
+                    if (item != null && row != null) {
+                      combo?.disableProperty()?.bind(row.typeProperty.mapObservable { it != SourceType.AUDIO })
+                    } else {
+                      combo?.disableProperty()?.unbind()
+                    }
+                  })
+                
+                rowFactory = ViewUtils.tableDraggableRowFactory { }
+                columns.forEach { it.isSortable = false }
+              }
             }
-          }
+          }.grow()
         }
       }
       separator()
@@ -337,7 +383,7 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
       detailedVideoProperty.set(it)
     }
     
-    processor = ConversionProcessor(settings, {
+    processor = ConversionProcessor(context, {
       statusProperty.set(it)
     }) {
       if (it == null) {
@@ -375,11 +421,10 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
     
     exampleMatchingResult.bind(
       settings.examplePathProperty.stringBinding(
-        settings.workingDirProperty,
-        settings.videoPathPatternProperty, *settings.sources.map { it.pathPatternProperty }.toTypedArray()
+        settings.workingDirProperty, *settings.sources.map { it.pathPatternProperty }.toTypedArray()
       ) {
         try {
-          val groups = Regex(settings.videoPathPattern).find(settings.examplePath)?.groupValues ?: emptyList()
+          val groups = Regex(settings.mainSourceProperty.value.pathPattern).find(settings.examplePath)?.groupValues ?: emptyList()
           val patterns = processor.buildRegexForAdditionalSourcesPaths(groups)
           
           groups.joinToString("|") + "\n" + patterns.joinToString("\n") { it.first.orEmpty() }
@@ -389,9 +434,7 @@ class VideoConverterView(val settings: MainSettings) : SimpleView() {
         }
       })
     
-    log.debug("SETTINGS: \n{}", settings.sources.joinToString("\n"))
     sourcesTableView.items = settings.sources
-    sourcesTableView.refresh()
   }
   
   private fun tryFindRelativePath(path: Path): Path {

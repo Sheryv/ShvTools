@@ -2,12 +2,13 @@ plugins {
     id 'application'
     alias(libs.plugins.launch4j)
     alias(libs.plugins.javafx)
+    alias(libs.plugins.kotlin.kapt)
 }
 
 ext.longName = "SHV Video Converter"
 
 
-ext.className = "com.sheryv.tools.videoconverter.mergetomkv.MergeStreamsToSingleMkvFile"
+ext.className = "com.sheryv.tools.videoconverter.VideoConverterMain"
 
 ext.addJavafx()
 ext.addLaunch4j()
@@ -19,6 +20,11 @@ dependencies {
     implementation project(':web-util')
 
     implementation "com.google.genai:google-genai:1.50.0"
+
+    implementation libs.picocli
+
+    kapt libs.picocli.codegen
+
 
 //    compile group: 'com.github.dnbn.submerge', name: 'submerge-api', version: '1.9.2'
 //    implementation 'commons-io:commons-io:1.3.2'

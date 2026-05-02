@@ -1,12 +1,17 @@
 package com.sheryv.tools.videoconverter.video.process
 
+import com.sheryv.tools.videoconverter.Context
 import com.sheryv.tools.videoconverter.video.*
+import com.sheryv.tools.videoconverter.video.process.ffmpeg.FFmpegService
 import com.sheryv.tools.videoconverter.video.process.ffprobe.FFProbeResult
-import com.sheryv.util.*
+import com.sheryv.tools.videoconverter.video.process.mkvmerge.MkvMergeService
+import com.sheryv.util.SerialisationUtils
+import com.sheryv.util.Strings
+import com.sheryv.util.inBackground
 import com.sheryv.util.io.FileUtils
 import com.sheryv.util.logging.log
-import com.sheryv.util.unit.BitTransferSpeed
-import com.sheryv.util.unit.BitUnit
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.StringWriter
 import java.nio.file.Files
 import java.nio.file.Path
@@ -19,31 +24,33 @@ import kotlin.io.path.isRegularFile
 import kotlin.io.path.nameWithoutExtension
 
 class ConversionProcessor(
-  private val settings: MainSettings,
+  private val context: Context,
   private val onProgress: (String) -> Unit,
   private val onComplete: (Exception?) -> Unit
 ) : AutoCloseable {
+  private val settings = context.settings
   
   private val processes: Queue<Process> = ConcurrentLinkedQueue()
   private val threadPool = Executors.newFixedThreadPool(settings.parallelProcessing)
-  private val languages by lazy { loadLanguages() }
+  private val ffmpeg = FFmpegService(context)
+  private val mkvMerge = MkvMergeService(context)
   
   suspend fun start(records: List<ConvertVideo>) {
     try {
-      inMainContext {
+      withContext(context.mainDispatcher) {
         onProgress("Processing videos...")
       }
-      
       run(records)
       
-      inMainContext {
+      withContext(context.mainDispatcher) {
         onProgress("Completed")
         onComplete(null)
       }
     } catch (e: Exception) {
-      inMainContext {
+      log.error("Error in process", e)
+      withContext(context.mainDispatcher) {
         onProgress("Completed")
-        onComplete(e)
+//        onComplete(e)
       }
     }
   }
@@ -52,7 +59,8 @@ class ConversionProcessor(
     frozenSettings: MainSettings,
     previous: List<ConvertVideo>
   ): List<ConvertVideo> {
-    val targetVideoRegex = frozenSettings.videoPathPattern.toRegex()
+    val main = frozenSettings.mainSourceProperty.value
+    val targetVideoRegex = main.pathPattern.toRegex()
     
     val outputToCompare = if (settings.outputDir.isAbsolute) {
       if (settings.outputDir.startsWith(settings.workingDir))
@@ -75,10 +83,14 @@ class ConversionProcessor(
     
     log.info("Processing ${allFiles.size} files")
     
-    val results = mutableListOf<ConvertVideo>()
+    val mainIndex = frozenSettings.sources.indexOfFirst { it.main }
+    
+    val results = ConcurrentLinkedQueue<ConvertVideo>()
     allFiles
       .asSequence()
-      .filter { it.extension in SourceType.VIDEO.fileExtensions }
+      .filter { it.extension in main.type.fileExtensions }
+      .toList()
+      .parallelStream()
       .forEach { videoPath ->
         val groupValues = targetVideoRegex.find(videoPath.toString().replace('\\', '/'))?.groupValues ?: return@forEach
         
@@ -87,29 +99,28 @@ class ConversionProcessor(
         val foundPaths = mutableListOf(videoPath)
         val sourcesRegexes = buildRegexForAdditionalSourcesPaths(groupValues)
         var additionalSources = sourcesRegexes.mapIndexed { i, (regex, exception) ->
-          if (regex.isNullOrBlank()) return@mapIndexed null
-          
-          val template = frozenSettings.sources[i]
+          val def = frozenSettings.additionalSources[i]
           val previousAdditionalSource = previousVideo?.sources?.get(i)
+          if (!def.enabled || regex.isNullOrBlank()) return@mapIndexed ConvertAdditionalSource(
+            null,
+            null,
+            previousAdditionalSource,
+            def
+          )
+          
           val path = allFiles
             .asSequence()
-            .filter { it.extension in template.type.fileExtensions }
+            .filter { it.extension in def.type.fileExtensions }
             .filterNot { foundPaths.contains(it) }
             .firstOrNull { regex.toRegex().containsMatchIn(it.toString().replace('\\', '/')) }
           
-          if (path == null) return@mapIndexed null
+          if (path == null) return@mapIndexed ConvertAdditionalSource(null, null, previousAdditionalSource, def)
           
           
           foundPaths.add(path)
+          val metadata = probeFile(path)
           
-          ConvertAdditionalSource(
-            SourceType.findByExtension(path.extension, false) ?: throw RuntimeException("Unknown extension: $path"),
-            path,
-            previousAdditionalSource?.timeOffset ?: template.defaultTimeOffset,
-            previousAdditionalSource?.audioType ?: template.audioType,
-            previousAdditionalSource?.language ?: template.language,
-            template
-          )
+          ConvertAdditionalSource(path, metadata, previousAdditionalSource, def)
         }
         
         val state = if (Files.exists(calculateOutput(videoPath))) {
@@ -117,23 +128,30 @@ class ConversionProcessor(
         } else {
           ConversionProcessState.READY
         }
+        val metadata = probeFile(videoPath)
         
-        results.add(ConvertVideo(results.size + 1, videoPath, additionalSources, state))
+        results.add(ConvertVideo(results.size + 1, videoPath, additionalSources, mainIndex, state, metadata))
       }
-    results.parallelStream().forEach {
-      val ffprobe = probeFile(it.targetVideo)
-      if (ffprobe.streams.isNotEmpty()) {
-        it.metadata = VideoMetadata(ffprobe)
-      }
-    }
-    return results
+//    results.parallelStream().forEach {
+//      val ffprobe = probeFile(it.targetVideo)
+//      if (ffprobe.streams.isNotEmpty()) {
+//        it.metadata = VideoMetadata(ffprobe)
+//      }
+//    }
+//    results.flatMap { it.sources }.filter { it.isValid }.parallelStream().forEach {
+//      val ffprobe = probeFile(it.path!!)
+//      if (ffprobe.streams.isNotEmpty()) {
+//        it.metadata = VideoMetadata(ffprobe)
+//      }
+//    }
+    return results.filter { it.metadata != null }
   }
   
   fun buildRegexForAdditionalSourcesPaths(matchedGroupsInVideoPath: List<String>): List<Pair<String?, Exception?>> {
     val values = matchedGroupsInVideoPath.mapIndexed { i, s -> i.toString() to s }.toMap()
     val templater = Strings.getTemplaterWithFormatterSupport(values)
-    return settings.sources.map {
-      if (it.pathPattern.isNotBlank())
+    return settings.additionalSources.map {
+      if (it.enabled && it.pathPattern.isNotBlank())
         try {
           templater.replace(it.pathPattern) to null
         } catch (e: Strings.KeyNotFoundException) {
@@ -165,115 +183,39 @@ class ConversionProcessor(
     return settings.workingDir.resolve(out)
   }
   
+  
   fun generateCommand(video: ConvertVideo): List<String> {
     val output = calculateOutput(video.targetVideo)
-    val sources = video.sources.filterNotNull()
-//    var audioProcessed = 0
-//    var subtitlesProcessed = 0
-    
-    val processedByCode = mutableMapOf<String, Int>()
-    
-    val cmd = mutableListOf("ffmpeg", "-hide_banner", "-loglevel", "error", "-progress", "pipe:1", "-i", "\"${video.targetVideo}\"")
-    val lastOptions = mutableListOf<String>()
-    var longestOffset = 0.0
-    sources.forEachIndexed { index, source ->
-      if (source.timeOffset != 0.0) {
-        longestOffset = longestOffset.coerceAtLeast(-source.timeOffset)
-        
-        cmd.add("-itsoffset")
-        cmd.add("${source.timeOffset}")
-      }
-      val code = typeToFFmpegCode(source.type)
-      
-      lastOptions.add("-map")
-      lastOptions.add("${index + 1}:$code")
-      if (source.definition.language.isNotBlank()) {
-        lastOptions.add("-metadata:s:$code:${processedByCode[code] ?: 0}")
-        lastOptions.add("language=${source.definition.language}")
-        if (source.definition.language in languages) {
-          var suffix = ""
-          if (source.audioType != null) {
-            suffix = " [${source.audioType!!.code}]"
-          }
-          
-          lastOptions.add("-metadata:s:$code:${processedByCode[code] ?: 0}")
-          lastOptions.add("title=${languages[source.definition.language]!!.originalName}$suffix")
-        }
-      }
-      processedByCode.compute(code) { _, c -> c?.plus(1) ?: 0 }
-      
-      
-//      when (source.type) {
-//        SourceType.SUBTITLES -> {
-//          lastOptions.add("-map")
-//          lastOptions.add("${index + 1}:s")
-//          if (source.definition.language.isNotBlank()) {
-//            lastOptions.add("-metadata:s:s:${subtitlesProcessed}")
-//            lastOptions.add("language=${source.definition.language}")
-//            if (source.definition.language in languages) {
-//              lastOptions.add("-metadata:s:s:${subtitlesProcessed}")
-//              lastOptions.add("title=${languages[source.definition.language]!!.originalName}")
-//            }
-//          }
-//          subtitlesProcessed++
-//        }
-//
-//        SourceType.AUDIO, SourceType.VIDEO -> {
-//          lastOptions.add("-map")
-//          lastOptions.add("${index + 1}:a:0")
-//          if (source.definition.language.isNotBlank()) {
-//            lastOptions.add("-metadata:s:a:${audioProcessed}")
-//            lastOptions.add("language=${source.definition.language}")
-//            if (source.definition.language in languages) {
-//              lastOptions.add("-metadata:s:a:${subtitlesProcessed}")
-//              lastOptions.add("title=${languages[source.definition.language]!!.originalName}")
-//            }
-//          }
-//          audioProcessed++
-//        }
-//      }
-      cmd.add("-i")
-      cmd.add("\"${source.path}\"")
-    }
-    cmd.add("-map")
-    cmd.add("0:v")
-    cmd.addAll(lastOptions)
-    cmd.add("-map")
-    cmd.add("0:a")
-    cmd.add("-map")
-    cmd.add("0:s")
-    cmd.add("-c")
-    cmd.add("copy")
-    
-    if (video.metadata != null && sources.any { it.timeOffset != 0.0 }) {
-      cmd.add("-ss")
-      cmd.add("0")
-      cmd.add("-t")
-      cmd.add((video.metadata!!.durationMs.toDouble() / 1000.0).toString())
-    }
-    cmd.add("\"$output\"")
-    return cmd
+    return mkvMerge.generateCommand(video, output)
   }
   
-  fun probeFile(path: Path): FFProbeResult {
-    
-    val builder = ProcessBuilder(
-      "ffprobe",
-      "-v",
-      "quiet",
-      "-show_format",
-      "-show_streams",
-      "-output_format",
-      "json",
-      "\"${settings.workingDir.resolve(path)}\""
-    )
-      .directory(settings.workingDir.toFile())
-      .redirectError(ProcessBuilder.Redirect.INHERIT)
-    
-    val process = builder.start()
-    val output = process.inputStream.bufferedReader().use { it.readText() }
-    process.waitFor()
-    return SerialisationUtils.fromJson(output, FFProbeResult::class.java)
+  fun probeFile(path: Path): MediaMetadata? {
+    try {
+      val builder = ProcessBuilder(
+        "ffprobe",
+        "-v",
+        "quiet",
+        "-show_format",
+        "-show_streams",
+        "-output_format",
+        "json",
+        "\"${settings.workingDir.resolve(path)}\""
+      )
+        .directory(settings.workingDir.toFile())
+        .redirectError(ProcessBuilder.Redirect.INHERIT)
+      
+      val process = builder.start()
+      val output = process.inputStream.bufferedReader().use { it.readText() }
+      process.waitFor()
+      val ffprobe = SerialisationUtils.fromJson(output, FFProbeResult::class.java)
+      if (ffprobe.streams.isNotEmpty()) {
+        return MediaMetadata(ffprobe)
+      }
+      return null
+    } catch (e: Exception) {
+      log.error("Error probing file $path", e)
+    }
+    return null
   }
   
   private suspend fun run(records: List<ConvertVideo>) {
@@ -286,13 +228,15 @@ class ConversionProcessor(
           FileUtils.renameAsBackup(output)
         }
         
-        inMainContext {
+        withContext(context.mainDispatcher) {
           video.state = ConversionProcessState.IN_QUEUE
         }
         
         threadPool.submit(Callable {
-          inMainThread {
-            video.state = ConversionProcessState.PROCESSING
+          runBlocking {
+            withContext(context.mainDispatcher) {
+              video.state = ConversionProcessState.PROCESSING
+            }
           }
           
           runSingle(video)
@@ -315,14 +259,14 @@ class ConversionProcessor(
           ConversionProcessState.FAILED
         }
         
-        inMainContext {
+        withContext(context.mainDispatcher) {
           video.state = state
         }
         
       } catch (e: Exception) {
         log.error(e.message, e)
         
-        inMainContext {
+        withContext(context.mainDispatcher) {
           video.state = ConversionProcessState.FAILED
         }
       }
@@ -344,7 +288,7 @@ class ConversionProcessor(
       process = builder.start()
       processes.add(process)
       
-      val otherLogs = StringBuilder()
+      var otherLogs: StringBuilder = StringBuilder()
       
       inBackground {
         val errors = StringWriter()
@@ -352,57 +296,22 @@ class ConversionProcessor(
           it.transferTo(errors)
         }
         if (errors.buffer.isNotEmpty()) {
-          log.error("ffmpeg errors: {}", errors.buffer.toString())
+          log.error("converter errors: {}", errors.buffer.toString())
         }
       }
       
       if (video.metadata != null) {
         val reader = process.inputStream.bufferedReader()
-        var line = reader.readLine()
-        var lastProcessedMs: Long? = null
-        var lastBitrate: BitTransferSpeed? = null
-        while (line != null) {
-          
-          if (line.startsWith("out_time_us")) {
-            lastProcessedMs = line.split('=').getOrNull(1)?.toLongOrNull()?.div(1000)
-          } else if (line.startsWith("bitrate")) {
-            lastBitrate = line.split('=').getOrNull(1)?.let {
-              var value = 0.0
-              var unit = BitUnit.b
-              
-              when {
-                it.endsWith("kbits/s") -> {
-                  value = it.dropLast(7).trim().toDouble()
-                  unit = BitUnit.kb
-                }
-                
-                it.lowercase().endsWith("mbits/s") -> {
-                  value = it.dropLast(7).trim().toDouble()
-                  unit = BitUnit.Mb
-                }
-                
-                it.lowercase().endsWith("bits/s") -> {
-                  value = it.dropLast(6).trim().toDouble()
-                }
-              }
-              
-              BitTransferSpeed.calc(value, unit)
-            }
-          } else {
-            otherLogs.appendLine(line)
-          }
-          
-          if (lastBitrate != null && lastProcessedMs != null) {
-            video.progress = ConversionProgress(lastProcessedMs / video.metadata!!.durationMs.toDouble() * 100, lastBitrate)
-          }
-          
-          line = reader.readLine()
+//        var line = reader.readLine()
+//        var lastProcessedMs: Long? = null
+//        var lastBitrate: BitTransferSpeed? = null
+        otherLogs = mkvMerge.parseOutput(video, reader.lineSequence()) {
+          video.progress = it
         }
-        reader.close()
       }
       val exitCode = process.waitFor()
       if (otherLogs.isNotEmpty()) {
-        log.debug("ffmpeg logs: \n{}", otherLogs.toString())
+        log.debug("converter logs: \n{}", otherLogs.toString())
       }
       if (exitCode == 0) {
         video.progress = video.progress.copy(percentage = 100.0)
@@ -437,19 +346,4 @@ class ConversionProcessor(
     }
   }
   
-  private fun loadLanguages(): Map<String, Language> {
-    return javaClass.classLoader.getResourceAsStream("languages.csv")
-      .use { it.bufferedReader().readLines() }
-      .map { it.split(';').map { it.trim() } }
-      .map { it[0] to Language(it[0], it[1], it[2]) }
-      .toMap()
-  }
-  
-  private fun typeToFFmpegCode(type: SourceType): String {
-    return when (type) {
-      SourceType.SUBTITLES, SourceType.STANDALONE_SUBTITLES, SourceType.EMBEDDED_SUBTITLES -> "s"
-      SourceType.EMBEDDED_AUDIO, SourceType.STANDALONE_AUDIO, SourceType.AUDIO -> "a"
-      else -> "a"
-    }
-  }
 }

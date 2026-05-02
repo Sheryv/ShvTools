@@ -2,21 +2,37 @@ package com.sheryv.tools.videoconverter.video
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.sheryv.util.SerialisationUtils
-import com.sheryv.util.fx.lib.observable
-import com.sheryv.util.fx.lib.observablePath
-import com.sheryv.util.fx.lib.staticProperty
+import com.sheryv.util.fx.lib.*
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import java.nio.file.Files
 import java.nio.file.Path
 
 class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
+  internal constructor(
+    workingDir: Path,
+    outputDir: Path,
+//    videoPathPattern: String,
+    directorySearchDepth: Int,
+    parallelProcessing: Int,
+    outputExtension: String,
+    languageFilter: List<String>,
+  ) : this() {
+    this.workingDir = workingDir
+    this.outputDir = outputDir
+//    this.videoPathPattern = videoPathPattern
+    this.directorySearchDepth = directorySearchDepth
+    this.parallelProcessing = parallelProcessing
+    this.outputExtension = outputExtension
+    this.languageFilter = languageFilter
+  }
+  
   var workingDir: Path = Path.of("").toAbsolutePath()
     private set
   var outputDir: Path = Path.of("output")
     private set
-  var videoPathPattern: String = ".*"
-    private set
+//  var videoPathPattern: String = ".*"
+//    private set
   var directorySearchDepth: Int = 4
     private set
   var parallelProcessing: Int = 2
@@ -25,8 +41,13 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
     private set
   var outputExtension: String = "mkv"
     private set
+  var languageFilter: List<String> = emptyList()
+    private set
   
   var sources: ObservableList<SourceSettings> = FXCollections.observableArrayList(sources)
+  
+  @JsonIgnore
+  var additionalSources: ObservableList<SourceSettings> = this.sources.filtered { !it.main }
   
   @JsonIgnore
   val workingDirProperty = observablePath(MainSettings::workingDir)
@@ -34,14 +55,20 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
   @JsonIgnore
   val outputDirProperty = observablePath(MainSettings::outputDir)
   
-  @JsonIgnore
-  val videoPathPatternProperty = observable(MainSettings::videoPathPattern)
+//  @JsonIgnore
+//  val videoPathPatternProperty = observable(MainSettings::videoPathPattern)
   
   @JsonIgnore
   val directorySearchDepthProperty = observable(MainSettings::directorySearchDepth)
   
   @JsonIgnore
   val examplePathProperty = observable(MainSettings::examplePath)
+  
+  @JsonIgnore
+  val languageFilterProperty = observable(MainSettings::languageFilter)
+  
+  @JsonIgnore
+  val mainSourceProperty = listProperty(this.sources).mapObservable { it.first { it.main } }
   
   fun copy(): MainSettings {
     val map = SerialisationUtils.jsonMapper.convertValue(this, Map::class.java)
@@ -62,15 +89,18 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
         settings.save()
       }
       while (settings.sources.size < SOURCES_NUMBER) {
-        settings.sources.add(SourceSettings(settings.sources.size + 1))
+        settings.sources.add(SourceSettings())
       }
       while (settings.sources.size > SOURCES_NUMBER) {
         settings.sources.removeLast()
       }
+      if (settings.sources.none { it.main }) {
+        settings.sources.add(0, SourceSettings(main = true, pathPattern = ".*", type = SourceType.ALL))
+      }
       return settings
     }
     
-    const val SOURCES_NUMBER = 8
+    const val SOURCES_NUMBER = 7
     
     var currentPath: Path = Path.of("config.json")
   }
@@ -78,13 +108,16 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
 
 
 class SourceSettings(
-  val index: Int,
-  type: SourceType = SourceType.SUBTITLES,
+  type: SourceType = SourceType.AUDIO,
   pathPattern: String = "",
   defaultTimeOffset: Double = 0.0,
   language: String = "",
-  audioType: SourceAudioType = SourceAudioType.DUBBING,
+  audioType: SourceAudioType = SourceAudioType.NOT_SPECIFIED,
+  streamSelection: StreamSelection = StreamSelection.ALL,
+  val main: Boolean = false,
 ) {
+  var enabled = true
+    private set
   var type = type
     private set
   var pathPattern = pathPattern
@@ -95,9 +128,11 @@ class SourceSettings(
     private set
   var audioType = audioType
     private set
+  var streamSelection = streamSelection
+    private set
   
   @JsonIgnore
-  val indexProperty = staticProperty(index)
+  val enabledProperty = observable(SourceSettings::enabled)
   
   @JsonIgnore
   val typeProperty = observable(SourceSettings::type)
@@ -114,7 +149,13 @@ class SourceSettings(
   @JsonIgnore
   val audioTypeProperty = observable(SourceSettings::audioType)
   
+  @JsonIgnore
+  val streamSelectionProperty = observable(SourceSettings::streamSelection)
+  
+  @JsonIgnore
+  val mainProperty = staticProperty(main)
+  
   override fun toString(): String {
-    return "#${indexProperty.value} $type [$pathPattern] $defaultTimeOffset, $language, $audioType"
+    return "$type [$pathPattern] $defaultTimeOffset, $language, $audioType"
   }
 }

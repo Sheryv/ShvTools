@@ -89,6 +89,7 @@ abstract class App(protected val primaryViewClass: KClass<out BaseView>, val sta
       
       block()
       val app = customAppInstance()
+      instance = app
       val deps = startKoin {
         this.logger(SLF4JLogger())
         modules(org.koin.dsl.module {
@@ -162,6 +163,8 @@ abstract class App(protected val primaryViewClass: KClass<out BaseView>, val sta
       AppBuilder(baseView, args).create(block)
     }
     
+    
+    var instance: App? = null
   }
 }
 

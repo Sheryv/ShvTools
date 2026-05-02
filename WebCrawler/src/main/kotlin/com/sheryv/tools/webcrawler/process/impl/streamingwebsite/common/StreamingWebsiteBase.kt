@@ -180,7 +180,7 @@ abstract class StreamingWebsiteBase(
           waitIfPaused()
           if (isSingleBuiltinHostingPerEpisode(item)) {
             item.server = VideoServer("_builtin", 0)
-            downloadUrl = findLoadedVideoDownloadUrl(item, builtinHostingServerHandler(item))
+            downloadUrl = initializeVideoAndGetDownloadUrl(item, builtinHostingServerHandler(item))
           } else {
             val allServers: List<VideoServer> = loadItemDataFromSummaryPageAndGetServers(item).let { found ->
               if (found.any { it.type != EpisodeAudioTypes.UNKNOWN }) {
@@ -217,44 +217,13 @@ abstract class StreamingWebsiteBase(
             
             for (pair in priorities) {
               try {
-                val handler = pair.first
                 item.server = pair.second
                 waitIfPaused()
                 item.pageOpenTimestamp = Instant.now()
                 
                 clearListeners()
-                var asyncIntercepted: Deferred<InterceptorMessage>? = null
-                if (handler is HLSVideoServerHandler) {
-                  asyncIntercepted = setupListenerAndWaitForCorrectEvent { e ->
-                    log.debug("[{}] Checking: {}", item.number, e.url)
-                    handler.isUrlMatchingRequestWithM3U8Manifest(e.url)
-                  }
-                }
                 
-                downloadUrl = openStreamAndInitializePlayerThenRun(item, pair.second, handler) {
-                  waitIfPaused()
-                  if (handler is HLSVideoServerHandler) {
-                    val findContainerJob = inBackground {
-                      log.debug("[{}] Waiting for video tag container", item.number)
-                      handler.findVideoContainer()
-                    }
-                    asyncIntercepted!!.invokeOnCompletion {
-                      findContainerJob.cancel()
-                    }
-                    findContainerJob.join()
-                    log.debug("[{}] Waiting for intercepted request", item.number)
-                    val response = try {
-                      withTimeout(15.seconds) {
-                        asyncIntercepted.await()
-                      }
-                    } finally {
-                      asyncIntercepted.cancel()
-                    }
-                    return@openStreamAndInitializePlayerThenRun extractUrlFromRequest(response)
-                  } else {
-                    findDirectVideoDownloadUrlFromHtml(item, handler)
-                  }
-                }
+                downloadUrl = initializeVideoAndGetDownloadUrl(item, pair.first)
                 
                 if (downloadUrl != null) {
                   break
@@ -350,29 +319,56 @@ abstract class StreamingWebsiteBase(
       Series(0, driver.title.orEmpty(), 0, getMainLang(), url)
     }
     
-    val result = if (handler is HLSVideoServerHandler) {
-      val findContainerJob = inBackground {
-        log.debug("Waiting ad-hoc for video tag container")
+    val result = findLoadedVideoUrl(VideoData(url, driver.title.orEmpty(), 1), handler, asyncIntercepted)
+    
+    return result
+  }
+
+  protected open suspend fun initializeVideoAndGetDownloadUrl(item: VideoData, handler: VideoServerHandler<*>): VideoUrl? {
+    var asyncIntercepted: Deferred<InterceptorMessage>? = null
+    if (handler is HLSVideoServerHandler) {
+      asyncIntercepted = setupListenerAndWaitForCorrectEvent { e ->
+        log.debug("[{}] Checking: {}", item.number, e.url)
+        handler.isUrlMatchingRequestWithM3U8Manifest(e.url)
+      }
+    }
+    
+    return openStreamAndInitializePlayerThenRun(item, item.server!!, handler) {
+      waitIfPaused()
+      findLoadedVideoUrl(item, handler, asyncIntercepted)
+    }
+  }
+  
+  protected open suspend fun findLoadedVideoUrl(item: VideoData, handler: VideoServerHandler<*>, interceptorJob: Deferred<InterceptorMessage>?): VideoUrl? {
+    if (handler is HLSVideoServerHandler) {
+      var findContainerJob = inBackground {
+        log.debug("[{}] Waiting for video tag container", item.number)
         handler.findVideoContainer()
       }
-      asyncIntercepted!!.invokeOnCompletion {
+      if (checkForCaptchaAndOtherOverlays(item)) {
+        findContainerJob.cancel()
+        findContainerJob = inBackground {
+          log.debug("[{}] Waiting for video tag container again", item.number)
+          handler.findVideoContainer()
+        }
+      }
+      interceptorJob!!.invokeOnCompletion {
         findContainerJob.cancel()
       }
       findContainerJob.join()
-      log.debug("Waiting ad-hoc for intercepted request")
+      log.debug("[{}] Waiting for intercepted request", item.number)
+      waitIfPaused()
       val response = try {
         withTimeout(15.seconds) {
-          asyncIntercepted.await()
+          interceptorJob.await()
         }
       } finally {
-        asyncIntercepted.cancel()
+        interceptorJob.cancel()
       }
-      extractUrlFromRequest(response)
+      return extractUrlFromRequest(response)
     } else {
-      findDirectVideoDownloadUrlFromHtml(VideoData(url, driver.title.orEmpty(), 1), handler)
+      return findDirectVideoDownloadUrlFromHtml(item, handler)
     }
-    
-    return result
   }
   
   protected open suspend fun findDirectVideoDownloadUrlFromHtml(data: VideoData, serverHandler: VideoServerHandler<*>): DirectUrl? {
@@ -388,38 +384,6 @@ abstract class StreamingWebsiteBase(
     return found?.let { DirectUrl(it) }
   }
   
-  protected open suspend fun findLoadedVideoDownloadUrl(data: VideoData, serverHandler: VideoServerHandler<*>): VideoUrl? {
-    delay(200)
-    if (serverHandler is HLSVideoServerHandler) {
-      var s = 100
-      var streamUrl = serverHandler.getM3U8UrlFromEvents()
-      if (streamUrl == null) {
-        checkForCaptchaAndOtherOverlays(data)
-        runBlocking(Dispatchers.Main) {
-          GlobalState.view.showMessageDialog("Cannot find URL. Video not started?")
-        }
-      }
-      while (streamUrl == null && s > 0) {
-        delay(100)
-        s--
-        streamUrl = serverHandler.getM3U8UrlFromEvents()
-      }
-      return streamUrl?.let { M3U8Url(it) }
-      
-    } else {
-      var found = serverHandler.findVideoSrcUrl(5)
-      if (found == null) {
-        checkForCaptchaAndOtherOverlays(data)
-        runBlocking(Dispatchers.Main) {
-          GlobalState.view.showMessageDialog("Cannot find URL. Video not started?")
-        }
-        found = serverHandler.findVideoSrcUrl(5)
-      }
-      return found?.let { DirectUrl(it) }
-    }
-    return null
-  }
-  
   protected open suspend fun getSeriesLink() = getFullUrl(settings.seriesUrl)
   
   protected open suspend fun <T> openStreamAndInitializePlayerThenRun(
@@ -428,7 +392,7 @@ abstract class StreamingWebsiteBase(
     handler: VideoServerHandler<*>,
     blockExecutedOnPage: (suspend () -> T)? = null
   ): T? {
-    return data.server?.let {
+    return server.let {
       driver.navigate().to(getFullUrl(it.videoPageExternalUrl!!))
       blockExecutedOnPage?.invoke()
     } ?: run {

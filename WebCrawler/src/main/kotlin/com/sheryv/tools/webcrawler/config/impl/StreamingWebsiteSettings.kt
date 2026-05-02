@@ -40,6 +40,7 @@ data class StreamingWebsiteSettings(
   val skippedEpisodes: List<Int> = emptyList(),
   var history: List<HistoryItem> = emptyList(),
   val linkExpirationDuration: Duration = Duration.ofDays(1),
+  val converterExePath: String? = null,
 ) : SettingsBase() {
   
   override fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
@@ -101,6 +102,7 @@ data class StreamingWebsiteSettings(
       listOf("Episode number"),
       false
     )
+    val converterPath = TextInputSettingsRow(viewFactory, "ShvVideoConverter executable path", converterExePath.orEmpty())
     return Pair(
       listOf(
         prepareHistoryDropdown(),
@@ -121,6 +123,7 @@ data class StreamingWebsiteSettings(
         episodeAudioTypes,
         qualitiesRow,
         skippedEpisodes,
+        converterPath
       )
     ) {
       val types = episodeAudioTypes.readValue()
@@ -153,7 +156,8 @@ data class StreamingWebsiteSettings(
           s.changeActivation(provs.first { it.cells[2] == s.id }.isEnabled()) as VideoServerConfig
         },
         skipped.filter { it.isEnabled() }.map { it.cells.first().toInt() },
-        history
+        history,
+        converterExePath = converterPath.readValue()
       )
     }
   }
@@ -188,6 +192,9 @@ data class StreamingWebsiteSettings(
   }
   
   fun appendHistory(item: HistoryItem) {
+    if (history.contains(item)) {
+      return
+    }
     history = listOf(item) + history
     if (history.size > 30) {
       history = history.dropLast(1)

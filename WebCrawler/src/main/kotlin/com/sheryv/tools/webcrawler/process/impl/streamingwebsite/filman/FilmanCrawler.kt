@@ -97,13 +97,18 @@ class FilmanCrawler(
         
         return res
       } finally {
+        waitIfPaused()
         closeOtherTabs(current)
         driver.switchTo().window(current)
       }
     } else {
       log.debug("Switching frame")
       driver.switchTo().frame(driver.findElement(By.cssSelector("#player-container #frame iframe")))
-      return blockExecutedOnPage?.invoke()
+      try {
+        return blockExecutedOnPage?.invoke()
+      } finally {
+        waitIfPaused()
+      }
     }
   }
   

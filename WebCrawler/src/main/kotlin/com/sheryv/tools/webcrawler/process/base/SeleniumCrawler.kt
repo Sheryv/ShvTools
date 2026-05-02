@@ -80,7 +80,8 @@ abstract class SeleniumCrawler<S : SettingsBase>(
     timeoutSeconds: Int = 3,
     intervalMs: Long = 250,
     label: String? = null,
-    checkIsCorrect: (WebElement) -> Boolean = { true }
+    doLog: Boolean = true,
+    checkIsCorrect: (WebElement) -> Boolean = { true },
   ): WebElement? {
     var ex: Exception? = null
     val nothing = false to null
@@ -97,7 +98,7 @@ abstract class SeleniumCrawler<S : SettingsBase>(
         nothing
       }
     }
-    if (result == null) {
+    if (result == null && doLog) {
       log.warn(
         "ERROR: Selector '{}' not found during {} seconds | {}{}",
         selector.toString(),

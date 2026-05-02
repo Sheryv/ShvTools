@@ -141,6 +141,10 @@
     -fx-background-color: derive(-fx-accent, -5%), -fx-accent;
 }
 
+.table-row-cell.drag-target {
+    -fx-border-color: red;
+    -fx-border-width: 1;
+}
 
 .container-border {
     -fx-border-color: derive(-fx-control-inner-background, -20%);

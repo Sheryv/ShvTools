@@ -2,6 +2,7 @@
 
 package com.sheryv.util.logging
 
+import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.LoggerContext
 import com.sheryv.util.LimitedQueue
 import org.slf4j.Logger
@@ -60,6 +61,10 @@ object LoggingUtils {
     return synchronized(this) {
       return@synchronized logHistory!!.toList()
     }
+  }
+  
+  fun setGlobalLevel(level: Level) {
+    ((LoggerFactory.getILoggerFactory() as LoggerContext).getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME)).setLevel(level)
   }
 }
 

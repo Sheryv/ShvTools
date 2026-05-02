@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.service.BrowserSupport
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.util.logging.log
+import kotlinx.coroutines.delay
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
@@ -31,6 +32,7 @@ import java.nio.file.StandardCopyOption
 import java.time.Duration
 import java.util.*
 import java.util.logging.Level
+import kotlin.time.Duration.Companion.milliseconds
 
 typealias NetworkInterceptor = (request: HttpRequest, handler: HttpHandler) -> HttpResponse?
 typealias NetworkRequestListener = (request: RequestData) -> Unit
@@ -202,6 +204,31 @@ open class SeleniumDriver(
     } else null
   }
   
+  suspend fun <T> closeTabsOpenedInBackground(block: suspend (driver: WebDriver) -> T): T {
+    val current = windowHandle
+    val opened = windowHandles
+    
+    val result = try {
+      block(this)
+    } finally {
+      try {
+        windowHandles.subtract(opened).forEach {
+          switchTo().window(it)
+          delay(10.milliseconds)
+          wrappedDriver.close()
+          log.debug("Closed tab: $it")
+        }
+      } catch (e: Exception) {
+        if (windowHandle != current) {
+          switchTo().window(current)
+        }
+        throw e
+      }
+    }
+    
+    return result
+  }
+  
   fun saveScreenshot(targetPath: Path): Path {
     Files.createDirectories(targetPath.parent)
     val shot = (wrappedDriver as TakesScreenshot).getScreenshotAs<File>(OutputType.FILE).toPath()
@@ -226,7 +253,7 @@ open class SeleniumDriver(
       }
       
       is ChromiumDriver -> {
-        
+
 //        networkBidi = org.openqa.selenium.bidi.module.Network(wrappedDriver)
 //        networkBidi!!.addIntercept(AddInterceptParameters(InterceptPhase.RESPONSE_STARTED))
 //        networkBidi!!.onResponseStarted { resp ->
@@ -239,7 +266,7 @@ open class SeleniumDriver(
 //          }
 //          log.debug("INTERCEPT 2 done, RequestId: {}", requestId)
 //        }
-        
+
 //        networkBidi!!.onBeforeRequestSent { req ->
 //          val requestId = req.request.requestId
 //          log.debug(

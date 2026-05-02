@@ -30,7 +30,7 @@ class TableSettingsRow(
     table = TableView<RowDefinition>()
     table.items.addAll(items)
     if (orderable) {
-      table.rowFactory = ViewUtils.tableDraggableRowFactory()
+      table.rowFactory = com.sheryv.util.fx.core.view.ViewUtils.tableDraggableRowFactory()
     }
     
     table.columns.add(TableColumn<RowDefinition, Boolean>("Enabled").apply {

@@ -8,7 +8,9 @@ import kotlin.time.Duration.Companion.milliseconds
 
 object CommonVideoServers {
   val ALL = listOf(
-    VideoServerDefinition("voe", "Voe", listOf("voe.sx", "lauradaydo.com"), true, ::JWVideoServerHandler),
+    VideoServerDefinition("voe", "Voe", listOf("voe.sx", "lauradaydo.com"), true) { d, s ->
+      JWVideoServerHandler(d, s, By.cssSelector("iframe#pl"))
+    },
     VideoServerDefinition("vtube", "VTube", listOf("vtbe.to"), true, ::VTubeVideoServerHanlder),
     VideoServerDefinition("vidoza", "Vidoza", listOf("vidoza.net"), false),
     VideoServerDefinition("embedo", "Embedo", listOf("embedo.co"), true) { def, scraper ->
@@ -48,12 +50,12 @@ object CommonVideoServers {
 }
 
 private const val JW_PLAYER_ACTIVATION_SCRIPT =
-  "document.querySelector('.jw-player .spin')?.click();document.querySelector('.jw-controls .jw-button-color')?.click();document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
+  "document.querySelector('.jwplayer .spin')?.click();document.querySelector('.jw-controls .jw-button-color')?.click();document.querySelector('button[data-plyr=play]')?.click();document.querySelector('.voe-play')?.click()"
 private const val JW_PLAYER_CHECK_READY_SCRIPT =
-  "document.querySelector('.jw-player .spin') != null"
+  "document.querySelector('.jwplayer .spin') != null"
 
-class JWVideoServerHandler(def: VideoServerDefinition, scraper: StreamingWebsiteBase) :
-  HLSVideoServerHandler(def, scraper, JW_PLAYER_ACTIVATION_SCRIPT, JW_PLAYER_CHECK_READY_SCRIPT) {
+class JWVideoServerHandler(def: VideoServerDefinition, scraper: StreamingWebsiteBase, iframe: By? = null) :
+  HLSVideoServerHandler(def, scraper, JW_PLAYER_ACTIVATION_SCRIPT, JW_PLAYER_CHECK_READY_SCRIPT, iframe) {
   
   override suspend fun findVideoSrcUrl(timeout: Int): String? {
     delay(2000.milliseconds)

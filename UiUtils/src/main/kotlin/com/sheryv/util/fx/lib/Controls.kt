@@ -674,63 +674,9 @@ fun <S, T : Any, N : Node> TableView<S>.columnBoundToCustomCell(
   controlValue: (N) -> Property<T?>,
   onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
 ): TableColumn<S, T?> {
-  return columnBound(name, width, alignRight, modelValue).customCell2(modelValue, builder, controlValue, onUpdate)
+  return columnBound(name, width, alignRight, modelValue).customCell(modelValue, builder, controlValue, onUpdate)
 }
 
-
-fun <S, T : Any, N : Node> TableColumn<S, T?>.customCell2(
-  modelValue: (S) -> Property<T?>,
-  builder: (TableCell<S, T?>) -> N,
-  controlValue: (N) -> Property<T?>,
-  onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
-): TableColumn<S, T?> {
-  setCellFactory { col ->
-    val c = object : TableCell<S, T?>() {
-      val node = builder(this)
-      val controlProperty = controlValue(node)
-      var lastListener: ChangeListener<T?>? = null
-      var lastRow: S? = null
-      
-      override fun updateItem(item: T?, empty: Boolean) {
-        super.updateItem(item, empty)
-        lastListener?.also { controlProperty.removeListener(it) }
-        if (empty || tableRow == null || tableRow.item == null) {
-          onUpdate(null, tableRow.item, graphic as? N)
-          lastListener = null
-          graphic = null
-        } else {
-          if (lastRow != tableRow.item) {
-            lastRow = tableRow.item
-            val model = modelValue(tableRow.item)
-            if (controlProperty.value != model.value) {
-              controlProperty.value = model.value
-            }
-            lastListener = ChangeListener { _, o, n ->
-//                log.debug("ChangeListener {} | {}", n, model.value)
-              model.value = n
-            }
-
-//              log.debug("Binding {} {} -> {} | {} | {}", tableRow.item, model.hashCode(), controlProperty.hashCode(), item, this.hashCode())
-          }
-          if (lastListener != null) {
-            controlProperty.addListener(lastListener)
-          }
-          onUpdate(item, tableRow.item, node)
-          graphic = node
-        }
-      }
-    }
-    c
-  }
-  return this
-}
-/*
-*              TextField().stripNonNumeric().let {
-                  val formatter = cell.itemProperty().formatter()
-                  it.textFormatter = formatter
-                  it to formatter.valueProperty()
-                }
-* */
 
 fun <S, N : TextInputControl> TableView<S>.columnBoundToTextControlCell(
   name: String,
@@ -766,9 +712,9 @@ fun <S> TableView<S>.columnBoundToTextFieldCell(
 
 inline fun <S, reified T : Any, N : TextInputControl> TableView<S>.columnBoundToTextFieldFormattedCell(
   name: String,
-  default: T,
   width: Int? = null,
   alignRight: Boolean = false,
+  default: T,
   noinline modelValue: (S) -> Property<T?>,
   noinline builder: (TableCell<S, T?>) -> N = { TextField() as N },
   noinline controlValue: (N) -> Property<T?> = { it.withFormatter<T>(default).valueProperty() },
@@ -779,18 +725,9 @@ inline fun <S, reified T : Any, N : TextInputControl> TableView<S>.columnBoundTo
     it.styleClass.add("text-field-table-cell")
     builder(it)
   }, controlValue, onUpdate)
-
-//  return customCell({ c ->
-//    c.styleClass.add("text-field-table-cell")
-//    builder(c).let { it to it.withFormatter<T>(default).valueProperty() }
-//  }, { item, row, tf ->
-//    @Suppress("UNCHECKED_CAST")
-//    (tf.textFormatter as TextFormatter<T>).value = item
-//    onUpdate(item, row, tf)
-//  })
 }
 
-fun <S, T : Any, N : ComboBoxBase<T>> TableView<S>.columnBoundToComboCell(
+fun <S, T : Any, N : ComboBox<T>> TableView<S>.columnBoundToComboCell(
   name: String,
   width: Int? = null,
   alignRight: Boolean = false,
@@ -806,41 +743,94 @@ fun <S, T : Any, N : ComboBoxBase<T>> TableView<S>.columnBoundToComboCell(
   }, controlValue, onUpdate)
 }
 
+
+fun <S> TableView<S>.columnBoundToCheckBoxCell(
+  name: String,
+  width: Int? = null,
+  alignRight: Boolean = false,
+  modelValue: (S) -> Property<Boolean?>,
+  default: Boolean = false,
+  builder: (TableCell<S, Boolean?>) -> CheckBox = { CheckBox().apply { isSelected = default } },
+  controlValue: (CheckBox) -> Property<Boolean?> = { it.selectedProperty() },
+  onUpdate: (Boolean?, S?, CheckBox?) -> Unit = { _, _, _ -> }
+): TableColumn<S, Boolean?> {
+  return columnBoundToCustomCell(name, width, alignRight, modelValue, {
+    styleClass.add("check-box-table-cell")
+    builder(it)
+  }, controlValue, onUpdate)
+}
+
 fun <S, T : Any, N : ButtonBase> TableColumn<S, T>.customButtonCell(
-  builder: (TableCell<S, T>) -> N,
+  label: String,
+  onAction: (T) -> Unit,
+  builder: (TableCell<S, T>) -> N = {
+    Button(label).action {
+      if (it.item != null) {
+        onAction(it.item)
+      }
+    } as N
+  },
   onUpdate: (T?, S?, N) -> Unit = { _, _, _ -> }
 ): TableColumn<S, T> {
-  return customCell({ c -> builder(c) to null }, onUpdate)
+  return customCell(builder, onUpdate)
 }
 
 
+fun <S, T : Any, N : Node> TableColumn<S, T?>.customCell(
+  modelValue: (S) -> Property<T?>,
+  builder: (TableCell<S, T?>) -> N,
+  controlValue: (N) -> Property<T?>,
+  onUpdate: (T?, S?, N?) -> Unit = { _, _, _ -> }
+): TableColumn<S, T?> {
+  setCellFactory { col ->
+    val c = object : TableCell<S, T?>() {
+      val node = builder(this)
+      val controlProperty = controlValue(node)
+      var lastListener: ChangeListener<T?>? = null
+      var lastRow: S? = null
+      
+      override fun updateItem(item: T?, empty: Boolean) {
+        super.updateItem(item, empty)
+        lastListener?.also { controlProperty.removeListener(it) }
+        if (empty || tableRow == null || tableRow.item == null) {
+          onUpdate(null, tableRow.item, graphic as? N)
+          lastListener = null
+          graphic = null
+        } else {
+          onUpdate(item, tableRow.item, node)
+          if (lastRow != tableRow.item) {
+            lastRow = tableRow.item
+            val model = modelValue(tableRow.item)
+            if (controlProperty.value != model.value) {
+              controlProperty.value = model.value
+            }
+            lastListener = ChangeListener { _, o, n ->
+//                log.debug("ChangeListener {} | {}", n, model.value)
+              model.value = n
+            }
+
+//              log.debug("Binding {} {} -> {} | {} | {}", tableRow.item, model.hashCode(), controlProperty.hashCode(), item, this.hashCode())
+          }
+          if (lastListener != null) {
+            controlProperty.addListener(lastListener)
+          }
+          graphic = node
+        }
+      }
+    }
+    c
+  }
+  return this
+}
+
 fun <S, T : Any, N : Node> TableColumn<S, T>.customCell(
-  builder: (TableCell<S, T>) -> Pair<N, ObservableValue<T?>?>,
+  builder: (TableCell<S, T>) -> N,
   onUpdate: (T?, S?, N) -> Unit
 ): TableColumn<S, T> {
   isEditable = true
   setCellFactory { col ->
     val c = object : TableCell<S, T>() {
-      private var columnProperty: ObservableValue<T>? = null
-      fun getProp(): ObservableValue<T>? {
-        if (columnProperty == null) {
-          columnProperty = tableRow?.item?.let { cellValueFactory.call(TableColumn.CellDataFeatures(col.tableView, col, tableRow.item)) }
-        }
-        return columnProperty
-      }
-      
-      val node = builder(this).let {
-        it.second?.onChangeNotNull { value ->
-          val prop = getProp()
-          if (prop is Property<T>) {
-            prop.value = value
-          }
-//          startEdit()
-//          commitEdit(value)
-        
-        }
-        it.first
-      }
+      val node = builder(this)
       
       override fun updateItem(item: T?, empty: Boolean) {
         super.updateItem(item, empty)
@@ -854,17 +844,6 @@ fun <S, T : Any, N : Node> TableColumn<S, T>.customCell(
         }
       }
     }
-//    val (node, prop) = builder(c)
-//
-//    c.itemProperty().addListener { observable, oldValue, newValue ->
-//      if (oldValue != null) {
-//        prop.unbindBidirectional(c.itemProperty())
-//      }
-//      if (newValue != null) {
-//        prop.bindBidirectional(c.itemProperty())
-//      }
-//    }
-//    c.graphicProperty().bind(Bindings.`when`(c.emptyProperty()).then(null as Node?).otherwise(node))
     c
   }
   return this

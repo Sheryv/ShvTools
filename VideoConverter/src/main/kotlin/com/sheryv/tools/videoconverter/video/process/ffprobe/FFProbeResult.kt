@@ -2,6 +2,7 @@ package com.sheryv.tools.videoconverter.video.process.ffprobe
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
+import com.sheryv.tools.videoconverter.video.process.Language
 
 data class FFProbeResult(val format: FFFormat?, val streams: List<FFStream> = listOf(), val chapters: List<FFChapter>? = null)
 
@@ -62,6 +63,24 @@ data class FFStream(
   
   fun title(): String? {
     return tags?.get("title")
+  }
+  
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is FFStream) return false
+    
+    if (index != other.index) return false
+    if (codecName != other.codecName) return false
+    if (codecType != other.codecType) return false
+    
+    return true
+  }
+  
+  override fun hashCode(): Int {
+    var result = index
+    result = 31 * result + (codecName?.hashCode() ?: 0)
+    result = 31 * result + (codecType?.hashCode() ?: 0)
+    return result
   }
 }
 

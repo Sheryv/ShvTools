@@ -1,40 +1,184 @@
-en; English; English;
-pl; Polish; Polski;
-de; German; Deutsch;
-fr; French; Français;
-it; Italian; Italiano;
-es; Spanish; Español;
-uk; Ukrainian; Українська;
-ro; Romanian; Română;
-nl; Dutch; Nederlands;
-el; Greek; Ελληνικά;
-hu; Hungarian; Magyar;
-pt; Portuguese; Português;
-cs; Czech; Čeština;
-sv; Swedish; Svenska;
-sr; Serbian; Српски;
-ru; Russian; Русский;
-zh; Mandarin Chinese; 中文;
-hi; Hindi; हिन्दी;
-ar; Modern Standard Arabic; العربية;
-bn; Bengali; বাংলা;
-id; Indonesian; Bahasa Indonesia;
-ur; Urdu; اردو;
-ja; Japanese; 日本語;
-pcm; Nigerian Pidgin; Naijá;
-arz; Egyptian Arabic; اللغة العربية المصرية;
-mr; Marathi; मराठी;
-vi; Vietnamese; Tiếng Việt;
-te; Telugu; తెలుగు;
-sw; Swahili; Kiswahili;
-ha; Hausa; Hausa;
-tr; Turkish; Türkçe;
-pnb; Western Punjabi; پنجابی;
-tl; Tagalog; Tagalog;
-ta; Tamil; தமிழ்;
-yue; Yue Chinese; 粵語;
-wuu; Wu Chinese; 吴语;
-fa; Persian; فارسی;
-ko; Korean; 한국어;
-am; Amharic; አማርኛ;
-th; Thai; ไทย
+aa;aar;Afar;Qafaraf
+ab;abk;Abkhazian;Аҧсуа бызшәа
+ae;ave;Avestan;Avesta
+af;afr;Afrikaans;Afrikaans
+ak;aka;Akan;Akan
+am;amh;Amharic;አማርኛ
+an;arg;Aragonese;Aragonés
+ar;ara;Arabic;العربية
+as;asm;Assamese;অসমীয়া
+av;ava;Avaric;Авар мацӀ
+ay;aym;Aymara;Aymar aru
+az;aze;Azerbaijani;Azərbaycan dili
+ba;bak;Bashkir;Башҡорт теле
+be;bel;Belarusian;Беларуская мова
+bg;bul;Bulgarian;Български език
+bh;bih;Bihari languages;भोजपुरी
+bi;bis;Bislama;Bislama
+bm;bam;Bambara;Bamanankan
+bn;ben;Bengali;বাংলা
+bo;bod;Tibetan;བོད་སྐད་
+br;bre;Breton;Brezhoneg
+bs;bos;Bosnian;Bosanski jezik
+ca;cat;Catalan;Català
+ce;che;Chechen;Нохчийн мотт
+ch;cha;Chamorro;Chamoru
+co;cos;Corsican;Corsu
+cr;cre;Cree;ᓀᐦᐃᔭᐁᐧᐃᐧin
+cs;ces;Czech;Čeština
+cu;chu;Church Slavic;Ѩзыкъ словѣньскъ
+cv;chv;Chuvash;Чӑваш чӗлхи
+cy;cym;Welsh;Cymraeg
+da;dan;Danish;Dansk
+de;deu;German;Deutsch
+dv;div;Divehi;ދިވެހި
+dz;dzo;Dzongkha;རྫོང་ཁ་
+ee;ewe;Ewe;Eʋegbe
+el;ell;Greek;Ελληνικά
+en;eng;English;English
+eo;epo;Esperanto;Esperanto
+es;spa;Spanish;Español
+et;est;Estonian;Eesti keel
+eu;eus;Basque;Euskara
+fa;fas;Persian;فارسی
+ff;ful;Fulah;Fulfulde
+fi;fin;Finnish;Suomi
+fj;fij;Fijian;Vosa Vakaviti
+fo;fao;Faroese;Føroyskt
+fr;fra;French;Français
+fy;fry;Western Frisian;Frysk
+ga;gle;Irish;Gaeilge
+gd;gla;Gaelic;Gàidhlig
+gl;glg;Galician;Galego
+gn;grn;Guarani;Avañe'ẽ
+gu;guj;Gujarati;ગુજરાતી
+gv;glv;Manx;Gaelg
+ha;hau;Hausa;هَوُسَ
+he;heb;Hebrew;עברית
+hi;hin;Hindi;हिन्दी
+ho;hmo;Hiri Motu;Hiri Motu
+hr;hrv;Croatian;Hrvatski jezik
+ht;hat;Haitian;Kreyòl ayisyen
+hu;hun;Hungarian;Magyar
+hy;hye;Armenian;Հայերեն
+hz;her;Herero;Otjiherero
+ia;ina;Interlingua;Interlingua
+id;ind;Indonesian;Bahasa Indonesia
+ie;ile;Interlingue;Interlingue
+ig;ibo;Igbo;Asụsụ Igbo
+ii;iii;Sichuan Yi;ꆈꌠ꒿ Nuosuhxop
+ik;ipk;Inupiaq;Iñupiaq
+io;ido;Ido;Ido
+is;isl;Icelandic;Íslenska
+it;ita;Italian;Italiano
+iu;iku;Inuktitut;ᐃᓄᒃᑎᑐᑦ
+ja;jpn;Japanese;日本語
+jv;jav;Javanese;Basa Jawa
+ka;kat;Georgian;Ქართული
+kg;kon;Kongo;Kikongo
+ki;kik;Kikuyu;Gĩkũyũ
+kj;kua;Kuanyama;Kuanyama
+kk;kaz;Kazakh;Қазақ тілі
+kl;kal;Kalaallisut;Kalaallisut
+km;khm;Central Khmer;ភាសាខ្មែរ
+kn;kan;Kannada;ಕನ್ನಡ
+ko;kor;Korean;한국어
+kr;kau;Kanuri;Kanuri
+ks;kas;Kashmiri;कश्मीरी
+ku;kur;Kurdish;Kurdî
+kv;kom;Komi;Коми кыв
+kw;cor;Cornish;Kernewek
+ky;kir;Kirghiz;Кыргызча
+la;lat;Latin;Latine
+lb;ltz;Luxembourgish;Lëtzebuergesch
+lg;lug;Ganda;Luganda
+li;lim;Limburgish;Limburgs
+ln;lin;Lingala;Lingála
+lo;lao;Lao;ພາສາລາວ
+lt;lit;Lithuanian;Lietuvių kalba
+lu;lub;Luba-Katanga;Kiluba
+lv;lav;Latvian;Latviešu valoda
+mg;mlg;Malagasy;Fiteny malagasy
+mh;mah;Marshallese;Kajin M̧ajeļ
+mi;mri;Maori;Te reo Māori
+mk;mkd;Macedonian;Македонски јазик
+ml;mal;Malayalam;മലയാളം
+mn;mon;Mongolian;Монгол хэл
+mr;mar;Marathi;मराठी
+ms;msa;Malay;Bahasa Melayu
+mt;mlt;Maltese;Malti
+my;mya;Burmese;ဗမာစာ
+na;nau;Nauru;Ekakairũ Naoero
+nb;nob;Norwegian Bokmål;Norsk bokmål
+nd;nde;North Ndebele;IsiNdebele saseNyakatho
+ne;nep;Nepali;नेपाली
+ng;ndo;Ndonga;Oshindonga
+nl;nld;Dutch;Nederlands
+nn;nno;Norwegian Nynorsk;Norsk nynorsk
+no;nor;Norwegian;Norsk
+nr;nbl;South Ndebele;IsiNdebele seSewula
+nv;nav;Navajo;Diné bizaad
+ny;nya;Chichewa;ChiCheŵa
+oc;oci;Occitan;Occitan
+oj;oji;Ojibwe;ᐊᓂᔑᓈᐯᒧᐎᓐ Anishinaabemowin
+om;orm;Oromo;Afaan Oromoo
+or;ori;Oriya;ଓଡ଼ିଆ
+os;oss;Ossetian;Ирон ӕвзаг
+pa;pan;Panjabi;ਪੰਜਾਬੀ
+pi;pli;Pali;पाऴि
+pl;pol;Polish;Polski
+ps;pus;Pushto;پښتو
+pt;por;Portuguese;Português
+qu;que;Quechua;Runa Simi
+rm;roh;Romansh;Rumantsch grischun
+rn;run;Rundi;Ikirundi
+ro;ron;Romanian;Română
+ru;rus;Russian;Русский язык
+rw;kin;Kinyarwanda;Ikinyarwanda
+sa;san;Sanskrit;संस्कृतम्
+sc;srd;Sardinian;Sardu
+sd;snd;Sindhi;سنڌي
+se;sme;Northern Sami;Davvisámegiella
+sg;sag;Sango;Yângâ tî sängö
+si;sin;Sinhala;සිංහල
+sk;slk;Slovak;Slovenčina
+sl;slv;Slovenian;Slovenščina
+sm;smo;Samoan;Gagana fa'a Sāmoa
+sn;sna;Shona;ChiShona
+so;som;Somali;Soomaaliga
+sq;sqi;Albanian;Shqip
+sr;srp;Serbian;Српски језик
+ss;ssw;Swati;SiSwati
+st;sot;Sotho, Southern;Sesotho
+su;sun;Sundanese;Basa Sunda
+sv;swe;Swedish;Svenska
+sw;swa;Swahili;Kiswahili
+ta;tam;Tamil;தமிழ்
+te;tel;Telugu;తెలుగు
+tg;tgk;Tajik;Тоҷикӣ
+th;tha;Thai;ไทย
+ti;tir;Tigrinya;ትግርኛ
+tk;tuk;Turkmen;Türkmençe
+tl;tgl;Tagalog;Wikang Tagalog
+tn;tsn;Tswana;Setswana
+to;ton;Tonga;Faka Tonga
+tr;tur;Turkish;Türkçe
+ts;tso;Tsonga;Xitsonga
+tt;tat;Tatar;Татар теле
+tw;twi;Twi;Twi
+ty;tah;Tahitian;Reo Tahiti
+ug;uig;Uighur;ئۇيغۇرچە‎
+uk;ukr;Ukrainian;Українська мова
+ur;urd;Urdu;اردو
+uz;uzb;Uzbek;Oʻzbekcha
+ve;ven;Venda;Tshivenḓa
+vi;vie;Vietnamese;Tiếng Việt
+vo;vol;Volapük;Volapük
+wa;wln;Walloon;Walon
+wo;wol;Wolof;Wollof
+xh;xho;Xhosa;IsiXhosa
+yi;yid;Yiddish;ייִדיש
+yo;yor;Yoruba;Yorùbá
+za;zha;Zhuang;Saɯ cueŋƅ
+zh;zho;Chinese;中文
+zu;zul;Zulu;IsiZulu

@@ -15,6 +15,7 @@ import com.sheryv.tools.webcrawler.process.base.event.FetchedDataStatusChangedEv
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
+import com.sheryv.tools.webcrawler.service.ConvertToMkvService
 import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.Downloader
@@ -23,8 +24,8 @@ import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
-import com.sheryv.tools.webcrawler.view.remoteclient.HttpServerView
 import com.sheryv.tools.webcrawler.view.jdownloader.JDownloaderView
+import com.sheryv.tools.webcrawler.view.remoteclient.HttpServerView
 import com.sheryv.tools.webcrawler.view.search.SearchView
 import com.sheryv.tools.webcrawler.view.search.SearchWindow
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelBuilder
@@ -229,7 +230,8 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
       val b = config.browserSettings.currentBrowser()
       if (b.binaryPath != null) {
         tfBrowserPath.text = b.binaryPath!!.toAbsolutePath().toString()
-        tfUserProfilePath.text = b.userProfilePath?.toAbsolutePath()?.toString() ?: b.type.getPathForUserProfileInBrowser(b)?.toString().orEmpty()
+        tfUserProfilePath.text =
+          b.userProfilePath?.toAbsolutePath()?.toString() ?: b.type.getPathForUserProfileInBrowser(b)?.toString().orEmpty()
       } else {
         config.browserSettings.currentBrowser().binaryPath = prev.binaryPath
       }
@@ -652,7 +654,8 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                   factory.dialogs.choiceDialog("Select tv series from history", rows)?.also { seriesCode ->
                     val item = settings.history[rows.indexOf(seriesCode)]
                     
-                    factory.dialogs.inputDialog("Select season for ${item.title}", header = "", rows = listOf(Pair("Season", ""))).firstOrNull()
+                    factory.dialogs.inputDialog("Select season for ${item.title}", header = "", rows = listOf(Pair("Season", "")))
+                      .firstOrNull()
                       ?.toIntOrNull()
                       ?.also {
                         val updated = item.copy(seasonNumber = it)
@@ -671,6 +674,34 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                   "Details", e.message + "\n\n" + e.stackTraceToString(), TITLE,
                   "Error while searching", Alert.AlertType.ERROR, true, false, ButtonType.OK
                 )
+              }
+            }
+          }
+        },
+        MenuItem("Convert downloaded files to mkv").apply {
+          accelerator = KeyCodeCombination(KeyCode.K, KeyCombination.CONTROL_DOWN)
+          setOnAction {
+            selected?.let { it.findSettings(config) as? StreamingWebsiteSettings }?.let {
+              inBackground {
+                try {
+                  val series = SerialisationUtils.jsonMapper.readValue(
+                    it.outputPath.toFile(),
+                    Series::class.java
+                  )
+                  ConvertToMkvService(config, it, viewFactory).convert(series) {
+                    inMainContext {
+                      lbState.text = "Conversion progress: $it %"
+                    }
+                  }
+                } catch (e: Exception) {
+                  log.error("Running error", e)
+                  inMainThread {
+                    factory.dialogs.textAreaDialog(
+                      "Details", e.stackTraceToString(), TITLE,
+                      "Error occurred while converting", Alert.AlertType.ERROR, false, false, ButtonType.OK
+                    )
+                  }
+                }
               }
             }
           }
@@ -843,7 +874,8 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   
   @FXML
   private lateinit var tfBrowserPath: TextField
-//  F:\Data\brave_profile_automat\User Data
+  
+  //  F:\Data\brave_profile_automat\User Data
   @FXML
   private lateinit var tfUserProfilePath: TextField
   
