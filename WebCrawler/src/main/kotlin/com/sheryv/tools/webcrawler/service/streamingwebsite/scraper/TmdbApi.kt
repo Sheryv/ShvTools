@@ -1,32 +1,25 @@
-package com.sheryv.tools.webcrawler.service.videosearch
+package com.sheryv.tools.webcrawler.service.streamingwebsite.scraper
 
 import com.sheryv.tools.webcrawler.GlobalState
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
+import kotlin.collections.get
 
-class TmdbApi(val key: String? = null) {
+class TmdbApi(private val secretsStore: SecretsStore) {
   
-  private fun findKey(): String {
-    if (key == null) {
-      val settings = GlobalState.settingsForCurrentScraper() as StreamingWebsiteSettings
-      require(!settings.tmdbKey.isNullOrBlank()) { "TMDB API key is required to use this feature" }
-      return settings.tmdbKey!!
-    }
-    return key
-  }
-  
-  fun searchTv(search: String, year: Int? = null): List<SearchItem> {
+  fun searchTv(search: String, year: Int? = null): List<TvSearchItem> {
     val support = HttpSupport()
     val query = SystemSupport.get.encodeNameForWeb(search)
     val json = support.sendString(
-      "https://api.themoviedb.org/3/search/tv?api_key=${findKey()}&language=en-US&query=$query&page=1${
+      "https://api.themoviedb.org/3/search/tv?api_key=${secretsStore.tmdbApiKey.require()}&language=en-US&query=$query&page=1${
         year?.let { "&first_air_date_year=$it" }.orEmpty()
       }"
     )
-    val result: SearchResult<SearchItem> = SerialisationUtils.fromJson(json)
+    val result: SearchResult<TvSearchItem> = SerialisationUtils.fromJson(json)
     val items = result.results
     log.info(
       "Found {} items for {}{}: {}",
@@ -41,7 +34,7 @@ class TmdbApi(val key: String? = null) {
     val support = HttpSupport()
     val query = SystemSupport.get.encodeNameForWeb(search)
     val json = support.sendString(
-      "https://api.themoviedb.org/3/search/movie?api_key=${findKey()}&language=en-US&query=$query&page=1${
+      "https://api.themoviedb.org/3/search/movie?api_key=${secretsStore.tmdbApiKey.require()}&language=en-US&query=$query&page=1${
         year?.let { "&primary_release_year=$it" }.orEmpty()
       }"
     )
@@ -56,32 +49,32 @@ class TmdbApi(val key: String? = null) {
     return items
   }
   
-  fun getTvSeries(id: Long): SearchItem {
+  fun getTvSeries(id: Long): TvSearchItem {
     val support = HttpSupport()
-    val json = support.sendString("https://api.themoviedb.org/3/tv/$id?api_key=${findKey()}&language=en-US&append_to_response=external_ids")
+    val json = support.sendString("https://api.themoviedb.org/3/tv/$id?api_key=${secretsStore.tmdbApiKey.require()}&language=en-US&append_to_response=external_ids")
     return SerialisationUtils.fromJson(json)
   }
   
   fun getTvEpisodes(id: Long, season: Int): TmdbSeason {
     val support = HttpSupport()
-    val json = support.sendString("https://api.themoviedb.org/3/tv/$id/season/$season?api_key=${findKey()}&language=en-US")
+    val json = support.sendString("https://api.themoviedb.org/3/tv/$id/season/$season?api_key=${secretsStore.tmdbApiKey.require()}&language=en-US")
     return SerialisationUtils.fromJson(json)
   }
   
   fun getImdbIdForTv(id: Long): String {
     val support = HttpSupport()
-    val json = support.sendString("https://api.themoviedb.org/3/tv/$id/external_ids?api_key=${findKey()}&language=en-US")
+    val json = support.sendString("https://api.themoviedb.org/3/tv/$id/external_ids?api_key=${secretsStore.tmdbApiKey.require()}&language=en-US")
     return SerialisationUtils.fromJson<Map<*, *>>(json)["imdb_id"].toString()
   }
   
   fun getImdbIdForMovie(id: Long): String? {
     val support = HttpSupport()
-    val json = support.sendString("https://api.themoviedb.org/3/movie/$id/external_ids?api_key=${findKey()}")
+    val json = support.sendString("https://api.themoviedb.org/3/movie/$id/external_ids?api_key=${secretsStore.tmdbApiKey.require()}")
     return SerialisationUtils.fromJson<Map<*, *>>(json)["imdb_id"]?.toString()
   }
   
   fun getEpisodeId(showId: Long, season: Int, episode: Int): String? {
-    val json = HttpSupport().sendString("https://api.themoviedb.org/3/tv/$showId/season/$season/episode/$episode/external_ids?api_key=${findKey()}")
+    val json = HttpSupport().sendString("https://api.themoviedb.org/3/tv/$showId/season/$season/episode/$episode/external_ids?api_key=${secretsStore.tmdbApiKey.require()}")
     return SerialisationUtils.fromJson<Map<*, *>>(json)["imdb_id"]?.toString()
   }
 }

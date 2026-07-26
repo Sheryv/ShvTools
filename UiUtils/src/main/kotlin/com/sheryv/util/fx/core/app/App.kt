@@ -77,6 +77,10 @@ abstract class App(protected val primaryViewClass: KClass<out BaseView>, val sta
       modules.add(module)
     }
     
+    fun module(module: Module) {
+      modules.add(module)
+    }
+    
     fun customAppInstance(block: () -> App) {
       customAppInstance = block
     }

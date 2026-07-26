@@ -21,7 +21,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
+import kotlin.streams.asSequence
 
 class ConversionProcessor(
   private val context: Context,
@@ -29,6 +31,7 @@ class ConversionProcessor(
   private val onComplete: (Exception?) -> Unit
 ) : AutoCloseable {
   private val settings = context.settings
+  private val filesystemOffestAttributeRegex = Regex("""offset=(-?\d+(.\d+)?)""")
   
   private val processes: Queue<Process> = ConcurrentLinkedQueue()
   private val threadPool = Executors.newFixedThreadPool(settings.parallelProcessing)
@@ -61,6 +64,8 @@ class ConversionProcessor(
   ): List<ConvertVideo> {
     val main = frozenSettings.mainSourceProperty.value
     val targetVideoRegex = main.pathPattern.toRegex()
+    
+    val allExtenstions =  SourceType.entries.flatMap { it.fileExtensions }.toSet()
     
     val outputToCompare = if (settings.outputDir.isAbsolute) {
       if (settings.outputDir.startsWith(settings.workingDir))
@@ -99,7 +104,7 @@ class ConversionProcessor(
         val foundPaths = mutableListOf(videoPath)
         val sourcesRegexes = buildRegexForAdditionalSourcesPaths(groupValues)
         var additionalSources = sourcesRegexes.mapIndexed { i, (regex, exception) ->
-          val def = frozenSettings.additionalSources[i]
+          val def = frozenSettings.sources[i]
           val previousAdditionalSource = previousVideo?.sources?.get(i)
           if (!def.enabled || regex.isNullOrBlank()) return@mapIndexed ConvertAdditionalSource(
             null,
@@ -120,7 +125,14 @@ class ConversionProcessor(
           foundPaths.add(path)
           val metadata = probeFile(path)
           
-          ConvertAdditionalSource(path, metadata, previousAdditionalSource, def)
+          val offset = filesystemOffestAttributeRegex.find(path.name)?.groupValues?.getOrNull(1)?.toDoubleOrNull()
+            ?: Files.list(path.parent?.let { frozenSettings.workingDir.resolve(it) } ?: frozenSettings.workingDir)
+              .filter { it.isRegularFile() }
+              .filter { it.extension !in allExtenstions }
+              .asSequence()
+              .firstNotNullOfOrNull { filesystemOffestAttributeRegex.find(it.name)?.groupValues?.getOrNull(1)?.toDoubleOrNull() }
+          
+          ConvertAdditionalSource(path, metadata, previousAdditionalSource, def, offset)
         }
         
         val state = if (Files.exists(calculateOutput(videoPath))) {
@@ -150,13 +162,13 @@ class ConversionProcessor(
   fun buildRegexForAdditionalSourcesPaths(matchedGroupsInVideoPath: List<String>): List<Pair<String?, Exception?>> {
     val values = matchedGroupsInVideoPath.mapIndexed { i, s -> i.toString() to s }.toMap()
     val templater = Strings.getTemplaterWithFormatterSupport(values)
-    return settings.additionalSources.map {
-      if (it.enabled && it.pathPattern.isNotBlank())
+    return settings.sources.map {
+      if (it.enabled && it.pathPattern.isNotBlank() && !it.main)
         try {
           templater.replace(it.pathPattern) to null
         } catch (e: Strings.KeyNotFoundException) {
           "=== Matching group ${e.key} not found ===" to e
-        } catch (e: Strings.IncorrectConverstionException) {
+        } catch (e: Strings.IncorrectConversionException) {
           "=== Conversion '${e.conversion}' contains illegal specifier '${e.specifier}' ===" to e
         }
       else {

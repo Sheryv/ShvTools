@@ -7,7 +7,7 @@ import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 
 interface SDriver : AutoCloseable {
-  fun initialize(crawler: Crawler<SDriver, SettingsBase>)
+  fun initialize(crawler: Crawler<out SDriver, out SettingsBase>)
   
   fun findElementsByTag(tag: String): Elements
   

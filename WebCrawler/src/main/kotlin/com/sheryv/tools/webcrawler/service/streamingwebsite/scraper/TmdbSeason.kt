@@ -1,4 +1,4 @@
-package com.sheryv.tools.webcrawler.service.videosearch
+package com.sheryv.tools.webcrawler.service.streamingwebsite.scraper
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty

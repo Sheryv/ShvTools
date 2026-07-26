@@ -12,6 +12,7 @@ import com.sheryv.tools.webcrawler.view.settings.*
 import com.sheryv.util.fx.core.view.ViewFactory
 import com.sheryv.util.fx.lib.onChangeNotNull
 import javafx.beans.property.SimpleStringProperty
+import org.koin.core.Koin
 import java.nio.file.Path
 import java.time.Duration
 import kotlin.collections.get
@@ -25,7 +26,6 @@ data class StreamingWebsiteSettings(
   val seriesName: String = "",
   val seasonNumber: Int = 1,
   val seriesUrl: String = "",
-  var tmdbKey: String? = null,
   val idmExePath: String? = null,
   var jDownloaderWatchedDir: String? = null,
   val searchStartIndex: Int = 1,
@@ -43,7 +43,7 @@ data class StreamingWebsiteSettings(
   val converterExePath: String? = null,
 ) : SettingsBase() {
   
-  override fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
+  override fun buildSettingsPanelDef(viewFactory: ViewFactory, koin: Koin): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
     val savePathRow = TextInputSettingsRow(viewFactory, "Intermediate file path", outputPath.toString())
     val seriesNameRow = TextInputSettingsRow(viewFactory, "Series name", seriesName)
     val seriesNumberRow = NumberRangeSettingRow("Season number", seasonNumber, 1, 100, showSlider = false)
@@ -51,7 +51,6 @@ data class StreamingWebsiteSettings(
     val download = TextInputSettingsRow(viewFactory, "Download directory (parent)", downloadDir)
     val searchStart = NumberRangeSettingRow("Search start index", searchStartIndex, 1, 10000)
     val searchStop = NumberRangeSettingRow("Search stop index (set -1 to disable)", searchStopIndex, -1, 10000)
-    val tmdb = TextInputSettingsRow(viewFactory, "API key for TMDB database (themoviedb.org)", tmdbKey.orEmpty())
     val idm = TextInputSettingsRow(viewFactory, "Path to IDM exe (Internet Download Manager integration)", idmExePath.orEmpty())
     val shuffleProviderOrder =
       BoolSettingsRow("Shuffle order of streaming providers when searching each episode", shuffleStreamingProviderOrder)
@@ -105,7 +104,7 @@ data class StreamingWebsiteSettings(
     val converterPath = TextInputSettingsRow(viewFactory, "ShvVideoConverter executable path", converterExePath.orEmpty())
     return Pair(
       listOf(
-        prepareHistoryDropdown(),
+        prepareHistoryDropdown(koin),
         seriesNameRow,
         seriesNumberRow,
         seriesUrlRow,
@@ -113,7 +112,6 @@ data class StreamingWebsiteSettings(
         download,
         searchStart,
         searchStop,
-        tmdb,
         idm,
         shuffleProviderOrder,
         parallelProviders,
@@ -137,7 +135,6 @@ data class StreamingWebsiteSettings(
         seriesNameRow.readValue(),
         seriesNumberRow.readValue(),
         seriesUrlRow.readValue(),
-        tmdb.readValue(),
         idm.readValue(),
         jDownloaderWatchedDir,
         searchStart.readValue(),
@@ -168,13 +165,14 @@ data class StreamingWebsiteSettings(
     return res
   }
   
-  private fun prepareHistoryDropdown(): ChoiceSettingsRow {
+  private fun prepareHistoryDropdown(koin: Koin): ChoiceSettingsRow {
+    val defs = koin.getAll<CrawlerDef>()
     val historyItems = history.map { it.toString() }
     val historyProp = SimpleStringProperty().also {
       it.onChangeNotNull { chosen ->
         if (chosen.isNotEmpty() && "-" != chosen && historyItems.indexOf(chosen) >= 0) {
           val item = history[historyItems.indexOf(chosen)]
-          Registry.get().crawlers().filterIsInstance<StreamingCrawlerBase>().firstOrNull { it.id() == crawlerId }?.onLoadFromHistory(item)
+          defs.filterIsInstance<StreamingCrawlerBase>().firstOrNull { it.id() == crawlerId }?.onLoadFromHistory(item)
         }
       }
     }

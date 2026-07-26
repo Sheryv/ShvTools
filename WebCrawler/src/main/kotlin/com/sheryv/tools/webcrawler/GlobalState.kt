@@ -14,10 +14,6 @@ object GlobalState {
   var processingState: NotNullObservable<ProcessingStates> = NotNullObservable(ProcessingStates.IDLE)
   var runningProcess: Observable<SeleniumCrawler<SettingsBase>> = Observable()
   var pauseOnNextStep: Boolean = false
-  
-  fun settingsForCurrentScraper(): SettingsBase {
-    return currentCrawler.findSettings(Configuration.get())
-  }
 }
 
 enum class ProcessingStates {

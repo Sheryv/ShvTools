@@ -1,15 +1,16 @@
 package com.sheryv.tools.webcrawler.view.search
 
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
-import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
-import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
-import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TvSearchItem
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbApi
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbEpisode
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.Strings
 import com.sheryv.util.event.EventBus
@@ -34,7 +35,7 @@ import javax.swing.event.ChangeEvent
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
 
-class SearchWindow {
+class SearchWindow(secrets: SecretsStore) {
   var mainPanel: JPanel? = null
     private set
   private lateinit var properties: JPanel
@@ -49,8 +50,8 @@ class SearchWindow {
   private lateinit var showFileListButton: JButton
   private lateinit var progressBar: JProgressBar
   private lateinit var findSizeBtn: JButton
-  private lateinit var cbVersion: JComboBox<SearchItem>
-  private val api = TmdbApi()
+  private lateinit var cbVersion: JComboBox<TvSearchItem>
+  private val api = TmdbApi(secrets)
   private var lastSeries: Series? = null
   private lateinit var configuration: Configuration
   private lateinit var settings: StreamingWebsiteSettings
@@ -82,7 +83,7 @@ class SearchWindow {
     cbVersion.addActionListener { e: ActionEvent? ->
       val item = cbVersion.selectedItem
       if (item != null) {
-        onVersionChanged(item as SearchItem)
+        onVersionChanged(item as TvSearchItem)
       }
     }
     clearBtn.addActionListener {
@@ -208,7 +209,7 @@ class SearchWindow {
     episodes.updateUI()
   }
   
-  private fun onVersionChanged(i: SearchItem) {
+  private fun onVersionChanged(i: TvSearchItem) {
     setProgress(-1)
     searchBtn.isEnabled = false
     val season = seasonNumber.value as Int
@@ -247,7 +248,7 @@ class SearchWindow {
       })
   }
   
-  private fun setDetails(i: SearchItem, season: Int) {
+  private fun setDetails(i: TvSearchItem, season: Int) {
     nameField.text = StringUtils.defaultString(i.name, i.originalName)
     detailsField.text = java.lang.String.format(
       "%s [%d, %s, S%d] %s | %.2f", i.originalName,
@@ -650,7 +651,7 @@ class SearchWindow {
     gbc.gridy = 2
     gbc.fill = GridBagConstraints.HORIZONTAL
     properties.add(spacer12, gbc)
-    cbVersion = JComboBox<SearchItem>()
+    cbVersion = JComboBox<TvSearchItem>()
     gbc = GridBagConstraints()
     gbc.gridx = 3
     gbc.gridy = 2

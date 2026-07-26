@@ -19,10 +19,7 @@ import javafx.geometry.Orientation
 import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.Parent
-import javafx.scene.control.SelectionMode
-import javafx.scene.control.TableRow
-import javafx.scene.control.TableView
-import javafx.scene.control.TextField
+import javafx.scene.control.*
 import javafx.scene.layout.Pane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.Region
@@ -31,6 +28,7 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.extension
+import kotlin.io.path.isDirectory
 import kotlin.io.path.nameWithoutExtension
 
 
@@ -100,23 +98,68 @@ class VideoConverterView(val settings: MainSettings, val context: Context) : Sim
           settings.save()
         },
         separator(orientation = Orientation.VERTICAL).growV(),
-        buttonIcon("\uEEF8", "One-off", tooltip = "Run for single movie") {
-          setOnAction {
-            factory.dialogs.openFileDialog(stage, initialFile = settings.workingDir.absolutePathString())?.let {
-              settings.workingDirProperty.value = it.parent.absolutePathString()
-              val exp = Pattern.compile(it.nameWithoutExtension, Pattern.LITERAL).pattern()
-              settings.mainSourceProperty.value.pathPatternProperty.value = "^" + exp.split(' ').first() + ".*\\." + it.extension
+        buttonIcon("\uEEF8", "One-off", tooltip = "Run for single movie / directory") {
+          
+          fun run(path: Path) {
+            val workingDir = if (path.isDirectory()) path.toAbsolutePath() else path.parent.toAbsolutePath()
+            
+              settings.workingDirProperty.value = workingDir.toString()
+            if (path.isDirectory()) {
+              settings.mainSourceProperty.value.pathPatternProperty.value = """^([^/]+/)*([^/]+)\.""" + SourceType.ALL.fileExtensions.joinToString("|", "(", ")")
               settings.additionalSources.first().run {
-                this.pathPatternProperty.value = "^" + exp + ".*\\." + SourceType.AUDIO.fileExtensions.joinToString("|", "(", ")")
+                this.pathPatternProperty.value =  $$"""^${1}/.*\[VO\]\.""" + SourceType.AUDIO.fileExtensions.joinToString("|", "(", ")")
                 this.defaultTimeOffsetProperty.value = 0.0
+                this.enabledProperty.value = true
+                this.audioTypeProperty.value = SourceAudioType.VOICE_OVER
               }
               settings.additionalSources[1].run {
-                this.pathPatternProperty.value = "^" + exp + ".*\\." + SourceType.SUBTITLES.fileExtensions.joinToString("|", "(", ")")
+                this.pathPatternProperty.value = $$"""^${1}/.*\.""" + SourceType.SUBTITLES.fileExtensions.joinToString("|", "(", ")")
                 this.defaultTimeOffsetProperty.value = 0.0
+                this.enabledProperty.value = true
               }
-              settings.outputDirProperty.value = ""
-              findFiles()
+              settings.additionalSources[2].run {
+                this.pathPatternProperty.value = $$"""^${1}/.*\[DUB\]\.""" + SourceType.AUDIO.fileExtensions.joinToString("|", "(", ")")
+                this.defaultTimeOffsetProperty.value = 0.0
+                this.enabledProperty.value = true
+                this.audioTypeProperty.value = SourceAudioType.DUBBING
+              }
+            } else {
+              val exp = Pattern.compile(path.nameWithoutExtension, Pattern.LITERAL).pattern().split(' ').first()
+              settings.mainSourceProperty.value.pathPatternProperty.value = "^" + exp + ".*\\." + path.extension
+              settings.additionalSources.first().run {
+                this.pathPatternProperty.value = exp + ".*\\." + SourceType.AUDIO.fileExtensions.joinToString("|", "(", ")")
+                this.defaultTimeOffsetProperty.value = 0.0
+                this.enabledProperty.value = true
+              }
+              settings.additionalSources[1].run {
+                this.pathPatternProperty.value = exp + ".*\\." + SourceType.SUBTITLES.fileExtensions.joinToString("|", "(", ")")
+                this.defaultTimeOffsetProperty.value = 0.0
+                this.enabledProperty.value = true
+              }
             }
+            settings.outputDirProperty.value = "out"
+            sourcesTableView.refresh()
+            findFiles()
+          }
+          
+          val menu = ContextMenu(
+            MenuItem("File").apply {
+              setOnAction {
+                factory.dialogs.openFileDialog(stage, initialFile = settings.workingDir.absolutePathString())?.let(::run)
+              }
+            },
+            MenuItem("Directory").apply {
+              setOnAction {
+                factory.dialogs.openDirectoryDialog(stage, initialDir = settings.workingDir.absolutePathString())?.let(::run)
+              }
+            },
+          )
+          setOnAction {
+            val control = it.source as Control
+            val bounds = control.boundsInLocal
+            val screenBounds = control.localToScreen(bounds)
+            
+            menu.show(control.parent, screenBounds.minX, screenBounds.minY)
           }
         },
         buttonIcon("\ue01c", "Subs to UTF-8", tooltip = "Convert encoding of matching subtitles files to UTF-8") {

@@ -7,6 +7,7 @@ import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
 import com.sheryv.util.fx.core.view.ViewFactory
+import org.koin.core.Koin
 import java.nio.file.Path
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -15,11 +16,9 @@ abstract class SettingsBase(
   abstract val crawlerId: String
   abstract val outputPath: Path
   
-  protected val crawlerAttr: CrawlerAttributes by lazy { Registry.get().crawlers().first { it.id() == crawlerId }.attributes }
-  
   abstract fun copyAll(): SettingsBase
   
-  abstract fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader>
+  abstract fun buildSettingsPanelDef(viewFactory: ViewFactory, koin: Koin): Pair<List<SettingsViewRow<*>>, SettingsPanelReader>
   
   open fun validate(def: CrawlerDef) {
   }

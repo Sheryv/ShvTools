@@ -7,9 +7,11 @@ import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.module.kotlin.addDeserializer
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
-import com.sheryv.tools.webcrawler.service.Registry
+import com.sheryv.tools.webcrawler.process.base.CrawlerDef
 import com.sheryv.tools.webcrawler.service.remoteclient.RemoteClientConfig
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.DownloaderConfig
 import com.sheryv.tools.webcrawler.utils.AppError
@@ -24,6 +26,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.OffsetDateTime
 import java.util.*
+import kotlin.reflect.KClass
 import kotlin.system.measureTimeMillis
 
 class Configuration(
@@ -33,7 +36,6 @@ class Configuration(
   var lastUserScript: String = "",
   var downloaderConfig: DownloaderConfig = DownloaderConfig(),
   var remoteClient: RemoteClientConfig = RemoteClientConfig(Path.of("")),
-  @JsonDeserialize(using = SettingsSetDeserializer::class)
   val settings: MutableSet<SettingsBase>
 ) : AppConfiguration() {
   
@@ -64,7 +66,7 @@ class Configuration(
   
   fun save(): Configuration {
     modifyDate = OffsetDateTime.now()
-    mapper.writeValue(File(FILE), this)
+    SerialisationUtils.toJson(File(FILE), this)
     EventBus.emitEvent(ConfigurationChangedEvent(this))
     return this
   }
@@ -73,13 +75,7 @@ class Configuration(
     const val FILE = "config.json"
     private const val PROP_FILE = "app.properties"
     
-    @JvmStatic
-    private val mapper by lazy {
-      SerialisationUtils.createJsonMapper()
-    }
-    
-    @JvmStatic
-    private val instance: Configuration by lazy(::load)
+    lateinit var instance: Configuration
     
     @JvmStatic
     fun get(): Configuration = instance
@@ -104,18 +100,24 @@ class Configuration(
     }
     
     @JvmStatic
-    private fun load(): Configuration {
+    fun load(registry: List<CrawlerDef>): Configuration {
       val path = Paths.get(FILE)
       return try {
+        
+        val mod = SimpleModule()
+        mod.addDeserializer(Set::class as KClass<Set<SettingsBase>>, SettingsSetDeserializer(registry))
+        val mapper = SerialisationUtils.jsonMapperBuilder().addModule(mod).build()
+        
         val c: Configuration
         val time = measureTimeMillis {
           c = if (Files.exists(path)) {
             mapper.readValue(path.toFile(), Configuration::class.java).save()
           } else {
-            Configuration(settings = Registry.get().crawlers().map { it.createDefaultSettings() }.toMutableSet()).save()
+            Configuration(settings = registry.map { it.createDefaultSettings() }.toMutableSet()).save()
           }
         }
         log.debug("Configuration loaded in $time ms")
+        instance = c
         c
       } catch (e: Exception) {
         throw AppError("Cannot load configuration file from '${path.toAbsolutePath()}'. Incorrect format", e)
@@ -151,9 +153,8 @@ data class CommonConfiguration(
   var verifyDownloadedFilesBeforeRetrying: Boolean = true
 )
 
-private class SettingsSetDeserializer : StdDeserializer<Set<SettingsBase>>(Set::class.java) {
+private class SettingsSetDeserializer(val registry: List<CrawlerDef>) : StdDeserializer<Set<SettingsBase>>(Set::class.java) {
   override fun deserialize(p: JsonParser, ctxt: DeserializationContext): Set<SettingsBase> {
-    val registry = Registry.get().crawlers()
     val mapping = registry.associate { it.id() to it.settingsClass }
     
     val settings =

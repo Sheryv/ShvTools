@@ -20,13 +20,13 @@ abstract class Crawler<T : SDriver, S : SettingsBase>(
   val def: CrawlerDefinition<T, S>,
   protected val driverBuilder: DriverBuilder<T>,
   val params: ProcessParams
-) {
+) : AutoCloseable {
   
   var driver by singleAssign<T>()
   
   open fun initialize() {
     driver = driverBuilder.build(configuration, browser)
-    driver.initialize(this as Crawler<SDriver, SettingsBase>)
+    driver.initialize(this)
   }
   
   abstract fun getSteps(): List<Step<out Any, out Any>>

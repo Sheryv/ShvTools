@@ -53,9 +53,9 @@ class FilmanCrawler(
   
   override suspend fun loadItemDataFromSummaryPageAndGetServers(data: VideoData): List<VideoServer> {
     val js = "return \$('#links > tbody > tr').get().filter(n => n.children.length > 0).map(n => ({a: n.children[1].textContent, " +
-        "q: n.children[2].textContent, h: n.children[0].children[0].children[0].getAttribute('alt'), d: n.children[0].innerText}))"
+        "q: n.children[2].textContent, h: n.children[0].children[0]?.children[0]?.getAttribute('alt'), d: n.children[0].innerText}))"
     
-    return driver.executeScriptFetchList(js)?.mapIndexed { i, map ->
+    return driver.executeScriptFetchList(js)?.filter { !it["h"]?.toString().isNullOrEmpty() }?.mapIndexed { i, map ->
       val name = map["h"]!!.toString().trim { it <= ' ' }.lowercase()
       val format = map["q"]!!.toString().trim { it <= ' ' }.lowercase()
       val audio = when (map["a"].toString().lowercase()) {
@@ -114,7 +114,7 @@ class FilmanCrawler(
   
   override suspend fun extractSeriesDetails(): SeriesDetailsFromPage {
     val year =
-      driver.executeScript("return document.querySelector('#single-info > .meta-row .meta-value').innerText;")?.toString()?.toIntOrNull()
+      driver.executeScript("return document.querySelector('#single-info > .flm-meta-row .flm-meta-value')?.innerText;")?.toString()?.toIntOrNull()
     val result = Regex("""(.* / )?(.*) - Filman\.cc.*""").matchEntire(driver.title.orEmpty())?.let { it.groups[2]!!.value }
     return SeriesDetailsFromPage(result ?: settings.seriesName, year)
   }
@@ -131,16 +131,16 @@ class FilmanCrawler(
     driver.navigate().to(getSeriesLink())
   }
   
-  override suspend fun searchByTitleAndYear(title: String, year: Int?): String? {
-    val encoded = URLEncoder.encode(title.replace(' ', '+'), StandardCharsets.UTF_8)
+  protected override suspend fun searchByTitleAndYear(title: String, year: Int?): String? {
+    val encoded = URLEncoder.encode(title, StandardCharsets.UTF_8)
     val searchUrl = "${def.attributes.websiteUrl}/search?phrase=${encoded}"
     driver.get(searchUrl)
     wait(By.id("item-list"))
     val script = """
       |return document.querySelectorAll('#item-list .col-xs-6').values().map(x => ({
-      |  y: x.querySelector('.film_year').textContent,
-      |  t: x.querySelector('.film_title').textContent,
-      |  l: x.querySelector('.poster a').getAttribute('href')
+      |  y: x.querySelector('.film_year')?.textContent,
+      |  t: x.querySelector('.film_title')?.textContent,
+      |  l: x.querySelector('.poster a')?.getAttribute('href')
       |})).toArray();""".trimMargin()
     
     val url = driver.executeScriptFetchList(script)

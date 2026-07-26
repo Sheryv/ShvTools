@@ -8,6 +8,7 @@ import com.sheryv.tools.webcrawler.process.base.Crawler
 import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
+import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 
 class FilmwebCrawlerDef : CrawlerDefinition<SeleniumDriver, FilmwebSettings>(

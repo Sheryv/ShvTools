@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.service.subsdownload
 
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.utils.ZipUtils
 import com.sheryv.util.io.HttpSupport
 import org.openqa.selenium.By
 import org.openqa.selenium.JavascriptExecutor
@@ -23,7 +24,7 @@ import kotlin.Exception
 import kotlin.plus
 import kotlin.text.contains
 
-class SubsDownloadRunner {
+class SubsWebDownloadRunner {
   private var executor: JavascriptExecutor? = null
   
   var webWait: WebDriverWait? = null
@@ -32,7 +33,7 @@ class SubsDownloadRunner {
   var driver: WebDriver? = null
     private set
   
-  fun start(options: SubsDownloadOptions) {
+  fun start(options: SubsWebDownloadOptions) {
     try {
       driver = ChromeDriver(this.chromeOptions)
       webWait = WebDriverWait(driver, Duration.ofSeconds(15))
@@ -52,7 +53,7 @@ class SubsDownloadRunner {
   }
   
   @Throws(IOException::class)
-  private fun run(options: SubsDownloadOptions) {
+  private fun run(options: SubsWebDownloadOptions) {
     val url = options.formatFullUrl()
     driver!!.navigate().to(url)
     val searchResults = By.id("search_results")
@@ -101,7 +102,7 @@ class SubsDownloadRunner {
   }
   
   @Throws(IOException::class)
-  private fun download(link: String, options: SubsDownloadOptions): File {
+  private fun download(link: String, options: SubsWebDownloadOptions): File {
     val http: HttpSupport = HttpSupport()
     val path: Path =
       Paths.get(options.temporaryDirectory, options.series + "_" + options.season + "_" + options.episode + ".zip")

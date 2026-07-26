@@ -1,14 +1,15 @@
-package com.sheryv.tools.webcrawler.service.videosearch
+package com.sheryv.tools.webcrawler.service.streamingwebsite.scraper
 
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import java.time.LocalDate
 
-class TmdbService(private val configuration: Configuration) {
-  val api: TmdbApi = TmdbApi()
+class TmdbService(private val configuration: Configuration, private val secretsStore: SecretsStore) {
+  val api: TmdbApi = TmdbApi(secretsStore)
   
   fun searchSeriesBestMatch(current: Series, title: String, years: List<Int> = emptyList()): Series? {
     val item = api.searchTv(title)
@@ -17,7 +18,7 @@ class TmdbService(private val configuration: Configuration) {
     return updateSeriesFromTmdb(current, item)
   }
   
-  fun updateSeriesFromTmdb(series: Series, item: SearchItem): Series {
+  fun updateSeriesFromTmdb(series: Series, item: TvSearchItem): Series {
     val updatedEpisodes = api.getTvEpisodes(item.id, series.season).episodes.map { ep: TmdbEpisode ->
       
       val found = series.episodes.firstOrNull { l -> l.number == ep.episodeNumber }

@@ -106,10 +106,10 @@ class ConvertAdditionalSource(
   val metadata: MediaMetadata?
 ) {
   
-  constructor(path: Path?, metadata: MediaMetadata?, other: ConvertAdditionalSource?, template: SourceSettings) : this(
+  constructor(path: Path?, metadata: MediaMetadata?, other: ConvertAdditionalSource?, template: SourceSettings, offsetFromFilesystem: Double? = null) : this(
     path?.let { SourceType.findByExtension(path.extension, false) ?: throw RuntimeException("Unknown extension: $path") } ?: template.type,
     path,
-    other?.timeOffset ?: template.defaultTimeOffset,
+    offsetFromFilesystem ?: other?.timeOffset ?: template.defaultTimeOffset,
     other?.audioType ?: template.audioType,
     other?.language ?: template.language,
     other?.streamSelection ?: template.streamSelection,

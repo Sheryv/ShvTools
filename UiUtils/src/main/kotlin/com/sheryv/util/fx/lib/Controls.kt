@@ -276,8 +276,9 @@ fun ToolBar.button(text: ObservableValue<String>, graphic: Node? = null, op: But
 /**
  * @param icon Icon code from https://fonts.google.com/icons?selected=Material+Symbols+Outlined:add_2:FILL@0;wght@400;GRAD@0;opsz@24&icon.size=24&icon.color=%23e3e3e3&icon.query=add&icon.set=Material+Symbols
  */
-fun Parent.buttonIcon(icon: String = "", text: String = "", tooltip: String? = null, large: Boolean = false, op: Button.() -> Unit = {}) =
-  Button(text).attachTo(this, op) {
+fun Parent.buttonIcon(icon: String = "", text: String = "", tooltip: String? = null, large: Boolean = false, base: Button = Button(), op: Button.() -> Unit = {}) =
+  base.attachTo(this, op) {
+    it.text = text
     val iconLabel = Label(icon)
     if (large) {
       styleClass += "if-btn-large-wrapper"

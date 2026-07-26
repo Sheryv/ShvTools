@@ -371,5 +371,9 @@ abstract class SeleniumCrawler<S : SettingsBase>(
   fun clearListeners() {
     driver.removeListeners()
   }
+  
+  override fun close() {
+    driver.close()
+  }
 }
 

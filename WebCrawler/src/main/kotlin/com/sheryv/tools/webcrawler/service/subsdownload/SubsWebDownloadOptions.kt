@@ -1,6 +1,6 @@
 package com.sheryv.tools.webcrawler.service.subsdownload
 
-class SubsDownloadOptions(
+class SubsWebDownloadOptions(
   val urlFormatString: String? = null,
   val baseUrl: String? = null,
   val downloadDirectory: String? = null,
@@ -16,8 +16,8 @@ class SubsDownloadOptions(
   }
   
   companion object {
-    fun default(): SubsDownloadOptions {
-      val options = SubsDownloadOptions(
+    fun default(): SubsWebDownloadOptions {
+      val options = SubsWebDownloadOptions(
         baseUrl = "https://www.opensubtitles.org",
         temporaryDirectory = "C:\\temp",
         urlFormatString = "/pl/ssearch/sublanguageid-pol,eng/searchonlytvseries-on/season-%2\$d/episode-%3\$d/idmovie-%1\$s"

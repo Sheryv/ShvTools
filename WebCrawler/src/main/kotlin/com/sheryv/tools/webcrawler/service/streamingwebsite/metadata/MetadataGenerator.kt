@@ -1,4 +1,4 @@
-package com.sheryv.tools.webcrawler.service.streamingwebsite.generator
+package com.sheryv.tools.webcrawler.service.streamingwebsite.metadata
 
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series

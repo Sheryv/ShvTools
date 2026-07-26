@@ -1,4 +1,4 @@
-package com.sheryv.tools.webcrawler.service.subsdownload
+package com.sheryv.tools.webcrawler.utils
 
 import java.io.File
 import java.io.FileInputStream

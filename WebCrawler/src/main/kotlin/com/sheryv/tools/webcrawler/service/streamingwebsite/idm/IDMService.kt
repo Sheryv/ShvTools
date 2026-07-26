@@ -8,6 +8,8 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Se
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.delay
 import java.nio.file.Path
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.name
 
 class IDMService(val configuration: Configuration) {
   
@@ -42,6 +44,25 @@ class IDMService(val configuration: Configuration) {
     
     try {
       log.info("\n> IDM {} {}", episode.number, ex)
+      Runtime.getRuntime().exec(ex)
+    } catch (e: Exception) {
+      log.error("Error while adding to IDM", e)
+    }
+  }
+  
+  fun addUrl(url: String, path: Path, settings: StreamingWebsiteSettings) {
+    val idmExePath: String = settings.idmExePath!!
+    require(idmExePath.isNotBlank()) { "Path to IDM exe cannot be empty" }
+    val ex = String.format(
+      "\"%s\" /n /f \"%s\" /p \"%s\"" +
+          " /a /d %s",
+      idmExePath,
+      path.name,
+      path.parent.absolutePathString(),
+      url
+    )
+    
+    try {
       Runtime.getRuntime().exec(ex)
     } catch (e: Exception) {
       log.error("Error while adding to IDM", e)

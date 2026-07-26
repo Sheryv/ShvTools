@@ -22,11 +22,11 @@ import java.nio.file.Path
 object SerialisationUtils {
   
   val yamlMapper: ObjectMapper by lazy {
-    createJsonMapper(factory = YAMLFactory())
+    jsonMapperBuilder(factory = YAMLFactory()).build()
   }
   
   val jsonMapper: ObjectMapper by lazy {
-    createJsonMapper()
+    jsonMapperBuilder().build()
   }
   
   @JvmStatic
@@ -91,7 +91,7 @@ object SerialisationUtils {
   
   
   @JvmStatic
-  fun createJsonMapper(types: Map<String, Class<*>> = emptyMap(), factory: JsonFactory? = null): ObjectMapper {
+  fun jsonMapperBuilder(types: Map<String, Class<*>> = emptyMap(), factory: JsonFactory? = null): JsonMapper.Builder {
     val map =JsonMapper.builder(factory ?: JsonFactory())
 //    val map = ObjectMapper(factory)
     map.configure(SerializationFeature.INDENT_OUTPUT, true)
@@ -106,7 +106,7 @@ object SerialisationUtils {
     val mod = SimpleModule()
     mod.addSerializer(Path::class.java, ToStringSerializer())
     map.addModule(mod)
-    return map.build()
+    return map
   }
   
 }

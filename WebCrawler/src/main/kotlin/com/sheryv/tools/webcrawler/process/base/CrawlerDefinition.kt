@@ -11,17 +11,18 @@ import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.util.DateUtils
 import com.sheryv.util.event.AsyncEvent
 import com.sheryv.util.event.AsyncEventHandler
+import org.koin.core.component.KoinComponent
 import java.net.URL
 import java.nio.file.Path
 import java.time.format.DateTimeFormatter
 
-typealias CrawlerDef = CrawlerDefinition<in SDriver, SettingsBase>
+typealias CrawlerDef = CrawlerDefinition<out SDriver, out SettingsBase>
 
 abstract class CrawlerDefinition<T : SDriver, S : SettingsBase>(
   val attributes: CrawlerAttributes,
   internal val settingsClass: Class<S>,
   protected val driverClass: Class<in T> = SDriver::class.java,
-): AsyncEventHandler {
+): AsyncEventHandler, KoinComponent {
   
   fun id() = attributes.id
   

@@ -1,6 +1,7 @@
 package com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common
 
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.config.impl.streamingwebsite.HistoryItem
 import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
@@ -12,16 +13,14 @@ import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.SystemSupport
-import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
-import com.sheryv.util.DateUtils
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbApi
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.event.AsyncEvent
 import com.sheryv.util.event.EventBus
 import com.sheryv.util.inBackground
+import org.koin.core.component.inject
 import java.nio.file.Files
-import java.nio.file.Path
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 abstract class StreamingCrawlerBase(
   id: String,
@@ -31,6 +30,8 @@ abstract class StreamingCrawlerBase(
   CrawlerAttributes(id, name, websiteUrl, Groups.STREAMING_WEBSITE),
   StreamingWebsiteSettings::class.java
 ) {
+  
+  protected val secretsStore: SecretsStore by inject()
   
   override fun handleEvent(e: AsyncEvent) {
     when (e) {
@@ -62,7 +63,7 @@ abstract class StreamingCrawlerBase(
     history.tmdbId?.also {
       inBackground {
         synchronized(StreamingCrawlerBase::class.java) {
-          val api = TmdbApi()
+          val api = TmdbApi(secretsStore)
           val foundSeries = api.getTvSeries(it)
           val season = api.getTvEpisodes(it, history.seasonNumber)
           val series = Series(

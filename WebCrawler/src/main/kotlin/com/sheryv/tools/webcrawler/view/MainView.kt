@@ -5,6 +5,7 @@ import com.sheryv.tools.webcrawler.ProcessingStates
 import com.sheryv.tools.webcrawler.browser.BrowserTypes
 import com.sheryv.tools.webcrawler.browser.DriverTypes
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.Runner
@@ -16,11 +17,12 @@ import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.StreamingCrawlerBase
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.ConvertToMkvService
-import com.sheryv.tools.webcrawler.service.Registry
 import com.sheryv.tools.webcrawler.service.SystemSupport
 import com.sheryv.tools.webcrawler.service.streamingwebsite.downloader.Downloader
-import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGenerator
 import com.sheryv.tools.webcrawler.service.streamingwebsite.idm.IDMService
+import com.sheryv.tools.webcrawler.service.streamingwebsite.metadata.MetadataGenerator
+import com.sheryv.tools.webcrawler.service.streamingwebsite.moviesearch.MovieDLSearchService
+import com.sheryv.tools.webcrawler.service.subsdownload.SubsOpensubtitlesAPIDownload
 import com.sheryv.tools.webcrawler.utils.ViewUtils
 import com.sheryv.tools.webcrawler.utils.ViewUtils.TITLE
 import com.sheryv.tools.webcrawler.view.downloader.DownloaderView
@@ -35,6 +37,7 @@ import com.sheryv.util.event.EventBus
 import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.FxmlView
 import com.sheryv.util.fx.core.view.ViewFactory
+import com.sheryv.util.fx.core.view.runActionInBackground
 import com.sheryv.util.fx.lib.onChange
 import com.sheryv.util.io.FileUtils
 import com.sheryv.util.io.HttpSupport
@@ -54,6 +57,7 @@ import javafx.stage.Stage
 import javafx.util.Duration
 import org.greenrobot.eventbus.Subscribe
 import org.greenrobot.eventbus.ThreadMode
+import org.koin.core.Koin
 import org.koin.core.component.get
 import org.koin.core.component.inject
 import java.awt.EventQueue
@@ -77,6 +81,8 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   private var selected: CrawlerDef? = null
   private lateinit var settingsReader: SettingsPanelReader
   private val viewFactory: ViewFactory = get()
+  private val koin: Koin = get()
+  private val secrets: SecretsStore by inject()
   
   override val config: Configuration by inject()
   
@@ -95,7 +101,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
 //      System.setErr(PrintStream(Files.newOutputStream(Path.of("out-err.log"), StandardOpenOption.CREATE, StandardOpenOption.WRITE)))
       System.setErr(PrintStream("out-err.log"))
       
-      registry = Registry.get().crawlers().associate { it.id() to it as CrawlerDef }
+      registry = koin.getAll<CrawlerDef>().associateBy { it.id() }
       prepareRegistry()
       init()
     } catch (e: Exception) {
@@ -441,7 +447,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
   private fun showSettingsForSelectedScraper() {
     val settings = selected!!.findSettings(config)
     lbSelected.text = selected.toString()
-    val parts = SettingsPanelBuilder(settings, viewFactory).build()
+    val parts = SettingsPanelBuilder(settings, viewFactory, koin).build()
     settingsReader = parts.second
     vbOptions.children.setAll(parts.first)
   }
@@ -485,7 +491,7 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
 //      UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
       val f = JFrame()
       f.title = "Search and fill episodes links"
-      f.contentPane.add(SearchWindow().init(config, selected!!.findSettings(config) as StreamingWebsiteSettings).mainPanel)
+      f.contentPane.add(SearchWindow(secrets).init(config, selected!!.findSettings(config) as StreamingWebsiteSettings).mainPanel)
       f.setSize(1200, 750)
       f.isVisible = true
       f.addWindowListener(object : WindowAdapter() {
@@ -706,6 +712,31 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
             }
           }
         },
+        MenuItem("Find URLs for movies in directory").apply {
+          setOnAction {
+            val dir = factory.dialogs.openDirectoryDialog(stage) ?: return@setOnAction
+            
+            GlobalState.processingState.value = (ProcessingStates.RUNNING)
+            
+            inBackground {
+              try {
+                MovieDLSearchService(
+                  settingsReader.invoke() as StreamingWebsiteSettings,
+                  config,
+                  selected!!,
+                  ProcessParams(false)
+                ).searchUrlsForMoviesIn(dir)
+              } catch (e: Exception) {
+                log.error("Running error", e)
+                inMainThread {
+                  factory.dialogs.exceptionDialog("Details", e, "Error occurred while scraping")
+                }
+              } finally {
+                GlobalState.processingState.value = (ProcessingStates.IDLE)
+              }
+            }
+          }
+        },
         MenuItem("Find URL for single episode").apply {
           setOnAction {
             val results = factory.dialogs.inputDialog(
@@ -736,6 +767,17 @@ class MainView : FxmlView("view/crawler-main.fxml"), ViewActionsProvider {
                 GlobalState.processingState.value = (ProcessingStates.IDLE)
               }
             }
+          }
+        },
+        MenuItem("Download subtitles for movies in directory").apply {
+          setOnAction {
+            val dir = factory.dialogs.openDirectoryDialog(stage) ?: return@setOnAction
+            
+            runActionInBackground("Downloading subtitles", null, {
+              val results = SubsOpensubtitlesAPIDownload(secrets).findAndDownloadForMoviesFromDir(dir)
+              val summary = results.entries.joinToString("\n") { " - ${it.key.title.padEnd(30, ' ')} > ${it.value?.toAbsolutePath()}" }
+              log.info("Summary:\n$summary")
+            })
           }
         })
     }

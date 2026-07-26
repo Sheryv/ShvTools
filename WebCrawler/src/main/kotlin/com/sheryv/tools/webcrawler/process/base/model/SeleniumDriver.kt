@@ -77,7 +77,7 @@ open class SeleniumDriver(
     }
   }
   
-  override fun initialize(crawler: Crawler<SDriver, SettingsBase>) {
+  override fun initialize(crawler: Crawler<out SDriver, out SettingsBase>) {
     this.crawler = crawler as Crawler<SeleniumDriver, SettingsBase>
   }
   
@@ -120,14 +120,14 @@ open class SeleniumDriver(
   }
   
   override fun close() {
-    when (wrappedDriver) {
-      is ChromiumDriver -> {
-        wrappedDriver.devTools.clearListeners()
-      }
-    }
+//    when (wrappedDriver) {
+//      is ChromiumDriver -> {
+//        wrappedDriver.devTools.clearListeners()
+//      }
+//    }
     removeListeners()
     networkBidi?.close()
-    return wrappedDriver.close()
+    quit()
   }
   
   override fun quit() {

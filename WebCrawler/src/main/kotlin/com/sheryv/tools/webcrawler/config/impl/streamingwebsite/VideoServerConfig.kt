@@ -2,6 +2,7 @@ package com.sheryv.tools.webcrawler.config.impl.streamingwebsite
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.sheryv.tools.webcrawler.config.impl.ApplicableEntry
+import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.CommonVideoServers
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.VideoServerDefinition
 import com.sheryv.tools.webcrawler.service.Registry
 
@@ -11,7 +12,7 @@ data class VideoServerConfig(
 ) : ApplicableEntry {
   
   @JsonIgnore
-  val definition: VideoServerDefinition = Registry.get().serverDefinitions().firstOrNull { it.id == id }
+  val definition: VideoServerDefinition = CommonVideoServers.ALL.firstOrNull { it.id == id }
     ?: throw NoSuchElementException("Cannot find video server definition with id '$id'")
   
   override fun changeActivation(isEnabled: Boolean): ApplicableEntry {
@@ -35,6 +36,6 @@ data class VideoServerConfig(
   
   companion object {
     @JvmStatic
-    fun all() = Registry.get().serverDefinitions().map { VideoServerConfig(it.id) }
+    fun all() = CommonVideoServers.ALL.map { VideoServerConfig(it.id) }
   }
 }

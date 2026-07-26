@@ -14,9 +14,11 @@ import java.util.*
 import java.util.concurrent.ThreadLocalRandom
 import kotlin.math.ceil
 
+private val HEX_ARRAY = "0123456789ABCDEF".toByteArray(StandardCharsets.US_ASCII)
+private val SUPPORTED_FORMATTER_CONVERSIONS = listOf('d', 'f', 's', 'o', 'x', 'b', '@')
+private val REGEX_METACHARACTERS = setOf('\\', '*', '+', '?', '^', '$', '[', ']', '(', ')', '{', '}', '|') //,'.')
+
 object Strings {
-  private val HEX_ARRAY = "0123456789ABCDEF".toByteArray(StandardCharsets.US_ASCII)
-  private val SUPPORTED_FORMATTER_CONVERSIONS = listOf('d', 'f', 's', 'o', 'x', 'b')
   fun isNullOrEmpty(string: String?): Boolean {
     return string == null || string.isEmpty()
   }
@@ -86,11 +88,11 @@ object Strings {
         SUPPORTED_FORMATTER_CONVERSIONS
         
         try {
-          val (k, conversion) = key.split("::")
+          var (k, conversion) = key.split("::")
           
           val specifier = conversion.last()
           if (specifier !in SUPPORTED_FORMATTER_CONVERSIONS) {
-            throw IncorrectConverstionException("Conversion specifier '$specifier' is not supported.", conversion, specifier)
+            throw IncorrectConversionException("Conversion specifier '$specifier' is not supported.", conversion, specifier)
           }
           
           val value = base.apply(k)
@@ -100,8 +102,12 @@ object Strings {
           
           val converted = when (specifier) {
             'f' -> value.toDouble()
-            's', 'b' -> value
+            's', 'b' -> Regex.escape(value)
+            '@' -> value
             else -> value.toLong()
+          }
+          if (specifier == '@') {
+            conversion = "s"
           }
           
           return String.format("%$conversion", converted)
@@ -110,10 +116,11 @@ object Strings {
           return key
         }
       }
-      return base.apply(key)
+      val value = base.apply(key)
+      return if (REGEX_METACHARACTERS.any { it in value }) Regex.escape(value) else value
     }
   }
   
   class KeyNotFoundException(message: String, val key: String) : RuntimeException(message)
-  class IncorrectConverstionException(message: String, val conversion: String, val specifier: Char) : RuntimeException(message)
+  class IncorrectConversionException(message: String, val conversion: String, val specifier: Char) : RuntimeException(message)
 }

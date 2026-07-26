@@ -1,11 +1,11 @@
 package com.sheryv.tools.webcrawler.config.impl
 
 import com.sheryv.tools.webcrawler.config.SettingsBase
-import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.view.settings.SettingsPanelReader
 import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
 import com.sheryv.tools.webcrawler.view.settings.TextInputSettingsRow
 import com.sheryv.util.fx.core.view.ViewFactory
+import org.koin.core.Koin
 import java.nio.file.Path
 
 data class FilmwebSettings(
@@ -14,7 +14,7 @@ data class FilmwebSettings(
 ) : SettingsBase() {
   override fun copyAll(): SettingsBase = copy()
   
-  override fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
+  override fun buildSettingsPanelDef(viewFactory: ViewFactory, koin: Koin): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
     val savePathRow = TextInputSettingsRow(viewFactory, "Save path", outputPath.toString())
     return Pair(
       listOf(

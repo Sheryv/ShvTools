@@ -13,6 +13,7 @@ import com.sheryv.tools.webcrawler.process.base.CrawlerAttributes
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.SeleniumCrawler
 import com.sheryv.tools.webcrawler.process.base.model.ProcessParams
+import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.base.model.SeleniumDriver
 import com.sheryv.tools.webcrawler.process.base.model.SimpleStep
 import com.sheryv.tools.webcrawler.process.base.model.Step
@@ -110,7 +111,7 @@ class MockCrawler(
       override fun build(
         configuration: Configuration,
         browser: BrowserConfig,
-        driverBuilder: DriverBuilder<SeleniumDriver>,
+        driverBuilder: DriverBuilder<out SDriver>,
         params: ProcessParams
       ): MockCrawler {
         if (!configuration.settings.contains(settings)) {

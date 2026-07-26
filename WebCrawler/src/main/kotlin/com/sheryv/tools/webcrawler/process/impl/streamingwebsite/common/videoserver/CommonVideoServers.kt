@@ -46,6 +46,7 @@ object CommonVideoServers {
     VideoServerDefinition("filemoon", "Filemoon", listOf("filemoon.sx"), true, ::HLSVideoServerHandler),
     VideoServerDefinition("luluvdo", "Luluvdo", listOf("luluvdo.com"), true, ::JWVideoServerHandler),
     VideoServerDefinition("vidmoly", "vidmoly", listOf("vidmoly.biz"), true, ::JWVideoServerHandler),
+    VideoServerDefinition("fmovies", "fmovies", listOf("fmovies.co"), true, ::HLSVideoServerHandler),
   )
 }
 

@@ -10,37 +10,41 @@ import kotlin.io.path.nameWithoutExtension
 class MkvMergeService(private val context: Context) {
   
   fun generateCommand(video: ConvertVideo, outputPath: Path): List<String> {
-    val sources = video.sources.filter { it.isValid }
     val cmd = mutableListOf("mkvmerge", "--title", quote(outputPath.nameWithoutExtension), "--gui-mode", "-o", quote(outputPath))
     
     require(video.metadata != null) { "Metadata not found for type ${video.targetVideo}" }
     
-    if (sources.isNotEmpty()) {
+    if (video.sources.any { it.isValid }) {
       cmd += "--split"
-      cmd += "parts:00:00:00-" + DurationFormatUtils.formatDuration(video.metadata.durationMs, "HH:mm:ss.SSS", true)
+      cmd += quote("parts:00:00:00-" + DurationFormatUtils.formatDuration(video.metadata.durationMs, "HH:mm:ss.SSS", true))
     }
     
     val order = mutableListOf<Pair<Int, Int>>()
     
     val mainFileTracks = video.metadata.streams.filter { context.isLanguageSupported(it.language()) }
-
+    
     val toSkip = video.metadata.streams.subtract(mainFileTracks)
     
     listOf(SourceType.VIDEO, SourceType.AUDIO, SourceType.SUBTITLES).forEach {
       val skipped = video.metadata.streamsForType(it, toSkip)
       if (skipped.isNotEmpty()) {
         cmd += "-" + typeToTrackCodeName(it)
-        cmd += skipped.joinToString(",") { "!" + it.index.toString() }
+        cmd += quote("!" + skipped.joinToString(",") { it.index.toString() })
       }
     }
     
     cmd += quote(video.targetVideo)
     
-    sources.forEachIndexed { index, source ->
-      if (index == video.mainSourceIndex){
+    var index = 0
+    
+    video.sources.forEachIndexed { defIndex, source ->
+      if (defIndex == video.mainSourceIndex) {
         mainFileTracks.forEach {
           order += 0 to it.index
         }
+      }
+      if (!source.isValid){
+        return@forEachIndexed
       }
       
       cmd += "-D"
@@ -76,7 +80,7 @@ class MkvMergeService(private val context: Context) {
 //      if (streams != null) {
       cmd += "-" + typeToTrackCodeName(source.type)
       
-      cmd += streams.joinToString(",") { "${it.first}" }
+      cmd += quote(streams.joinToString(",") { "${it.first}" })
 //      }
       
       streams.forEach { (stream, language) ->
@@ -91,7 +95,7 @@ class MkvMergeService(private val context: Context) {
         if (language != null || userLang != null) {
           val selectedLang = language ?: userLang
           var suffix = ""
-          if (source.audioType != null && source.audioType != SourceAudioType.NOT_SPECIFIED) {
+          if (source.type.isAudio() && source.audioType != null && source.audioType != SourceAudioType.NOT_SPECIFIED) {
             suffix = " [${source.audioType!!.code}]"
           }
           
@@ -104,6 +108,7 @@ class MkvMergeService(private val context: Context) {
       
       cmd += quote(source.path!!)
 
+      index++
 //      lastOptions.add("-map")
 //      lastOptions.add("${index + 1}:$code")
 //      if (source.definition.language.isNotBlank()) {
@@ -122,14 +127,14 @@ class MkvMergeService(private val context: Context) {
 //
     }
     if (order.isNotEmpty()) {
-      if (order.none { it.first == 0 }){
+      if (order.none { it.first == 0 }) {
         mainFileTracks.forEach {
           order += 0 to it.index
         }
       }
       
       cmd += "--track-order"
-      cmd += order.joinToString(",") { "${it.first}:${it.second}" }
+      cmd += quote(order.joinToString(",") { "${it.first}:${it.second}" })
     }
     return cmd
   }

@@ -4,44 +4,22 @@ import com.sheryv.tools.webcrawler.config.SettingsBase
 import com.sheryv.tools.webcrawler.process.base.CrawlerDefinition
 import com.sheryv.tools.webcrawler.process.base.model.SDriver
 import com.sheryv.tools.webcrawler.process.impl.filmweb.FilmwebCrawlerDef
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.CommonVideoServers
-import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.videoserver.VideoServerDefinition
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilmanCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.filman.FilserCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.fmovies.FMoviesCrawlerDef
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.zerion.ZerionCrawlerDef
+import org.koin.core.module.Module
+import org.koin.dsl.bind
+import org.koin.dsl.module
 
 object Registry {
-  @JvmStatic
-  val DEFAULT = object : RegistryProvider {
-    override fun crawlers(): List<CrawlerDefinition<out SDriver, out SettingsBase>> {
-      return listOf(
-        FilmwebCrawlerDef(),
-        ZerionCrawlerDef(),
-        FilmanCrawlerDef(),
-        FMoviesCrawlerDef(),
-        FilserCrawlerDef(),
-      )
+  fun buildModule(): Module {
+    return module(createdAtStart = true) {
+      single { FilmwebCrawlerDef() }.bind<CrawlerDefinition<out SDriver, out SettingsBase>>()
+      single { ZerionCrawlerDef() }.bind<CrawlerDefinition<out SDriver, out SettingsBase>>()
+      single { FilmanCrawlerDef() }.bind<CrawlerDefinition<out SDriver, out SettingsBase>>()
+      single { FMoviesCrawlerDef() }.bind<CrawlerDefinition<out SDriver, out SettingsBase>>()
+      single { FilserCrawlerDef() }.bind<CrawlerDefinition<out SDriver, out SettingsBase>>()
     }
-  
-    override fun serverDefinitions() = CommonVideoServers.ALL
-  
   }
-  
-  @JvmStatic
-  private var registry = DEFAULT
-  
-  @JvmStatic
-  fun use(provider: RegistryProvider) {
-    registry = provider
-  }
-  
-  @JvmStatic
-  fun get() = registry
-}
-
-interface RegistryProvider {
-  fun crawlers(): List<CrawlerDefinition<out SDriver, out SettingsBase>>
-  
-  fun serverDefinitions(): List<VideoServerDefinition>
 }

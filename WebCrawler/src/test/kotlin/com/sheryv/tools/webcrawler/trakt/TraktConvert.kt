@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.sheryv.tools.webcrawler.RunFilmwebScraper
 import com.sheryv.tools.webcrawler.config.Configuration
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
-import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbApi
 import com.sheryv.util.SerialisationUtils
 import com.uwetrottmann.trakt5.TraktV2
 import com.uwetrottmann.trakt5.entities.*

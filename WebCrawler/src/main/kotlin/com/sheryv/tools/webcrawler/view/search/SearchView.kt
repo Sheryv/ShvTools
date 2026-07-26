@@ -2,16 +2,17 @@ package com.sheryv.tools.webcrawler.view.search
 
 import com.sheryv.tools.webcrawler.GlobalState
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.process.base.event.FetchedDataExternalChangeEvent
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.DirectUrl
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Episode
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
-import com.sheryv.tools.webcrawler.service.streamingwebsite.generator.MetadataGenerator
-import com.sheryv.tools.webcrawler.service.videosearch.SearchItem
-import com.sheryv.tools.webcrawler.service.videosearch.TmdbApi
-import com.sheryv.tools.webcrawler.service.videosearch.TmdbEpisode
+import com.sheryv.tools.webcrawler.service.streamingwebsite.metadata.MetadataGenerator
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TvSearchItem
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbApi
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbEpisode
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.event.EventBus
@@ -39,16 +40,16 @@ import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 
-class SearchView(override val config: Configuration) : SimpleView() {
+class SearchView(override val config: Configuration, private val secretsStore: SecretsStore) : SimpleView() {
   
   private val name = stringProperty("")
   private val season = objectProperty(1)
   private val inProgress = booleanProperty(false)
-  private val api = TmdbApi()
+  private val api = TmdbApi(secretsStore)
   private val settings = GlobalState.currentCrawler.findSettings(config) as StreamingWebsiteSettings
   
-  private val results = FXCollections.observableArrayList<SearchItem>()
-  private val selectedItem = objectProperty<SearchItem?>()
+  private val results = FXCollections.observableArrayList<TvSearchItem>()
+  private val selectedItem = objectProperty<TvSearchItem?>()
   private var sourceSeries: Series? = null
   private val series = objectProperty<Series?>(null)
   private val episodes = series.toList { it?.episodes }
@@ -359,7 +360,7 @@ class SearchView(override val config: Configuration) : SimpleView() {
     )
   }
   
-  private fun fetchEpisodes(i: SearchItem) {
+  private fun fetchEpisodes(i: TvSearchItem) {
     inProgress.set(true)
     inBackground {
       try {
