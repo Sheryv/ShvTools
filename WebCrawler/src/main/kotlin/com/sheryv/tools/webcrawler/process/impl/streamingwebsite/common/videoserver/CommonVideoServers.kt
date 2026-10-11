@@ -48,6 +48,10 @@ object CommonVideoServers {
     VideoServerDefinition("vidmoly", "vidmoly", listOf("vidmoly.biz"), true, ::JWVideoServerHandler),
     VideoServerDefinition("fmovies", "fmovies", listOf("fmovies.co"), true, ::HLSVideoServerHandler),
   )
+  
+  fun find(name: String): VideoServerDefinition? {
+    return ALL.firstOrNull { it.id == name.lowercase() || it.label.equals(name, true) }
+  }
 }
 
 private const val JW_PLAYER_ACTIVATION_SCRIPT =

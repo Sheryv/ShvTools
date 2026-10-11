@@ -1,18 +1,26 @@
-package com.sheryv.tools.videoconverter.video
+package com.sheryv.tools.videoconverter.core
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreType
+import com.sheryv.tools.videoconverter.video.convert.SourceAudioType
+import com.sheryv.tools.videoconverter.video.convert.SourceType
+import com.sheryv.tools.videoconverter.video.convert.StreamSelection
+import com.sheryv.tools.videoconverter.video.encode.VideoReEncodingSettings
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.fx.lib.*
+import javafx.beans.property.Property
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import java.nio.file.Files
 import java.nio.file.Path
 
-class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
+class MainSettings(
+  val videoEncodingSettings: VideoReEncodingSettings = VideoReEncodingSettings.empty,
+  sources: List<SourceSettings> = listOf<SourceSettings>()
+) {
   internal constructor(
     workingDir: Path,
     outputDir: Path,
-//    videoPathPattern: String,
     directorySearchDepth: Int,
     parallelProcessing: Int,
     outputExtension: String,
@@ -20,7 +28,6 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
   ) : this() {
     this.workingDir = workingDir
     this.outputDir = outputDir
-//    this.videoPathPattern = videoPathPattern
     this.directorySearchDepth = directorySearchDepth
     this.parallelProcessing = parallelProcessing
     this.outputExtension = outputExtension
@@ -31,8 +38,6 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
     private set
   var outputDir: Path = Path.of("output")
     private set
-//  var videoPathPattern: String = ".*"
-//    private set
   var directorySearchDepth: Int = 4
     private set
   var parallelProcessing: Int = 2
@@ -55,9 +60,6 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
   @JsonIgnore
   val outputDirProperty = observablePath(MainSettings::outputDir)
   
-//  @JsonIgnore
-//  val videoPathPatternProperty = observable(MainSettings::videoPathPattern)
-  
   @JsonIgnore
   val directorySearchDepthProperty = observable(MainSettings::directorySearchDepth)
   
@@ -71,19 +73,26 @@ class MainSettings(sources: List<SourceSettings> = listOf<SourceSettings>()) {
   val mainSourceProperty = listProperty(this.sources).mapObservable { it.first { it.main } }
   
   fun copy(): MainSettings {
-    val map = SerialisationUtils.jsonMapper.convertValue(this, Map::class.java)
-    return SerialisationUtils.jsonMapper.convertValue(map, MainSettings::class.java)
+    val map = serializer.convertValue(this, Map::class.java)
+    return serializer.convertValue(map, MainSettings::class.java)
   }
   
   fun save() {
-    SerialisationUtils.toJson(currentPath.toFile(), this)
+    serializer.writeValue(currentPath.toFile(), this)
   }
   
   companion object {
+    private val serializer by lazy {
+      SerialisationUtils
+        .jsonMapperBuilder()
+        .addMixIn(Property::class.java, IgnoredPropertyMixin::class.java)
+        .build()
+    }
+    
     fun read(): MainSettings {
       val settings: MainSettings
       if (Files.exists(currentPath)) {
-        settings = SerialisationUtils.fromJson(currentPath.toFile(), MainSettings::class.java)
+        settings = serializer.readValue(currentPath.toFile(), MainSettings::class.java)
       } else {
         settings = MainSettings()
         settings.save()
@@ -159,3 +168,7 @@ class SourceSettings(
     return "$type [$pathPattern] $defaultTimeOffset, $language, $audioType"
   }
 }
+
+
+@JsonIgnoreType
+private abstract class IgnoredPropertyMixin {}

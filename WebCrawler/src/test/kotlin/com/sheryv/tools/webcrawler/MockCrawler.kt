@@ -22,6 +22,7 @@ import com.sheryv.tools.webcrawler.view.settings.SettingsViewRow
 import com.sheryv.util.DateUtils
 import com.sheryv.util.fx.core.view.ViewFactory
 import kotlinx.coroutines.runBlocking
+import org.koin.core.Koin
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
@@ -31,7 +32,7 @@ class MockCrawler(
   configuration: Configuration,
   browser: BrowserConfig,
   def: CrawlerDefinition<SeleniumDriver, SettingsBase>,
-  driver: SeleniumDriver,
+  driver: DriverBuilder<SeleniumDriver>,
   params: ProcessParams
 ) : SeleniumCrawler<SettingsBase>(configuration, browser, def, driver, params) {
   
@@ -62,7 +63,7 @@ class MockCrawler(
       try {
         return runBlocking {
           val def = Def(exec, website, name)
-          val crawler = def.build(configuration, browser, driver, params)
+          val crawler = def.build(configuration, browser, browser.selectedDriver.webDriverBuilder as DriverBuilder<SeleniumDriver>, params)
           driver.initialize(crawler)
           for (step in crawler.getSteps()) {
             step.run()
@@ -99,7 +100,10 @@ class MockCrawler(
             TODO("Not yet implemented")
           }
           
-          override fun buildSettingsPanelDef(viewFactory: ViewFactory): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
+          override fun buildSettingsPanelDef(
+            viewFactory: ViewFactory,
+            koin: Koin
+          ): Pair<List<SettingsViewRow<*>>, SettingsPanelReader> {
             TODO("Not yet implemented")
           }
           
@@ -111,7 +115,7 @@ class MockCrawler(
       override fun build(
         configuration: Configuration,
         browser: BrowserConfig,
-        driverBuilder: DriverBuilder<out SDriver>,
+        driverBuilder: DriverBuilder<SeleniumDriver>,
         params: ProcessParams
       ): MockCrawler {
         if (!configuration.settings.contains(settings)) {

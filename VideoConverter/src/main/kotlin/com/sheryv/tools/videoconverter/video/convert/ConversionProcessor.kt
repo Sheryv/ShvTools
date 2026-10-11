@@ -1,13 +1,12 @@
-package com.sheryv.tools.videoconverter.video.process
+package com.sheryv.tools.videoconverter.video.convert
 
-import com.sheryv.tools.videoconverter.Context
-import com.sheryv.tools.videoconverter.video.*
-import com.sheryv.tools.videoconverter.video.process.ffmpeg.FFmpegService
-import com.sheryv.tools.videoconverter.video.process.ffprobe.FFProbeResult
-import com.sheryv.tools.videoconverter.video.process.mkvmerge.MkvMergeService
+import com.sheryv.tools.videoconverter.core.Context
+import com.sheryv.tools.videoconverter.core.MainSettings
+import com.sheryv.tools.videoconverter.video.convert.ffmpeg.FFmpegService
+import com.sheryv.tools.videoconverter.video.convert.ffprobe.FFProbeResult
+import com.sheryv.tools.videoconverter.video.convert.mkvmerge.MkvMergeService
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.Strings
-import com.sheryv.util.inBackground
 import com.sheryv.util.io.FileUtils
 import com.sheryv.util.logging.log
 import kotlinx.coroutines.runBlocking
@@ -19,8 +18,10 @@ import java.util.*
 import java.util.concurrent.Callable
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.Executors
+import kotlin.io.path.copyTo
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
 import kotlin.streams.asSequence
@@ -249,9 +250,9 @@ class ConversionProcessor(
             withContext(context.mainDispatcher) {
               video.state = ConversionProcessState.PROCESSING
             }
-          }
           
-          runSingle(video)
+            runSingle(video)
+          }
         }) to video
       } catch (e: Exception) {
         log.error(e.message, e)
@@ -285,13 +286,19 @@ class ConversionProcessor(
     }
   }
   
-  private fun runSingle(video: ConvertVideo): Boolean {
+  private suspend fun runSingle(video: ConvertVideo): Boolean {
     var process: Process? = null
     
     try {
       val cmd = generateCommand(video)
       
       log.debug("RUN: {}", cmd.joinToString(" "))
+      
+      val outputDir = calculateOutput(video.targetVideo).parent
+      settings.workingDir.resolve(video.targetVideo).parent.listDirectoryEntries("*.nfo").forEach {
+        it.copyTo(outputDir.resolve(it.name), true)
+      }
+      
       
       val builder = ProcessBuilder(cmd)
         .directory(settings.workingDir.toFile())
@@ -302,14 +309,12 @@ class ConversionProcessor(
       
       var otherLogs: StringBuilder = StringBuilder()
       
-      inBackground {
-        val errors = StringWriter()
-        process.errorStream.bufferedReader().use {
-          it.transferTo(errors)
-        }
-        if (errors.buffer.isNotEmpty()) {
-          log.error("converter errors: {}", errors.buffer.toString())
-        }
+      val errors = StringWriter()
+      process.errorStream.bufferedReader().use {
+        it.transferTo(errors)
+      }
+      if (errors.buffer.isNotEmpty()) {
+        log.error("converter errors: {}", errors.buffer.toString())
       }
       
       if (video.metadata != null) {

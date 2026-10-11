@@ -10,15 +10,18 @@ import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Ep
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.M3U8Url
 import com.sheryv.tools.webcrawler.process.impl.streamingwebsite.common.model.Series
 import com.sheryv.tools.webcrawler.service.streamingwebsite.metadata.MetadataGenerator
-import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TvSearchItem
 import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbApi
 import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbEpisode
+import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TvSearchItem
+import com.sheryv.tools.webcrawler.service.subsdownload.SubsOpensubtitlesAPIDownload
 import com.sheryv.tools.webcrawler.utils.Utils
 import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.event.EventBus
 import com.sheryv.util.fx.core.view.SimpleView
+import com.sheryv.util.fx.core.view.runActionInBackground
 import com.sheryv.util.fx.lib.*
 import com.sheryv.util.inBackground
+import com.sheryv.util.io.FileUtils
 import com.sheryv.util.io.HttpSupport
 import com.sheryv.util.logging.log
 import com.sheryv.util.unit.BinarySize
@@ -31,14 +34,17 @@ import javafx.scene.control.cell.TextFieldTableCell
 import javafx.scene.layout.Priority
 import javafx.stage.Stage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.time.LocalDate
+import kotlin.io.path.exists
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.name
 import kotlin.io.path.nameWithoutExtension
+import kotlin.time.Duration.Companion.milliseconds
 
 class SearchView(override val config: Configuration, private val secretsStore: SecretsStore) : SimpleView() {
   
@@ -46,6 +52,7 @@ class SearchView(override val config: Configuration, private val secretsStore: S
   private val season = objectProperty(1)
   private val inProgress = booleanProperty(false)
   private val api = TmdbApi(secretsStore)
+  private val opensubtitlesApi = SubsOpensubtitlesAPIDownload(secretsStore)
   private val settings = GlobalState.currentCrawler.findSettings(config) as StreamingWebsiteSettings
   
   private val results = FXCollections.observableArrayList<TvSearchItem>()
@@ -99,19 +106,6 @@ class SearchView(override val config: Configuration, private val secretsStore: S
       }
       hbox {
         disableProperty().bind(inProgress)
-        
-        button("Remove selected") {
-          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
-          setOnAction {
-            updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) })
-          }
-        }
-        button("Clear URL for selected") {
-          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
-          setOnAction {
-            updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) }.map { it.copy(downloadUrl = null) })
-          }
-        }
         pane {
           hgrow = Priority.ALWAYS
         }
@@ -273,6 +267,12 @@ class SearchView(override val config: Configuration, private val secretsStore: S
             }
           }
         }
+        button("Download selected subtitles") {
+          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
+          setOnAction {
+            downloadSubtitles(series.value!!.episodes.filter { selectedEpisodes.contains(it) }, series.value!!)
+          }
+        }
         button("Show file list") {
           disableProperty().bind(series.isNull)
           setOnAction {
@@ -297,6 +297,21 @@ class SearchView(override val config: Configuration, private val secretsStore: S
               }
             }
             log.info("Metadata generated")
+          }
+        }
+      }
+      hbox {
+        disableProperty().bind(inProgress)
+        button("Remove selected") {
+          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
+          setOnAction {
+            updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) })
+          }
+        }
+        button("Clear URL for selected") {
+          disableProperty().bind(selectedEpisodes.sizeProperty.mapObservable { it == 0 })
+          setOnAction {
+            updateEpisodes(series.value!!.episodes.filterNot { selectedEpisodes.contains(it) }.map { it.copy(downloadUrl = null) })
           }
         }
       }
@@ -403,6 +418,35 @@ class SearchView(override val config: Configuration, private val secretsStore: S
         inProgress.set(false)
       }
     }
+  }
+  
+  private fun downloadSubtitles(episodes: List<Episode>, tv: Series) {
+    runActionInBackground("Downloading subtitles", inProgress.asEditable(), {
+      val results = mutableListOf<SubsOpensubtitlesAPIDownload.SearchResultDetails>()
+      for (episode in episodes) {
+        
+        val found = downloadSubtitles(episode, tv)
+        if (found.isNotEmpty()) {
+          delay(300.milliseconds)
+        }
+        results.addAll(found.take(1))
+      }
+    })
+  }
+  
+  private fun downloadSubtitles(episode: Episode, series: Series): List<SubsOpensubtitlesAPIDownload.SearchResultDetails> {
+    val path = FileUtils.replaceExtension(episode.generateDefaultFilePath(series, settings), "srt")
+    if (path.exists()) {
+      log.info("Skipping download of subtitles for episode ${episode.number} because it exists: $path")
+      return emptyList()
+    }
+    
+    val found = opensubtitlesApi.searchTvShow(episode.number, series.season, series.id.toString(), null)
+    found.firstOrNull()?.also {
+      opensubtitlesApi.download(it.files.first().fileId, path)
+      log.info("Downloaded $path")
+    }
+    return found
   }
   
   private fun openFilesListDialog() {

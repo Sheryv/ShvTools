@@ -1,6 +1,6 @@
 package com.sheryv.tools.videoconverter.subtitles
 
-import com.sheryv.tools.videoconverter.video.MainSettings
+import com.sheryv.tools.videoconverter.core.MainSettings
 import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.core.view.ViewUtils

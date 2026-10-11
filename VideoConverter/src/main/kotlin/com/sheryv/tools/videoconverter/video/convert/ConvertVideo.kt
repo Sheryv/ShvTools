@@ -1,9 +1,9 @@
-package com.sheryv.tools.videoconverter.video
+package com.sheryv.tools.videoconverter.video.convert
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.sheryv.tools.videoconverter.video.process.ConversionProcessState
-import com.sheryv.tools.videoconverter.video.process.ffprobe.FFProbeResult
-import com.sheryv.tools.videoconverter.video.process.ffprobe.FFStream
+import com.sheryv.tools.videoconverter.core.SourceSettings
+import com.sheryv.tools.videoconverter.video.convert.ffprobe.FFProbeResult
+import com.sheryv.tools.videoconverter.video.convert.ffprobe.FFStream
 import com.sheryv.util.fx.lib.listProperty
 import com.sheryv.util.fx.lib.mutableProperty
 import com.sheryv.util.fx.lib.staticProperty
@@ -15,7 +15,7 @@ import java.nio.file.Path
 import java.text.DecimalFormat
 import kotlin.io.path.extension
 
-private val DEFAULT_DECIMAL_FORMATTER = DecimalFormat("#,##0.#")
+internal val DEFAULT_DECIMAL_FORMATTER = DecimalFormat("#,##0.0")
 
 class ConvertVideo(
   val number: Int,

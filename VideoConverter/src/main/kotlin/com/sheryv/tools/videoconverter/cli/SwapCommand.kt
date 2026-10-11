@@ -2,12 +2,12 @@ package com.sheryv.tools.videoconverter.cli
 
 
 import ch.qos.logback.classic.Level
-import com.sheryv.tools.videoconverter.Context
+import com.sheryv.tools.videoconverter.core.Context
 import com.sheryv.tools.videoconverter.VideoConverterMain
-import com.sheryv.tools.videoconverter.video.MainSettings
-import com.sheryv.tools.videoconverter.video.SourceSettings
-import com.sheryv.tools.videoconverter.video.SourceType
-import com.sheryv.tools.videoconverter.video.process.ConversionProcessor
+import com.sheryv.tools.videoconverter.core.MainSettings
+import com.sheryv.tools.videoconverter.core.SourceSettings
+import com.sheryv.tools.videoconverter.video.convert.SourceType
+import com.sheryv.tools.videoconverter.video.convert.ConversionProcessor
 import com.sheryv.util.CoreUtils
 import com.sheryv.util.inBackground
 import com.sheryv.util.logging.LoggingUtils

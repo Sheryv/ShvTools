@@ -33,6 +33,7 @@ class YtDlpDownloadingTask(
     output.fileName.toString(),
     "--newline",
     "--write-info-json",
+    "--no-update",
     "--progress-delta",
     "0.25",
     "--no-clean-info-json"

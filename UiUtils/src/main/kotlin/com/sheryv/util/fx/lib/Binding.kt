@@ -21,12 +21,14 @@ import org.fxmisc.easybind.monadic.MonadicObservableValue
 import org.fxmisc.easybind.select.SelectBuilder
 import java.math.BigDecimal
 import java.math.BigInteger
+import java.nio.file.Path
 import java.text.Format
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.*
 import java.util.concurrent.Callable
+import kotlin.reflect.KClass
 
 
 private fun <T> Property<T>.internalBind(property: ObservableValue<T>, readonly: Boolean) {
@@ -68,7 +70,7 @@ inline fun <reified S : T, reified T : Any> Labeled.bind(
   converter: StringConverter<T>? = null,
   format: Format? = null
 ) {
-  bindStringProperty(textProperty(), converter, format, property, readonly)
+  bindStringProperty(S::class, T::class, textProperty(), converter, format, property, readonly)
 }
 
 inline fun <reified S : T, reified T : Any> TitledPane.bind(
@@ -76,23 +78,25 @@ inline fun <reified S : T, reified T : Any> TitledPane.bind(
   readonly: Boolean = false,
   converter: StringConverter<T>? = null,
   format: Format? = null
-) = bindStringProperty(textProperty(), converter, format, property, readonly)
+) = bindStringProperty(S::class, T::class, textProperty(), converter, format, property, readonly)
 
 inline fun <reified S : T, reified T : Any> Text.bind(
   property: ObservableValue<S>,
   readonly: Boolean = false,
   converter: StringConverter<T>? = null,
   format: Format? = null
-) = bindStringProperty(textProperty(), converter, format, property, readonly)
+) = bindStringProperty(S::class, T::class, textProperty(), converter, format, property, readonly)
 
 inline fun <reified S : T, reified T : Any> TextInputControl.bind(
   property: ObservableValue<S>,
   readonly: Boolean = false,
   converter: StringConverter<T>? = null,
   format: Format? = null
-) = bindStringProperty(textProperty(), converter, format, property, readonly)
+) = bindStringProperty(S::class, T::class, textProperty(), converter, format, property, readonly)
 
-inline fun <reified S : T, reified T : Any> bindStringProperty(
+fun <S : T, T : Any> bindStringProperty(
+  sourceType: KClass<S>,
+  targetType: KClass<T>,
   stringProperty: StringProperty,
   converter: StringConverter<T>?,
   format: Format?,
@@ -100,14 +104,14 @@ inline fun <reified S : T, reified T : Any> bindStringProperty(
   readonly: Boolean
 ) {
   if (stringProperty.isBound) stringProperty.unbind()
-  val effectiveReadonly = readonly || property !is Property<S> || S::class != T::class
+  val effectiveReadonly = readonly || property !is Property<S> || sourceType != targetType
   
   
-  if (S::class == String::class) when {
+  if (sourceType == String::class) when {
     effectiveReadonly -> stringProperty.bind(property as ObservableValue<String>)
     else -> stringProperty.bindBidirectional(property as Property<String>)
   } else {
-    val effectiveConverter = if (format != null) null else converter ?: getDefaultConverter<S>()
+    val effectiveConverter = if (format != null) null else converter ?: getDefaultConverter(sourceType)
     if (effectiveReadonly) {
       val toStringConverter = Callable {
         when {
@@ -121,12 +125,12 @@ inline fun <reified S : T, reified T : Any> bindStringProperty(
     } else when {
       effectiveConverter != null -> stringProperty.bindBidirectional(property as Property<S>, effectiveConverter as StringConverter<S>)
       format != null -> stringProperty.bindBidirectional(property as Property<S>, format)
-      else -> throw IllegalArgumentException("Cannot convert from ${S::class} to String without an explicit converter or format")
+      else -> throw IllegalArgumentException("Cannot convert from ${sourceType} to String without an explicit converter or format")
     }
   }
 }
 
-inline fun <reified T : Any> getDefaultConverter() = when (T::class.javaPrimitiveType ?: T::class) {
+internal fun <T : Any> getDefaultConverter(type: KClass<T>) = when (type.javaPrimitiveType ?: type) {
   Int::class.javaPrimitiveType -> IntegerStringConverter()
   Long::class.javaPrimitiveType -> LongStringConverter()
   Double::class.javaPrimitiveType -> DoubleStringConverter()
@@ -139,11 +143,12 @@ inline fun <reified T : Any> getDefaultConverter() = when (T::class.javaPrimitiv
   LocalTime::class -> LocalTimeStringConverter()
   LocalDateTime::class -> LocalDateTimeStringConverter()
   Boolean::class.javaPrimitiveType -> BooleanStringConverter()
+  Path::class -> PathStringConverter()
   else -> null
 } as? StringConverter<T>?
 
-inline fun <reified T : Any> textFormatter(default: T): TextFormatter<T> {
-  return TextFormatter(getDefaultConverter<T>()!!, default)
+fun <T : Any> textFormatter(default: T, type: KClass<T>): TextFormatter<T> {
+  return TextFormatter(getDefaultConverter(type)!!, default)
 }
 
 fun ObservableValue<Boolean>.toBinding() = object : BooleanBinding() {
@@ -304,3 +309,10 @@ fun <T> ObservableValue<T>.selectBoolean(nested: (T) -> BooleanExpression): Bool
   }
   
 }*/
+
+
+internal class PathStringConverter() : StringConverter<Path>() {
+  override fun toString(p0: Path?): String? = p0?.toString()
+  
+  override fun fromString(p0: String?): Path? = p0?.let { Path.of(it) }
+}

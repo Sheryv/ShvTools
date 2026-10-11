@@ -61,7 +61,7 @@ class RunFilmwebScraper {
             continue
           }
           
-          driverBuilder.get(url + data.url)
+          driver.get(url + data.url)
           val parent = ".page__wrapper .filmCoverSection__filmPreview > div"
           val title = getText("$parent .filmCoverSection__title")
           val year = getText("$parent .filmCoverSection__year")
@@ -78,7 +78,7 @@ class RunFilmwebScraper {
             false,
             originalTitle ?: title,
             originalTitle?.let { title },
-            driverBuilder.findElement(By.cssSelector(parent)).getAttribute("data-entity-name")!!,
+            driver.findElement(By.cssSelector(parent)).getAttribute("data-entity-name")!!,
             parseYear(year),
             getText(".FilmRatingSection a").takeIf { it.isNotBlank() }?.let { parse(it) },
             LocalDate.parse(getAttr(".FilmRatingSection button", "title")),
@@ -97,7 +97,7 @@ class RunFilmwebScraper {
             continue
           }
           
-          driverBuilder.get(url + data.url)
+          driver.get(url + data.url)
           val parent = ".page__wrapper .filmCoverSection__filmPreview > div"
           val title = getText("$parent .filmCoverSection__title")
           val year = getText("$parent .filmCoverSection__year")
@@ -114,7 +114,7 @@ class RunFilmwebScraper {
             true,
             originalTitle ?: title,
             originalTitle?.let { title },
-            driverBuilder.findElement(By.cssSelector(parent)).getAttribute("data-entity-name")!!,
+            driver.findElement(By.cssSelector(parent)).getAttribute("data-entity-name")!!,
             parseYear(year),
             getTextOrNull(".FilmRatingSection a")?.takeIf { it.isNotBlank() }?.let { parse(it) },
             null,
@@ -143,13 +143,13 @@ class RunFilmwebScraper {
   }
   
   fun MockCrawler.getText(cssSelector: String): String {
-    val e = driverBuilder.waitForVisibility(By.cssSelector(cssSelector), 20)
+    val e = driver.waitForVisibility(By.cssSelector(cssSelector), 20)
     return e.text
   }
   
   fun MockCrawler.getTextOrNull(cssSelector: String): String? {
     try {
-      val element = driverBuilder.wait(5).until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(cssSelector)))
+      val element = driver.wait(5).until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(cssSelector)))
       return element?.text
     } catch (e: TimeoutException) {
       return null

@@ -24,6 +24,7 @@ import javafx.scene.paint.Color
 import javafx.scene.text.Text
 import javafx.scene.text.TextFlow
 import javafx.util.StringConverter
+import java.nio.file.Path
 import java.time.LocalDate
 
 var Node.hgrow: Priority?
@@ -121,6 +122,11 @@ fun Parent.text(property: Property<String>, op: Text.() -> Unit = {}) = text().a
 
 fun Parent.text(observable: ObservableValue<String>, op: Text.() -> Unit = {}) = text().apply {
   bind(observable)
+  op(this)
+}
+
+fun Parent.pathField(property: ObservableValue<Path>, op: TextField.() -> Unit = {}) = textfield().apply {
+  bind(property)
   op(this)
 }
 
@@ -273,20 +279,44 @@ fun ToolBar.button(text: ObservableValue<String>, graphic: Node? = null, op: But
   op(it)
 }
 
+
+fun Parent.labelIcon(icon: String = "", tooltip: String? = null, large: Boolean = false): Label {
+  val iconLabel = Label(icon)
+  if (large) {
+    styleClass += "if-btn-large-wrapper"
+    iconLabel.styleClass += "if-btn-label-large"
+  } else {
+    iconLabel.styleClass += "if-btn-label"
+  }
+  return iconLabel
+}
+
+fun Parent.labelIcon(icon: ObservableValue<String>, tooltip: String? = null, large: Boolean = false): Label {
+  val iconLabel = Label()
+  iconLabel.textProperty().bind(icon)
+  if (large) {
+    styleClass += "if-btn-large-wrapper"
+    iconLabel.styleClass += "if-btn-label-large"
+  } else {
+    iconLabel.styleClass += "if-btn-label"
+  }
+  return iconLabel
+}
+
 /**
  * @param icon Icon code from https://fonts.google.com/icons?selected=Material+Symbols+Outlined:add_2:FILL@0;wght@400;GRAD@0;opsz@24&icon.size=24&icon.color=%23e3e3e3&icon.query=add&icon.set=Material+Symbols
  */
-fun Parent.buttonIcon(icon: String = "", text: String = "", tooltip: String? = null, large: Boolean = false, base: Button = Button(), op: Button.() -> Unit = {}) =
+fun Parent.buttonIcon(
+  icon: String = "",
+  text: String = "",
+  tooltip: String? = null,
+  large: Boolean = false,
+  base: Button = Button(),
+  op: Button.() -> Unit = {}
+) =
   base.attachTo(this, op) {
     it.text = text
-    val iconLabel = Label(icon)
-    if (large) {
-      styleClass += "if-btn-large-wrapper"
-      iconLabel.styleClass += "if-btn-label-large"
-    } else {
-      iconLabel.styleClass += "if-btn-label"
-    }
-    it.graphic = iconLabel
+    it.graphic = labelIcon(icon, tooltip, large)
     if (tooltip != null) it.tooltip = Tooltip(tooltip)
   }
 
@@ -295,14 +325,10 @@ fun Parent.buttonIcon(icon: String = "", text: String = "", tooltip: String? = n
  */
 fun ToolBar.buttonIcon(icon: String = "", text: String = "", tooltip: String? = null, large: Boolean = false, op: Button.() -> Unit = {}) =
   Button(text).also {
-    val iconLabel = Label(icon)
     if (large) {
       styleClass += "if-btn-large-wrapper"
-      iconLabel.styleClass += "if-btn-label-large"
-    } else {
-      iconLabel.styleClass += "if-btn-label"
     }
-    it.graphic = iconLabel
+    it.graphic = labelIcon(icon, tooltip, large)
     if (tooltip != null) it.tooltip = Tooltip(tooltip)
     items += it
     op(it)
@@ -316,15 +342,10 @@ fun ToolBar.buttonIcon(
   op: Button.() -> Unit = {}
 ) = Button().also {
   text?.also { t -> it.textProperty().bind(t) }
-  val iconLabel = Label()
-  iconLabel.textProperty().bind(icon)
   if (large) {
     styleClass += "if-btn-large-wrapper"
-    iconLabel.styleClass += "if-btn-label-large"
-  } else {
-    iconLabel.styleClass += "if-btn-label"
   }
-  it.graphic = iconLabel
+  it.graphic = labelIcon(icon, tooltip, large)
   if (tooltip != null) it.tooltip = Tooltip(tooltip)
   items += it
   op(it)
@@ -552,7 +573,7 @@ fun TextInputControl.stripNonNumeric(vararg allowedChars: String = arrayOf(".", 
 }
 
 inline fun <reified T : Any> TextInputControl.withFormatter(default: T): TextFormatter<T> {
-  val formatter = textFormatter<T>(default)
+  val formatter = textFormatter(default, T::class)
   textFormatter = formatter
   return formatter
 }
@@ -773,7 +794,7 @@ fun <S, T : Any, N : ButtonBase> TableColumn<S, T>.customButtonCell(
   },
   onUpdate: (T?, S?, N) -> Unit = { _, _, _ -> }
 ): TableColumn<S, T> {
-  return customCell(builder, onUpdate)
+  return customCell(onUpdate, null, builder)
 }
 
 
@@ -825,8 +846,9 @@ fun <S, T : Any, N : Node> TableColumn<S, T?>.customCell(
 }
 
 fun <S, T : Any, N : Node> TableColumn<S, T>.customCell(
+  onUpdate: (T?, S?, N) -> Unit = { _, _, _ -> },
+  modelValue: ((S) -> Property<T?>)? = null,
   builder: (TableCell<S, T>) -> N,
-  onUpdate: (T?, S?, N) -> Unit
 ): TableColumn<S, T> {
   isEditable = true
   setCellFactory { col ->

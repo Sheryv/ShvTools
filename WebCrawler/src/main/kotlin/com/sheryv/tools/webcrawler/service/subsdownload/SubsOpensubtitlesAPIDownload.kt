@@ -94,6 +94,19 @@ class SubsOpensubtitlesAPIDownload(private val secrets: SecretsStore) {
     return search(params)
   }
   
+  fun searchTvShow(episode: Int, season: Int, tmdbId: String?, imdbId: String?): List<SearchResultDetails> {
+    require(imdbId != null || tmdbId != null) { "imdbId or tmdbId can not be null" }
+    val params = mapOf(
+      imdbId?.let { "parent_imdb_id" to it } ?: ("parent_tmdb_id" to tmdbId.toString()),
+      "languages" to "pl",
+      "season_number" to season.toString(),
+      "episode_number" to episode.toString(),
+      "languages" to "pl",
+      "type" to "episode"
+    )
+    return search(params)
+  }
+  
   fun search(params: Map<String, String>): List<SearchResultDetails> {
     var page = 0
     val results = mutableListOf<SearchResultDetails>()
@@ -118,10 +131,11 @@ class SubsOpensubtitlesAPIDownload(private val secrets: SecretsStore) {
       
     } while (result.totalCount > result.perPage && result.page >= result.totalPages)
     
+    val aiTranslatedLast = compareBy<SearchResultDetails> { it.aiTranslated }
     return when {
-      results.all { (it.ratings ?: 0) > 0 } -> results.sortedByDescending { it.ratings ?: 0 }
-      results.all { it.newDownloadCount > 0 } -> results.sortedByDescending { it.newDownloadCount }
-      else -> results.sortedByDescending { it.downloadCount }
+      results.all { (it.ratings ?: 0) > 0 } -> results.sortedWith(aiTranslatedLast.thenByDescending { it.ratings ?: 0 })
+      results.all { it.newDownloadCount > 0 } -> results.sortedWith(aiTranslatedLast.thenByDescending { it.newDownloadCount })
+      else -> results.sortedWith(aiTranslatedLast.thenByDescending { it.downloadCount })
     }
   }
   

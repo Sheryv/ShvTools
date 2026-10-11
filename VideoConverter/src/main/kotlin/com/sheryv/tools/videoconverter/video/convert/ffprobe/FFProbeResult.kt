@@ -1,8 +1,7 @@
-package com.sheryv.tools.videoconverter.video.process.ffprobe
+package com.sheryv.tools.videoconverter.video.convert.ffprobe
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import com.sheryv.tools.videoconverter.video.process.Language
 
 data class FFProbeResult(val format: FFFormat?, val streams: List<FFStream> = listOf(), val chapters: List<FFChapter>? = null)
 

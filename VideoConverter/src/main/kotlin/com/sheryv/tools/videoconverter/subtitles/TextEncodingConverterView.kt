@@ -1,6 +1,6 @@
 package com.sheryv.tools.videoconverter.subtitles
 
-import com.sheryv.tools.videoconverter.video.MainSettings
+import com.sheryv.tools.videoconverter.core.MainSettings
 import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.core.view.runActionInBackground
@@ -19,7 +19,7 @@ import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 
 
-class EncodingConverterView(val settings: MainSettings) : SimpleView() {
+class TextEncodingConverterView(val settings: MainSettings) : SimpleView() {
   private val searchPathProperty = stringProperty(settings.workingDir.absolutePathString())
   private val searchPatternProperty = stringProperty("**.srt")
   private val processingInProgressProperty = booleanProperty(false)

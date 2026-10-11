@@ -5,6 +5,7 @@ import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
+import kotlin.io.path.nameWithoutExtension
 
 object FileUtils {
   private val FILE_NAME_FORBIDDEN_CHARS_PATTER = Pattern.compile("[\\\\/:*?\"<>|]")
@@ -124,5 +125,15 @@ object FileUtils {
     }
     Files.move(path, backup)
     return backup
+  }
+  
+  @JvmStatic
+  fun replaceExtension(path: Path, extension: String): Path {
+    val name = path.nameWithoutExtension + "." + extension
+    
+    if (path.parent != null) {
+      return path.parent.resolve(name)
+    }
+    return Path.of(name)
   }
 }

@@ -1,9 +1,7 @@
-package com.sheryv.tools.videoconverter
+package com.sheryv.tools.videoconverter.core
 
-import com.sheryv.tools.videoconverter.video.MainSettings
-import com.sheryv.tools.videoconverter.video.process.Language
+import com.sheryv.tools.videoconverter.video.convert.Language
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
 class Context(val settings: MainSettings) {

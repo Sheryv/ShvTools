@@ -1,9 +1,11 @@
 package com.sheryv.tools.videoconverter
 
 import com.sheryv.tools.videoconverter.cli.SwapCommand
-import com.sheryv.tools.videoconverter.subtitles.EncodingConverterView
+import com.sheryv.tools.videoconverter.core.Context
+import com.sheryv.tools.videoconverter.core.MainSettings
+import com.sheryv.tools.videoconverter.subtitles.TextEncodingConverterView
 import com.sheryv.tools.videoconverter.subtitles.TranslatorView
-import com.sheryv.tools.videoconverter.video.MainSettings
+import com.sheryv.tools.videoconverter.video.encode.VideoReEncodingView
 import com.sheryv.util.fx.core.app.App
 import com.sheryv.util.fx.core.app.AppConfiguration
 import kotlinx.coroutines.Dispatchers
@@ -28,8 +30,9 @@ object VideoConverterMain {
       module {
         factoryOf(::VideoConverterView)
         factory { Context(get()) }
-        factoryOf(::EncodingConverterView)
+        factoryOf(::TextEncodingConverterView)
         factoryOf(::TranslatorView)
+        factoryOf(::VideoReEncodingView)
         single(createdAtStart = true) { MainSettings.read() }
         single(createdAtStart = true) { Dispatchers.Main }
         single<AppConfiguration> { AppConfig() }

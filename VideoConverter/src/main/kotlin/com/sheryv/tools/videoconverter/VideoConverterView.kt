@@ -1,9 +1,17 @@
 package com.sheryv.tools.videoconverter
 
-import com.sheryv.tools.videoconverter.subtitles.EncodingConverterView
+import com.sheryv.tools.videoconverter.core.Context
+import com.sheryv.tools.videoconverter.core.MainSettings
+import com.sheryv.tools.videoconverter.core.SourceSettings
+import com.sheryv.tools.videoconverter.subtitles.TextEncodingConverterView
 import com.sheryv.tools.videoconverter.subtitles.TranslatorView
-import com.sheryv.tools.videoconverter.video.*
-import com.sheryv.tools.videoconverter.video.process.ConversionProcessor
+import com.sheryv.tools.videoconverter.video.convert.ConversionProcessor
+import com.sheryv.tools.videoconverter.video.convert.ConvertAdditionalSource
+import com.sheryv.tools.videoconverter.video.convert.ConvertVideo
+import com.sheryv.tools.videoconverter.video.convert.SourceAudioType
+import com.sheryv.tools.videoconverter.video.convert.SourceType
+import com.sheryv.tools.videoconverter.video.convert.StreamSelection
+import com.sheryv.tools.videoconverter.video.encode.VideoReEncodingView
 import com.sheryv.util.fx.core.Styles
 import com.sheryv.util.fx.core.view.SimpleView
 import com.sheryv.util.fx.core.view.ViewUtils
@@ -164,7 +172,7 @@ class VideoConverterView(val settings: MainSettings, val context: Context) : Sim
         },
         buttonIcon("\ue01c", "Subs to UTF-8", tooltip = "Convert encoding of matching subtitles files to UTF-8") {
           setOnAction {
-            factory.createWindow(EncodingConverterView::class)()
+            factory.createWindow(TextEncodingConverterView::class)()
           }
         },
         buttonIcon(
@@ -175,6 +183,26 @@ class VideoConverterView(val settings: MainSettings, val context: Context) : Sim
           setOnAction {
             factory.createWindow(TranslatorView::class)()
           }
+        },
+        button("Batch encoding") {
+//          vgrow = Priority.ALWAYS
+          maxHeight = Double.MAX_VALUE
+          setOnAction {
+            factory.createWindow(VideoReEncodingView::class)()
+          }
+        },
+        button(
+          graphic = labelIcon("\ue5d4", "More tools")
+        ) {
+//          menubutton("Sync one subtitles from another").setOnAction {
+//            factory.dialogs.openFileDialog(stage, "Subtitles to sync that will be changed (incorrect)")?.let { first ->
+//              factory.dialogs.openFileDialog(stage, "Subtitles that are a reference (correct)")?.let { first to it }
+//            }?.let { (s, r) ->
+//              runActionInBackground("Sync subtitles", action ={
+//                SubtitlesSync().syncTimestampsUsingIndices(s, r)
+//              })
+//            }
+//          }
         },
         separator(orientation = Orientation.VERTICAL).growV(),
         buttonIcon("\ue872", tooltip = "Remove selected items from the list") {

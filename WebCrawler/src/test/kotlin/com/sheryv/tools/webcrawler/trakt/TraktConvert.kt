@@ -3,6 +3,7 @@ package com.sheryv.tools.webcrawler.trakt
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.sheryv.tools.webcrawler.RunFilmwebScraper
 import com.sheryv.tools.webcrawler.config.Configuration
+import com.sheryv.tools.webcrawler.config.SecretsStore
 import com.sheryv.tools.webcrawler.config.impl.StreamingWebsiteSettings
 import com.sheryv.tools.webcrawler.service.streamingwebsite.scraper.TmdbApi
 import com.sheryv.util.SerialisationUtils
@@ -23,8 +24,7 @@ class TraktConvert {
   @Test
   fun fillIds() {
     val items = SerialisationUtils.fromJson<List<ProcessingResult>>(Files.readString(Path.of("processed.json")))
-    val key = (Configuration.get().settings.first { it.crawlerId == "filman" } as StreamingWebsiteSettings).tmdbKey
-    val api = TmdbApi(key)
+    val api = TmdbApi(SecretsStore.load())
     val out = mutableListOf<ProcessingResult>()
     out.addAll(items)
     try {
@@ -65,8 +65,7 @@ class TraktConvert {
   }
   
   fun findEpisodeIds(item: ProcessingResult): List<Episode> {
-    val key = (Configuration.get().settings.first { it.crawlerId == "filman" } as StreamingWebsiteSettings).tmdbKey
-    val api = TmdbApi(key)
+    val api = TmdbApi(SecretsStore.load())
     return item.getEpisodesToSearch().map { toSearch ->
       if (toSearch.imdbId != null) {
         return@map toSearch

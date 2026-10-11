@@ -1,12 +1,15 @@
 package com.sheryv.tools.webcrawler.config
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.fasterxml.jackson.annotation.JsonIgnoreType
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.core.JsonParser
 import com.fasterxml.jackson.databind.DeserializationContext
 import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.JsonSerializer
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
+import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.module.kotlin.addDeserializer
 import com.sheryv.tools.webcrawler.browser.BrowserConfig
@@ -20,6 +23,7 @@ import com.sheryv.util.SerialisationUtils
 import com.sheryv.util.event.EventBus
 import com.sheryv.util.fx.core.app.AppConfiguration
 import com.sheryv.util.logging.log
+import javafx.beans.property.Property
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
@@ -66,7 +70,7 @@ class Configuration(
   
   fun save(): Configuration {
     modifyDate = OffsetDateTime.now()
-    SerialisationUtils.toJson(File(FILE), this)
+    serializer!!.writeValue(File(FILE), this)
     EventBus.emitEvent(ConfigurationChangedEvent(this))
     return this
   }
@@ -74,6 +78,18 @@ class Configuration(
   companion object {
     const val FILE = "config.json"
     private const val PROP_FILE = "app.properties"
+    private var serializer: JsonMapper? = null
+    
+    private fun buildSerializer(registry: List<CrawlerDef>): JsonMapper {
+      val mod = SimpleModule()
+      mod.addDeserializer(Set::class as KClass<Set<SettingsBase>>, SettingsSetDeserializer(registry))
+      serializer = SerialisationUtils
+        .jsonMapperBuilder()
+        .addMixIn(Property::class.java, IgnoredPropertyMixin::class.java)
+        .addModule(mod)
+        .build()
+      return serializer!!
+    }
     
     lateinit var instance: Configuration
     
@@ -103,15 +119,10 @@ class Configuration(
     fun load(registry: List<CrawlerDef>): Configuration {
       val path = Paths.get(FILE)
       return try {
-        
-        val mod = SimpleModule()
-        mod.addDeserializer(Set::class as KClass<Set<SettingsBase>>, SettingsSetDeserializer(registry))
-        val mapper = SerialisationUtils.jsonMapperBuilder().addModule(mod).build()
-        
         val c: Configuration
         val time = measureTimeMillis {
           c = if (Files.exists(path)) {
-            mapper.readValue(path.toFile(), Configuration::class.java).save()
+            buildSerializer(registry).readValue(path.toFile(), Configuration::class.java).save()
           } else {
             Configuration(settings = registry.map { it.createDefaultSettings() }.toMutableSet()).save()
           }
@@ -177,3 +188,6 @@ private class SettingsSetDeserializer(val registry: List<CrawlerDef>) : StdDeser
   }
   
 }
+
+@JsonIgnoreType
+private abstract class IgnoredPropertyMixin {}

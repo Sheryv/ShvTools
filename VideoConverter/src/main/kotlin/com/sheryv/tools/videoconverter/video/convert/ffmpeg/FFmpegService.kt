@@ -1,9 +1,9 @@
-package com.sheryv.tools.videoconverter.video.process.ffmpeg
+package com.sheryv.tools.videoconverter.video.convert.ffmpeg
 
-import com.sheryv.tools.videoconverter.Context
-import com.sheryv.tools.videoconverter.video.ConversionProgress
-import com.sheryv.tools.videoconverter.video.ConvertVideo
-import com.sheryv.tools.videoconverter.video.SourceType
+import com.sheryv.tools.videoconverter.core.Context
+import com.sheryv.tools.videoconverter.video.convert.ConversionProgress
+import com.sheryv.tools.videoconverter.video.convert.ConvertVideo
+import com.sheryv.tools.videoconverter.video.convert.SourceType
 import com.sheryv.util.unit.BitTransferSpeed
 import com.sheryv.util.unit.BitUnit
 import okio.Path

@@ -1,8 +1,12 @@
-package com.sheryv.tools.videoconverter.video.process.mkvmerge
+package com.sheryv.tools.videoconverter.video.convert.mkvmerge
 
-import com.sheryv.tools.videoconverter.Context
-import com.sheryv.tools.videoconverter.video.*
-import com.sheryv.tools.videoconverter.video.process.Language
+import com.sheryv.tools.videoconverter.core.Context
+import com.sheryv.tools.videoconverter.video.convert.ConversionProgress
+import com.sheryv.tools.videoconverter.video.convert.ConvertVideo
+import com.sheryv.tools.videoconverter.video.convert.Language
+import com.sheryv.tools.videoconverter.video.convert.SourceAudioType
+import com.sheryv.tools.videoconverter.video.convert.SourceType
+import com.sheryv.tools.videoconverter.video.convert.StreamSelection
 import org.apache.commons.lang3.time.DurationFormatUtils
 import java.nio.file.Path
 import kotlin.io.path.nameWithoutExtension

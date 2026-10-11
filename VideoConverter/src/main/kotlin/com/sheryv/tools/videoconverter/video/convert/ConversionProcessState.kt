@@ -1,4 +1,4 @@
-package com.sheryv.tools.videoconverter.video.process
+package com.sheryv.tools.videoconverter.video.convert
 
 enum class ConversionProcessState(val label: String) {
   READY("Ready"),
